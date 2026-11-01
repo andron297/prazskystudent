@@ -23,7 +23,7 @@ import { uid } from '../../lib/id';
 import { defaultSubtasks, requirementProgress, REQUIREMENT_TYPE_LABELS } from '../../lib/progress';
 import { DEADLINE_STYLES, deadlineUrgency } from '../../lib/urgency';
 import { useAppStore } from '../../store/appStore';
-import { toast } from '../../store/uiStore';
+import { confirmAction, toast } from '../../store/uiStore';
 import { AddToCalendar } from '../common/AddToCalendar';
 import { Modal } from '../ui/overlays';
 import { Button, Checkbox, Chip, cn, Field, IconButton, ProgressBar, Select, TextArea, TextInput, Toggle } from '../ui/primitives';
@@ -211,8 +211,8 @@ export function RequirementCard({
                   variant="ghost"
                   icon={Trash}
                   className="text-red-600 hover:text-red-600"
-                  onClick={() => {
-                    if (window.confirm(`Smazat povinnost „${r.title}“?`)) removeRequirement(r.id);
+                  onClick={async () => {
+                    if (await confirmAction({ title: `Smazat povinnost „${r.title}“?`, message: 'Smaže se i checklist podúkolů. Připojené materiály zůstanou u předmětu.', confirmLabel: 'Smazat', tone: 'danger' })) removeRequirement(r.id);
                   }}
                 >
                   Smazat

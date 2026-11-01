@@ -28,7 +28,7 @@ import { LOCATION_PRESETS } from '../../lib/buildings';
 import { testGolemioKey } from '../../services/api';
 import { pickPersisted, useAppStore } from '../../store/appStore';
 import { appNow, useClockStore } from '../../store/clockStore';
-import { toast, useUiStore } from '../../store/uiStore';
+import { confirmAction, toast, useUiStore } from '../../store/uiStore';
 import { downloadTextFile } from '../../lib/calendarExport';
 import { Button, Card, Chip, cn, Field, Segmented, Select, TextInput, Toggle } from '../ui/primitives';
 import { BuildingsEditor } from './BuildingsEditor';
@@ -367,8 +367,8 @@ export function IntegrationsView() {
           <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files?.[0] && void onImport(e.target.files[0])} />
           <Button
             icon={RotateCcw}
-            onClick={() => {
-              if (window.confirm('Obnovit ukázková data? Tvoje ručně přidaná data budou nahrazena.')) {
+            onClick={async () => {
+              if (await confirmAction({ title: 'Obnovit ukázková data?', message: 'Ručně přidaná data budou nahrazena čerstvým sandboxem.', confirmLabel: 'Obnovit' })) {
                 resetDemo(appNow());
                 setMode('demo');
                 toast.success('Ukázková data obnovena.');
@@ -380,8 +380,8 @@ export function IntegrationsView() {
           <Button
             variant="ghost"
             icon={Trash}
-            onClick={() => {
-              if (window.confirm('Smazat všechna ukázková data (předměty, rozvrh, materiály z dema)?')) {
+            onClick={async () => {
+              if (await confirmAction({ title: 'Smazat ukázková data?', message: 'Odstraní demo předměty, rozvrh, povinnosti i materiály. Tvoje vlastní data zůstanou.', confirmLabel: 'Smazat demo', tone: 'danger' })) {
                 clearDemoData();
                 toast.info('Ukázková data smazána.');
               }
@@ -393,8 +393,8 @@ export function IntegrationsView() {
             variant="ghost"
             icon={Trash}
             className="text-red-600 hover:text-red-600"
-            onClick={() => {
-              if (window.confirm('Opravdu smazat VŠECHNA data v tomto zařízení?')) {
+            onClick={async () => {
+              if (await confirmAction({ title: 'Smazat všechna data?', message: 'Smaže předměty, rozvrh, povinnosti, materiály i milníky v tomto zařízení. Nastavení a klíče zůstanou.', confirmLabel: 'Smazat vše', tone: 'danger' })) {
                 clearAllData();
                 toast.info('Data smazána.');
               }

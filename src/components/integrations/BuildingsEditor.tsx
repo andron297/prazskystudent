@@ -4,7 +4,7 @@ import type { ArrivalStop, Building as BuildingType } from '../../types';
 import { uid } from '../../lib/id';
 import { isValidLatLng } from '../../lib/geo';
 import { useAppStore } from '../../store/appStore';
-import { toast } from '../../store/uiStore';
+import { confirmAction, toast } from '../../store/uiStore';
 import { Modal } from '../ui/overlays';
 import { Button, Card, Chip, Field, IconButton, TextInput } from '../ui/primitives';
 
@@ -64,8 +64,8 @@ export function BuildingsEditor() {
               label={`Smazat ${b.name}`}
               size="sm"
               tone="danger"
-              onClick={() => {
-                if (window.confirm(`Smazat budovu ${b.name}?`)) removeBuilding(b.id);
+              onClick={async () => {
+                if (await confirmAction({ title: `Smazat budovu ${b.name}?`, message: 'Rozvrhové lístky v této budově ztratí dopravní navigaci, dokud je nepřiřadíš jinam.', confirmLabel: 'Smazat', tone: 'danger' })) removeBuilding(b.id);
               }}
             />
           </li>

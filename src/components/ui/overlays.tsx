@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { CircleAlert, CircleCheck, Info, X, type LucideIcon } from 'lucide-react';
+import { CircleAlert, CircleCheck, Info, TriangleAlert, X, type LucideIcon } from 'lucide-react';
 import { useUiStore } from '../../store/uiStore';
-import { cn, IconButton } from './primitives';
+import { Button, cn, IconButton } from './primitives';
 
 /* ------------------------------------------------------------------ */
 /* Modální okno (na mobilu jako spodní panel)                          */
@@ -206,5 +206,38 @@ export function Toaster() {
         })}
       </AnimatePresence>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Potvrzovací dialog                                                  */
+/* ------------------------------------------------------------------ */
+
+export function ConfirmHost() {
+  const live = useUiStore((s) => s.confirmRequest);
+  const resolve = useUiStore((s) => s.resolveConfirm);
+  // Text zůstává viditelný i během zavírací animace.
+  const lastRef = useRef(live);
+  if (live) lastRef.current = live;
+  const request = lastRef.current;
+  return (
+    <Modal
+      open={Boolean(live)}
+      onClose={() => resolve(false)}
+      title={request?.title ?? ''}
+      icon={request?.tone === 'danger' ? TriangleAlert : Info}
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => resolve(false)}>
+            Zrušit
+          </Button>
+          <Button variant={request?.tone === 'danger' ? 'danger' : 'primary'} onClick={() => resolve(true)}>
+            {request?.confirmLabel ?? 'Potvrdit'}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-[14px] leading-relaxed text-muted">{request?.message ?? 'Tuto akci nelze vrátit zpět.'}</p>
+    </Modal>
   );
 }

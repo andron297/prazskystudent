@@ -12,7 +12,7 @@ import { navigateTo } from '../../hooks/useAppShell';
 import { useNow } from '../../hooks/useNow';
 import { useAppStore } from '../../store/appStore';
 import { buildingForEvent } from '../../store/selectors';
-import { toast, useUiStore } from '../../store/uiStore';
+import { confirmAction, toast, useUiStore } from '../../store/uiStore';
 import { AddToCalendar } from '../common/AddToCalendar';
 import { Modal } from '../ui/overlays';
 import { Button, Card, Chip, cn, EmptyState, Field, ProgressBar, ProgressRing, TextInput } from '../ui/primitives';
@@ -218,8 +218,8 @@ function SubjectHub({ subject }: { subject: Subject }) {
               variant="ghost"
               icon={Trash}
               className="text-red-600 hover:text-red-600"
-              onClick={() => {
-                if (window.confirm(`Smazat předmět „${subject.name}“ včetně povinností a materiálů?`)) {
+              onClick={async () => {
+                if (await confirmAction({ title: `Smazat předmět „${subject.name}“?`, message: 'Smaže i jeho rozvrhové lístky, povinnosti a materiály.', confirmLabel: 'Smazat předmět', tone: 'danger' })) {
                   removeSubject(subject.id);
                   navigateTo('predmety');
                   toast.info('Předmět smazán.');

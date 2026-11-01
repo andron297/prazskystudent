@@ -9,7 +9,7 @@ import { formatDate } from '../../lib/dates';
 import { uid } from '../../lib/id';
 import { moodleFileUrlWithToken } from '../../services/moodle';
 import { useAppStore } from '../../store/appStore';
-import { toast } from '../../store/uiStore';
+import { confirmAction, toast } from '../../store/uiStore';
 import { Menu, Modal } from '../ui/overlays';
 import { Button, Card, Chip, cn, EmptyState, Field, IconButton, Segmented, Select, TextArea, TextInput } from '../ui/primitives';
 import { materialVisual } from './materialVisual';
@@ -170,8 +170,8 @@ export function MaterialsPanel({ subject, materials, requirements, onOpen }: { s
                               label="Smazat"
                               size="sm"
                               tone="danger"
-                              onClick={() => {
-                                if (window.confirm(`Smazat „${m.title}“?`)) removeMaterial(m.id);
+                              onClick={async () => {
+                                if (await confirmAction({ title: `Smazat „${m.title}“?`, confirmLabel: 'Smazat', tone: 'danger' })) removeMaterial(m.id);
                               }}
                             />
                           )}

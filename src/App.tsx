@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { AppShell } from './components/layout/AppShell';
-import { Toaster } from './components/ui/overlays';
+import { ConfirmHost, Toaster } from './components/ui/overlays';
 import { Skeleton } from './components/ui/primitives';
 import { useHashRoute, useThemeEffect } from './hooks/useAppShell';
 import { useAppStore } from './store/appStore';
@@ -75,6 +75,7 @@ export default function App() {
           <ConnectStudyModal />
         </Suspense>
       )}
+      <ConfirmHost />
       <Toaster />
     </MotionConfig>
   );
