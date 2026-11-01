@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Stihnu</title>
+    <meta
+      name="description"
+      content="Rozvrh ze SISu, úkoly a materiály z Moodlu, harmonogram roku a odpočet do posledního spoje MHD v jedné aplikaci."
+    />
+    <meta name="theme-color" content="#f3f4f8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0c11" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Stihnu" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <script>
+      // Nastaví motiv ještě před prvním vykreslením (bez probliknutí).
+      (function () {
+        var pref = 'system';
+        try {
+          var raw = localStorage.getItem('stihnu:v1');
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            if (parsed && parsed.state && parsed.state.settings && parsed.state.settings.theme) {
+              pref = parsed.state.settings.theme;
+            }
+          }
+        } catch (e) {}
+        var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Stihnu potřebuje zapnutý JavaScript.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
