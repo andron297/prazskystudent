@@ -109,7 +109,7 @@ export function TransitGlance({
 
       {(status === 'calm' || status === 'prepare' || status === 'critical') && chosen && plan ? (
         <div className="mt-4">
-          <p className="eyebrow text-white/70">{isLast ? 'Vyraz nejpozději za' : 'Vyraz za'}</p>
+          <p className="eyebrow text-white/70">{isLast && !plan.bufferMet ? 'Rezerva už nevyjde · vyraz nejpozději za' : isLast ? 'Vyraz nejpozději za' : 'Vyraz za'}</p>
           <div className="mt-1.5" aria-live="polite">
             <BigCountdown seconds={secondsToLeave} />
           </div>
@@ -153,6 +153,11 @@ export function TransitGlance({
             <button type="button" onClick={onDetail} className="inline-flex items-center gap-1 font-semibold text-white hover:underline">
               Jiný spoj <ArrowDown className="size-3.5" aria-hidden />
             </button>
+            {plan.lastCall && plan.lastCall.id !== chosen.id && new Date(plan.lastCall.leaveAt) > new Date(chosen.leaveAt) && (
+              <span className="w-full tabular text-white/70">
+                Nejpozději: odchod <strong className="text-white">{formatTime(new Date(plan.lastCall.leaveAt))}</strong> · v budově {formatTime(new Date(plan.lastCall.arriveAt))}
+              </span>
+            )}
           </div>
         </div>
       ) : status === 'loading' ? (

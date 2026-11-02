@@ -7,7 +7,7 @@ import { Accessibility, Check, ChevronLeft, Crosshair, Footprints, GraduationCap
 import type { TransitMode } from '../../types';
 import { formatTime } from '../../lib/dates';
 import { formatDistance, haversineMeters, walkingMinutes } from '../../lib/geo';
-import { findStop, nearbyStops, searchStops, sortLines, stopsToGeoJSON, type StopGroup } from '../../lib/stops';
+import { findStop, nearbyStops, platformsToGeoJSON, searchStops, sortLines, stopsToGeoJSON, type StopGroup } from '../../lib/stops';
 import { delayChipClasses, formatDelay } from '../../lib/urgency';
 import { useResolvedTheme } from '../../hooks/useAppShell';
 import { useNow } from '../../hooks/useNow';
@@ -80,14 +80,64 @@ function applyNature(map: MapLibreMap, theme: 'light' | 'dark') {
   }
 }
 
-function addStopLayers(map: MapLibreMap, theme: 'light' | 'dark', data: ReturnType<typeof stopsToGeoJSON>) {
+/** Od tohoto přiblížení se místo středu zastávky kreslí jednotlivá nástupiště. */
+const PLATFORM_ZOOM = 15.5;
+
+function addStopLayers(map: MapLibreMap, theme: 'light' | 'dark', data: ReturnType<typeof stopsToGeoJSON>, platforms: ReturnType<typeof platformsToGeoJSON>) {
   if (!map.getSource('stops')) map.addSource('stops', { type: 'geojson', data, promoteId: 'name' });
+  if (!map.getSource('platforms')) map.addSource('platforms', { type: 'geojson', data: platforms });
   const ring = theme === 'dark' ? '#0d1410' : '#ffffff';
+  if (!map.getLayer('platforms-dot')) {
+    map.addLayer({
+      id: 'platforms-dot',
+      type: 'circle',
+      source: 'platforms',
+      minzoom: PLATFORM_ZOOM,
+      paint: {
+        'circle-color': ['get', 'color'],
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], PLATFORM_ZOOM, 5, 18, 9],
+        'circle-stroke-color': ring,
+        'circle-stroke-width': 2,
+      },
+    });
+    map.addLayer({
+      id: 'platforms-selected',
+      type: 'circle',
+      source: 'platforms',
+      minzoom: PLATFORM_ZOOM,
+      filter: ['==', ['get', 'name'], ''],
+      paint: {
+        'circle-color': 'rgba(0,0,0,0)',
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], PLATFORM_ZOOM, 8.5, 18, 13],
+        'circle-stroke-color': theme === 'dark' ? '#a8c79f' : '#2b5a40',
+        'circle-stroke-width': 3,
+      },
+    });
+    map.addLayer({
+      id: 'platforms-code',
+      type: 'symbol',
+      source: 'platforms',
+      minzoom: 15.8,
+      layout: {
+        'text-field': ['get', 'code'],
+        'text-font': ['Noto Sans Bold'],
+        'text-size': 10.5,
+        'text-offset': [0, -1.25],
+        'text-allow-overlap': true,
+      },
+      paint: {
+        'text-color': theme === 'dark' ? '#f2efe6' : '#1d2a22',
+        'text-halo-color': theme === 'dark' ? '#0d1410' : '#ffffff',
+        'text-halo-width': 1.4,
+      },
+    });
+  }
   if (!map.getLayer('stops-dot')) {
     map.addLayer({
       id: 'stops-dot',
       type: 'circle',
       source: 'stops',
+      maxzoom: PLATFORM_ZOOM,
       paint: {
         'circle-color': ['get', 'color'],
         'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, ['+', 1.6, ['*', ['get', 'rank'], 0.7]], 14, ['+', 4, ['*', ['get', 'rank'], 0.9]], 17, ['+', 8, ['get', 'rank']]],
@@ -236,6 +286,7 @@ export function TransitMapView() {
 
   const filtered = useMemo(() => (stops ? (modes.length ? stops.filter((s) => s.lines.some((l) => !l.night && modes.includes(l.mode))) : stops) : []), [stops, modes]);
   const geojson = useMemo(() => stopsToGeoJSON(filtered), [filtered]);
+  const platformGeojson = useMemo(() => platformsToGeoJSON(filtered), [filtered]);
   const near = useMemo(() => (stops ? nearbyStops(stops, origin.coords, { walkSpeed, maxMeters: 900, limit: 8, modes: modes.length ? modes : undefined }) : []), [stops, origin.coords, walkSpeed, modes]);
   const results = useMemo(() => (stops && query.trim().length >= 2 ? searchStops(stops, query, 8) : []), [stops, query]);
   const now = useNow(60_000);
@@ -270,8 +321,14 @@ export function TransitMapView() {
       const name = e.features?.[0]?.properties?.name as string | undefined;
       if (name) setFocusStop(name);
     });
-    map.on('mouseenter', 'stops-dot', () => (map.getCanvas().style.cursor = 'pointer'));
-    map.on('mouseleave', 'stops-dot', () => (map.getCanvas().style.cursor = ''));
+    map.on('click', 'platforms-dot', (e: MapLayerMouseEvent) => {
+      const name = e.features?.[0]?.properties?.name as string | undefined;
+      if (name) setFocusStop(name);
+    });
+    for (const layer of ['stops-dot', 'platforms-dot']) {
+      map.on('mouseenter', layer, () => (map.getCanvas().style.cursor = 'pointer'));
+      map.on('mouseleave', layer, () => (map.getCanvas().style.cursor = ''));
+    }
     mapRef.current = map;
     return () => {
       meMarker.current?.remove();
@@ -297,11 +354,13 @@ export function TransitMapView() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    addStopLayers(map, theme, geojson);
+    addStopLayers(map, theme, geojson, platformGeojson);
     (map.getSource('stops') as GeoJSONSource | undefined)?.setData(geojson);
+    (map.getSource('platforms') as GeoJSONSource | undefined)?.setData(platformGeojson);
     if (originStop) map.setFeatureState({ source: 'stops', id: originStop.name }, { origin: true });
     if (selectedRef.current) map.setFeatureState({ source: 'stops', id: selectedRef.current }, { selected: true });
-  }, [ready, geojson, theme, originStop]);
+    map.setFilter('platforms-selected', ['==', ['get', 'name'], selectedRef.current ?? '']);
+  }, [ready, geojson, platformGeojson, theme, originStop]);
 
   // Značky: já a škola
   useEffect(() => {
@@ -333,6 +392,7 @@ export function TransitMapView() {
       if (selectedRef.current) map.setFeatureState({ source: 'stops', id: selectedRef.current }, { selected: false });
       if (stop) map.setFeatureState({ source: 'stops', id: stop.name }, { selected: true });
     }
+    if (map?.getLayer('platforms-selected')) map.setFilter('platforms-selected', ['==', ['get', 'name'], stop?.name ?? '']);
     selectedRef.current = stop?.name ?? null;
     setSelected(stop);
     setPanelOpen(true);

@@ -59,9 +59,9 @@ export function DashboardView() {
   const origin = useOrigin();
   const { forecast } = useWeather(origin.coords, settings.weather.enabled);
   const plan = useMemo(
-    () => commuteWindows(events.filter(isTransitTarget), new Date(minuteKey * 60_000), { leaveAt: transit.plan?.lastCall ? new Date(transit.plan.lastCall.leaveAt) : null }),
+    () => commuteWindows(events.filter(isTransitTarget), new Date(minuteKey * 60_000), { leaveAt: transit.selected ? new Date(transit.selected.leaveAt) : null }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [events, minuteKey, transit.plan?.lastCall?.leaveAt],
+    [events, minuteKey, transit.selected?.leaveAt],
   );
   const advice = useMemo(() => (forecast ? weatherAdvice(forecast, plan, new Date(minuteKey * 60_000), settings.weather.feel) : null), [forecast, plan, minuteKey, settings.weather.feel]);
 

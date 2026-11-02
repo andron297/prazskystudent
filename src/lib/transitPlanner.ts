@@ -11,13 +11,16 @@
  */
 import type { Itinerary, RideLeg } from '../types';
 import { formatTime } from './dates';
+import { WALK_RELUCTANCE } from './stopIndex';
 import { transitStatusFromSeconds, type TransitStatus } from './urgency';
 
 export interface PlanInput {
   now: Date;
   eventStart: Date;
+  /** Kolik minut chce být student v budově předem – podle toho je doporučený spoj. */
   bufferMinutes: number;
-  comfortMinutes: number;
+  /** Nejmenší rezerva (dojít z vchodu do učebny), se kterou se to ještě stihne. */
+  minMarginMinutes?: number;
   itineraries: Itinerary[];
   accessibleOnly?: boolean;
   preferAirConditioned?: boolean;
@@ -25,14 +28,25 @@ export interface PlanInput {
 
 export interface TransitPlan {
   status: TransitStatus;
-  /** Kdy nejpozději být v učebně (začátek − rezerva). */
+  /** Kdy být v budově podle nastavení (začátek − rezerva). */
   deadline: Date;
+  /** Nejzazší příchod do budovy, kdy se to ještě stihne (začátek − minimální rezerva). */
+  hardDeadline: Date;
+  /** Nejpozdější spoj, kterým se to ještě stihne. */
   lastCall: Itinerary | null;
+  /** Nejpozdější spoj, se kterým je student na místě s rezervou z nastavení. */
   recommended: Itinerary | null;
-  /** Další stihnutelné spoje seřazené podle času odchodu. */
+  /** Doporučený spoj opravdu dodrží rezervu (jinak už zbývají jen riskantnější spoje). */
+  bufferMet: boolean;
+  /** Doporučený a pozdější spoje, které to ještě stihnou (podle odchodu). */
   upcoming: Itinerary[];
+  /** Dřívější spoje – víc času na místě (od nejpozdějšího). */
+  earlier: Itinerary[];
   fastestLate: Itinerary | null;
+  /** Do odchodu na doporučený spoj. */
   secondsToLeave: number | null;
+  /** Do odchodu na poslední možný spoj. */
+  secondsToLastCall: number | null;
   secondsToDeparture: number | null;
   secondsToRecommendedLeave: number | null;
   slackMinutes: number | null;
@@ -54,27 +68,55 @@ export function isAccessibleItinerary(it: Itinerary): boolean {
   return rides.length > 0 && rides.every((r) => r.isWheelchairAccessible === true);
 }
 
+export const DEFAULT_MIN_MARGIN = 3;
+
+/**
+ * „Nepohodlí“ spoje v minutách: chůze nad 6 min se počítá dvojnásob
+ * (WALK_RELUCTANCE) a každý přestup jako 4 min. Doporučený spoj je ten, který
+ * dovolí vyrazit nejpozději PO odečtení nepohodlí – ne autobus s přestupem
+ * a čtvrthodinou pěšky, který ušetří dvě minuty.
+ */
+export function itineraryPenalty(it: Itinerary): number {
+  const walk = it.legs.reduce((sum, l) => sum + (l.kind === 'walk' ? l.minutes : 0), 0);
+  return Math.max(0, walk - 6) * (WALK_RELUCTANCE - 1) + it.transfers * 4;
+}
+
+/** Minuty, o které je student v budově před začátkem. */
+export function minutesEarly(it: Itinerary, eventStart: Date): number {
+  return Math.floor((eventStart.getTime() - ms(it.arriveAt)) / 60_000);
+}
+
 export function planJourney(input: PlanInput): TransitPlan {
   const nowMs = input.now.getTime();
-  const deadline = new Date(input.eventStart.getTime() - input.bufferMinutes * 60_000);
-  const comfortDeadline = deadline.getTime() - input.comfortMinutes * 60_000;
+  const startMs = input.eventStart.getTime();
+  const buffer = Math.max(0, input.bufferMinutes);
+  const minMargin = Math.min(buffer, Math.max(0, input.minMarginMinutes ?? DEFAULT_MIN_MARGIN));
+  const deadline = new Date(startMs - buffer * 60_000);
+  const hardDeadline = new Date(startMs - minMargin * 60_000);
 
   const pool = input.itineraries.filter(
     (it) => (!input.accessibleOnly || isAccessibleItinerary(it)) && ms(it.leaveAt) >= nowMs - 20_000,
   );
-
-  const feasible = pool
-    .filter((it) => ms(it.arriveAt) <= deadline.getTime())
-    .sort((a, b) => ms(b.leaveAt) - ms(a.leaveAt) || ms(a.arriveAt) - ms(b.arriveAt));
+  // Od nejpozdějšího odchodu; při stejném odchodu dřív v cíli.
+  const byLeaveDesc = (a: Itinerary, b: Itinerary) => ms(b.leaveAt) - ms(a.leaveAt) || ms(a.arriveAt) - ms(b.arriveAt);
+  const reachable = pool.filter((it) => ms(it.arriveAt) <= hardDeadline.getTime());
+  // Nesmyslně nepohodlné varianty (o hodně víc chůze/přestupů než nejlepší) vůbec nenabízet.
+  const minPenalty = Math.min(Number.POSITIVE_INFINITY, ...reachable.map(itineraryPenalty));
+  const feasible = reachable.filter((it) => itineraryPenalty(it) <= minPenalty + 8).sort(byLeaveDesc);
+  const score = (it: Itinerary) => ms(it.leaveAt) - itineraryPenalty(it) * 60_000;
 
   const empty: TransitPlan = {
     status: 'no-data',
     deadline,
+    hardDeadline,
     lastCall: null,
     recommended: null,
+    bufferMet: false,
     upcoming: [],
+    earlier: [],
     fastestLate: null,
     secondsToLeave: null,
+    secondsToLastCall: null,
     secondsToDeparture: null,
     secondsToRecommendedLeave: null,
     slackMinutes: null,
@@ -88,36 +130,47 @@ export function planJourney(input: PlanInput): TransitPlan {
       ...empty,
       status: 'missed',
       fastestLate,
-      lateByMinutes: fastestLate ? Math.max(1, Math.ceil((ms(fastestLate.arriveAt) - input.eventStart.getTime()) / 60_000)) : null,
+      lateByMinutes: fastestLate ? Math.max(1, Math.ceil((ms(fastestLate.arriveAt) - startMs) / 60_000)) : null,
     };
   }
 
   const lastCall = feasible[0];
-  const comfortable = feasible.filter((it) => ms(it.arriveAt) <= comfortDeadline);
-  let recommended: Itinerary | null = comfortable[0] ?? null;
-  if (recommended && input.preferAirConditioned) {
+  const withBuffer = feasible.filter((it) => ms(it.arriveAt) <= deadline.getTime()).sort((a, b) => score(b) - score(a) || ms(a.arriveAt) - ms(b.arriveAt));
+  let recommended: Itinerary | null = withBuffer[0] ?? null;
+  if (recommended && input.preferAirConditioned && firstRide(recommended)?.isAirConditioned !== true) {
     const base = recommended;
-    const withAc = comfortable.find(
-      (it) => firstRide(it)?.isAirConditioned === true && ms(base.leaveAt) - ms(it.leaveAt) <= 10 * 60_000,
-    );
+    const withAc = withBuffer.find((it) => firstRide(it)?.isAirConditioned === true && ms(base.leaveAt) - ms(it.leaveAt) <= 10 * 60_000);
     if (withAc) recommended = withAc;
   }
-  if (!recommended) recommended = feasible.length > 1 ? feasible[1] : lastCall;
+  const bufferMet = recommended !== null;
+  if (!recommended) recommended = lastCall;
 
-  const secondsToLeave = (ms(lastCall.leaveAt) - nowMs) / 1000;
-  const upcoming = [...feasible].sort((a, b) => ms(a.leaveAt) - ms(b.leaveAt)).slice(0, 8);
+  const recLeave = ms(recommended.leaveAt);
+  // Doporučený + pozdější stihnutelné spoje; dřívější (zbytečně brzy na místě) zvlášť.
+  const upcoming = feasible
+    .filter((it) => it.id === recommended!.id || ms(it.leaveAt) > recLeave)
+    .sort((a, b) => ms(a.leaveAt) - ms(b.leaveAt))
+    .slice(0, 8);
+  const earlier = feasible.filter((it) => it.id !== recommended!.id && ms(it.leaveAt) <= recLeave && !upcoming.includes(it)).slice(0, 6);
 
+  const secondsToLeave = (recLeave - nowMs) / 1000;
+  const secondsToLastCall = (ms(lastCall.leaveAt) - nowMs) / 1000;
+  // Stav (barvy, „vyraz“) se řídí doporučeným spojem; když ujel, posledním možným.
   return {
     status: transitStatusFromSeconds(secondsToLeave),
     deadline,
+    hardDeadline,
     lastCall,
     recommended,
+    bufferMet,
     upcoming,
+    earlier,
     fastestLate: null,
     secondsToLeave,
-    secondsToDeparture: (ms(lastCall.departAt) - nowMs) / 1000,
-    secondsToRecommendedLeave: (ms(recommended.leaveAt) - nowMs) / 1000,
-    slackMinutes: Math.floor((deadline.getTime() - ms(lastCall.arriveAt)) / 60_000),
+    secondsToLastCall,
+    secondsToDeparture: (ms(recommended.departAt) - nowMs) / 1000,
+    secondsToRecommendedLeave: secondsToLeave,
+    slackMinutes: Math.floor((hardDeadline.getTime() - ms(lastCall.arriveAt)) / 60_000),
     lateByMinutes: null,
   };
 }
@@ -244,7 +297,7 @@ export function dedupeByTrip(itineraries: Itinerary[]): Itinerary[] {
 export function pickItinerary(plan: TransitPlan | null, selectedId: string | null | undefined, now: Date): Itinerary | null {
   if (!plan || !plan.lastCall) return null;
   if (selectedId) {
-    const chosen = plan.upcoming.find((it) => it.id === selectedId) ?? (plan.lastCall.id === selectedId ? plan.lastCall : undefined);
+    const chosen = plan.upcoming.find((it) => it.id === selectedId) ?? plan.earlier.find((it) => it.id === selectedId) ?? (plan.lastCall.id === selectedId ? plan.lastCall : undefined);
     if (chosen && ms(chosen.leaveAt) >= now.getTime() - 20_000) return chosen;
   }
   return plan.recommended ?? plan.lastCall;
@@ -290,7 +343,13 @@ export function routeSteps(it: Itinerary, eventStart: Date, buildingName: string
   }
   rides.forEach((r, i) => {
     if (i > 0) {
-      steps.push({ kind: 'transfer', time: new Date(rides[i - 1].predictedArrival), title: `Přestup na ${modeNoun(r.mode)} ${r.line}`, detail: `${r.fromStop}` });
+      const transferWalk = it.legs.find((l, li) => l.kind === 'walk' && li > it.legs.indexOf(rides[i - 1]) && li < it.legs.indexOf(r));
+      steps.push({
+        kind: 'transfer',
+        time: new Date(rides[i - 1].predictedArrival),
+        title: `Přestup na ${modeNoun(r.mode)} ${r.line}`,
+        detail: [r.fromStop, r.platform ? `nástupiště ${r.platform}` : null, transferWalk && transferWalk.kind === 'walk' ? `${transferWalk.minutes} min na přestup` : null].filter(Boolean).join(' · '),
+      });
     }
     const rideMin = Math.round((ms(r.predictedArrival) - ms(r.predictedDeparture)) / MIN_MS);
     steps.push({

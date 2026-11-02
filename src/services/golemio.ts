@@ -7,7 +7,19 @@
  */
 import type { LatLng, TransitMode } from '../types';
 import { haversineMeters } from '../lib/geo';
-import { requestJson } from './http';
+import { ApiError, requestJson, sleep } from './http';
+
+/**
+ * Golemio má limit dotazů – dotazy proto startují s odstupem (~4/s) a při
+ * odpovědi 429 se po chvíli zopakují.
+ */
+const SPACING_MS = 230;
+let paceChain: Promise<void> = Promise.resolve();
+function pace(): Promise<void> {
+  const next = paceChain.then(() => sleep(SPACING_MS));
+  paceChain = next.catch(() => undefined);
+  return next;
+}
 
 export interface GolemioDeparture {
   stopId: string;
@@ -115,12 +127,23 @@ export class GolemioClient {
     this.apiKey = apiKey.trim();
   }
 
-  private get<T>(path: string, query: [string, string][] = []): Promise<T> {
+  private async get<T>(path: string, query: [string, string][] = []): Promise<T> {
     const params = new URLSearchParams([['path', path], ...query]);
-    return requestJson<T>(`/api/golemio?${params.toString()}`, {
-      headers: this.apiKey ? { 'x-golemio-key': this.apiKey } : {},
-      timeoutMs: 12_000,
-    });
+    for (let attempt = 0; ; attempt++) {
+      await pace();
+      try {
+        return await requestJson<T>(`/api/golemio?${params.toString()}`, {
+          headers: this.apiKey ? { 'x-golemio-key': this.apiKey } : {},
+          timeoutMs: 12_000,
+        });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 429 && attempt < 3) {
+          await sleep(1600 * (attempt + 1));
+          continue;
+        }
+        throw error;
+      }
+    }
   }
 
   /** Golemio vrací nejvýš 100 odjezdů na dotaz – delší okno se načte po stránkách (podle času). */

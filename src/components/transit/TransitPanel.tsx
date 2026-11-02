@@ -19,7 +19,7 @@ import {
 import type { Building as BuildingType, Itinerary, ScheduleEvent, Subject } from '../../types';
 import { formatTime, formatWeekdayShort, formatDayMonth } from '../../lib/dates';
 import { googleMapsTransitUrl } from '../../lib/geo';
-import { explainItinerary, rideLegs, routeSteps, type RouteStep } from '../../lib/transitPlanner';
+import { explainItinerary, minutesEarly, rideLegs, routeSteps, type RouteStep, type TransitPlan } from '../../lib/transitPlanner';
 import { TRANSIT_STYLES } from '../../lib/urgency';
 import type { TransitPlanState } from '../../hooks/useTransitPlan';
 import { useNow } from '../../hooks/useNow';
@@ -138,7 +138,8 @@ export function TransitPanel({
   if (!event) return null;
 
   const options: Itinerary[] = plan ? plan.upcoming : [];
-  const shown = showAll ? options : options.slice(0, 5);
+  const earlier: Itinerary[] = plan ? [...plan.earlier].reverse() : [];
+  const minMargin = Math.min(settings.bufferMinutes, settings.minMarginMinutes ?? 3);
   const active = status === 'calm' || status === 'prepare' || status === 'critical';
 
   return (
@@ -179,7 +180,7 @@ export function TransitPanel({
 
         {building && (
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 rounded-[18px] bg-surface-2/70 px-3 py-2.5">
-            <ChoiceChips label="Na místě předem" value={settings.bufferMinutes} options={[0, 5, 10, 15]} suffix=" min" onChange={(bufferMinutes) => updateSettings({ bufferMinutes })} />
+            <ChoiceChips label="Na místě předem" value={settings.bufferMinutes} options={[3, 5, 10, 15]} suffix=" min" onChange={(bufferMinutes) => updateSettings({ bufferMinutes })} />
             <ChoiceChips label="Odchod z domu" value={settings.prepMinutes ?? 3} options={[0, 3, 5, 8]} suffix=" min" onChange={(prepMinutes) => updateSettings({ prepMinutes })} />
           </div>
         )}
@@ -225,7 +226,14 @@ export function TransitPanel({
             <div className="grid gap-4 lg:grid-cols-[1.05fr_1fr]">
               {/* Vybraná cesta krok za krokem */}
               <div>
-                <p className="eyebrow mb-2 text-subtle">{selected.id === plan.lastCall?.id ? 'Poslední možný spoj' : selected.id === plan.recommended?.id ? 'Doporučený spoj' : 'Tvůj spoj'}</p>
+                <p className="eyebrow mb-2 text-subtle">
+                  {selected.id === plan.recommended?.id && plan.bufferMet ? 'Doporučený spoj' : selected.id === plan.lastCall?.id ? 'Poslední možný spoj' : 'Tvůj spoj'}
+                </p>
+                {!plan.bufferMet && (
+                  <p className="mb-2 rounded-[14px] bg-clay/12 px-3 py-2 text-[12.5px] font-semibold text-clay">
+                    S rezervou {settings.bufferMinutes} min už to nestihneš – tohle jsou poslední spoje, které to ještě zvládnou.
+                  </p>
+                )}
                 <ol className="relative space-y-0.5 before:absolute before:bottom-3 before:left-[3.55rem] before:top-3 before:w-px before:bg-line">
                   {routeSteps(selected, eventStart, building.name, platformFor).map((step, i) => {
                     const Icon = STEP_ICON[step.kind];
@@ -280,49 +288,31 @@ export function TransitPanel({
               <div>
                 <p className="eyebrow mb-2 text-subtle">Vyber spoj</p>
                 <ul className="space-y-1.5" role="radiogroup" aria-label="Spoje">
-                  {shown.map((it) => {
-                    const rides = rideLegs(it);
-                    const first = rides[0];
-                    const isSel = it.id === selected.id;
-                    const slack = Math.round((eventStart.getTime() - new Date(it.arriveAt).getTime()) / 60_000);
-                    const leaveIn = Math.max(0, Math.round((new Date(it.leaveAt).getTime() - now.getTime()) / 60_000));
-                    return (
-                      <li key={it.id}>
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={isSel}
-                          onClick={() => selectTrip(event.id, it.id)}
-                          className={cn('flex w-full items-center gap-3 rounded-[18px] px-3 py-2.5 text-left ring-1 ring-inset transition', isSel ? 'bg-accent-soft ring-accent/40' : 'ring-line hover:bg-surface-2')}
-                        >
-                          <span className="w-14 shrink-0">
-                            <span className="block font-display text-[24px] leading-none tabular">{formatTime(new Date(it.leaveAt))}</span>
-                            <span className="text-[11px] font-semibold text-subtle">za {leaveIn} min</span>
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="flex flex-wrap items-center gap-1">
-                              {it.source === 'estimate' ? <span className="rounded-md bg-surface-2 px-1.5 text-[11px] font-bold text-muted">MHD · odhad</span> : rides.map((r, i) => <LineBadge key={i} ride={r} size="sm" />)}
-                              {first && it.source !== 'estimate' && <DelayChip delaySeconds={first.delaySeconds} />}
-                            </span>
-                            <span className="mt-0.5 block truncate text-[12.5px] text-muted">
-                              {first ? `${first.fromStop} ${formatTime(new Date(first.predictedDeparture))}` : 'pěšky'} → v budově {formatTime(new Date(it.arriveAt))}
-                            </span>
-                          </span>
-                          <span className="flex shrink-0 flex-col items-end gap-1">
-                            <span className={cn('text-[12px] font-bold tabular', slack <= 2 ? 'text-red-700 dark:text-red-300' : slack < 8 ? 'text-clay' : 'text-accent')}>{slack} min předem</span>
-                            {it.id === plan.lastCall?.id && <Chip className="bg-red-500/12 text-red-700 dark:text-red-300">poslední</Chip>}
-                            {it.id === plan.recommended?.id && it.id !== plan.lastCall?.id && <Chip className="bg-accent-soft text-accent">doporučený</Chip>}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
+                  {options.map((it) => (
+                    <li key={it.id}>
+                      <ConnectionOption it={it} plan={plan} selected={it.id === selected.id} eventStart={eventStart} now={now} buffer={settings.bufferMinutes} minMargin={minMargin} onSelect={() => selectTrip(event.id, it.id)} />
+                    </li>
+                  ))}
                 </ul>
-                {options.length > 5 && (
-                  <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-2 w-full rounded-full py-1.5 text-[12.5px] font-semibold text-muted hover:bg-surface-2 hover:text-fg">
-                    {showAll ? 'Méně spojů' : `Další spoje (${options.length - 5})`}
-                  </button>
+                {earlier.length > 0 && (
+                  <>
+                    <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-2 w-full rounded-full py-1.5 text-[12.5px] font-semibold text-muted hover:bg-surface-2 hover:text-fg" aria-expanded={showAll}>
+                      {showAll ? 'Skrýt dřívější spoje' : `Dřívější spoje – víc času na místě (${earlier.length})`}
+                    </button>
+                    {showAll && (
+                      <ul className="mt-1.5 space-y-1.5" role="radiogroup" aria-label="Dřívější spoje">
+                        {earlier.map((it) => (
+                          <li key={it.id}>
+                            <ConnectionOption it={it} plan={plan} selected={it.id === selected.id} eventStart={eventStart} now={now} buffer={settings.bufferMinutes} minMargin={minMargin} onSelect={() => selectTrip(event.id, it.id)} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
                 )}
+                <p className="mt-2 text-[11.5px] leading-snug text-subtle">
+                  Doporučený = nejpozdější spoj, se kterým jsi v budově aspoň {settings.bufferMinutes} min předem. Poslední možný = v budově aspoň {minMargin} min předem.
+                </p>
                 {options.length <= 1 && selected.source === 'estimate' && (
                   <p className="mt-2 rounded-[18px] bg-surface-2 p-3 text-[12.5px] text-muted">Bez dat PID je tohle jen odhad podle vzdálenosti. S živými daty tu uvidíš konkrétní spoje na výběr.</p>
                 )}
@@ -393,5 +383,61 @@ export function TransitPanel({
         )}
       </div>
     </section>
+  );
+}
+
+function ConnectionOption({
+  it,
+  plan,
+  selected,
+  eventStart,
+  now,
+  buffer,
+  minMargin,
+  onSelect,
+}: {
+  it: Itinerary;
+  plan: TransitPlan;
+  selected: boolean;
+  eventStart: Date;
+  now: Date;
+  buffer: number;
+  minMargin: number;
+  onSelect: () => void;
+}) {
+  const rides = rideLegs(it);
+  const first = rides[0];
+  const slack = minutesEarly(it, eventStart);
+  const leaveIn = Math.max(0, Math.round((new Date(it.leaveAt).getTime() - now.getTime()) / 60_000));
+  const isRecommended = it.id === plan.recommended?.id && plan.bufferMet;
+  const isLast = it.id === plan.lastCall?.id;
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      className={cn('flex w-full items-center gap-3 rounded-[18px] px-3 py-2.5 text-left ring-1 ring-inset transition', selected ? 'bg-accent-soft ring-accent/40' : 'ring-line hover:bg-surface-2')}
+    >
+      <span className="w-14 shrink-0">
+        <span className="block font-display text-[24px] leading-none tabular">{formatTime(new Date(it.leaveAt))}</span>
+        <span className="text-[11px] font-semibold text-subtle">za {leaveIn} min</span>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-1">
+          {it.source === 'estimate' ? <span className="rounded-md bg-surface-2 px-1.5 text-[11px] font-bold text-muted">MHD · odhad</span> : rides.map((r, i) => <LineBadge key={i} ride={r} size="sm" />)}
+          {first && it.source !== 'estimate' && <DelayChip delaySeconds={first.delaySeconds} />}
+        </span>
+        <span className="mt-0.5 block truncate text-[12.5px] text-muted">
+          {first ? `${first.fromStop} ${formatTime(new Date(first.predictedDeparture))}` : 'pěšky'}
+          {rides.length > 1 ? ` · přestup ${rides.slice(1).map((r) => r.fromStop).join(', ')}` : ''} → v budově {formatTime(new Date(it.arriveAt))}
+        </span>
+      </span>
+      <span className="flex shrink-0 flex-col items-end gap-1">
+        <span className={cn('text-[12px] font-bold tabular', slack < Math.max(1, minMargin) ? 'text-red-700 dark:text-red-300' : slack < buffer ? 'text-clay' : 'text-accent')}>{slack} min předem</span>
+        {isRecommended && <Chip className="bg-accent-soft text-accent">doporučený</Chip>}
+        {isLast && !isRecommended && <Chip className="bg-red-500/12 text-red-700 dark:text-red-300">poslední možný</Chip>}
+      </span>
+    </button>
   );
 }

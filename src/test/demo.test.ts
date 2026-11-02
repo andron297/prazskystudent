@@ -36,10 +36,11 @@ describe('simulace PID', () => {
   it('finds a last call and recommendation from Kolej Hvězda to Hollar', () => {
     const its = planDemoItineraries({ origin: hvezda.coords, originLabel: 'Kolej Hvězda', building: hollar, nowMs: now.getTime(), untilMs: eventStart.getTime() + 30 * 60_000, walkSpeed: 'normal' });
     expect(its.length).toBeGreaterThan(3);
-    const plan = planJourney({ now, eventStart, bufferMinutes: 5, comfortMinutes: 8, itineraries: its });
+    const plan = planJourney({ now, eventStart, bufferMinutes: 5, itineraries: its });
     expect(plan.lastCall).not.toBeNull();
     expect(plan.recommended).not.toBeNull();
-    expect(new Date(plan.lastCall!.arriveAt).getTime()).toBeLessThanOrEqual(eventStart.getTime() - 5 * 60_000);
+    expect(new Date(plan.lastCall!.arriveAt).getTime()).toBeLessThanOrEqual(eventStart.getTime() - 3 * 60_000);
+    expect(new Date(plan.recommended!.arriveAt).getTime()).toBeLessThanOrEqual(eventStart.getTime() - 5 * 60_000);
     expect(['calm', 'prepare', 'critical']).toContain(plan.status);
   });
 
@@ -48,7 +49,7 @@ describe('simulace PID', () => {
       const n = new Date(2026, 10, day, 13, 5);
       const start = new Date(2026, 10, day, 14, 0);
       const its = planDemoItineraries({ origin: kajetanka.coords, originLabel: 'Kajetánka', building: hollar, nowMs: n.getTime(), untilMs: start.getTime() + 30 * 60_000, walkSpeed: 'normal' });
-      const plan = planJourney({ now: n, eventStart: start, bufferMinutes: 5, comfortMinutes: 8, itineraries: its });
+      const plan = planJourney({ now: n, eventStart: start, bufferMinutes: 5, itineraries: its });
       const ride = plan.lastCall?.legs.find((l) => l.kind === 'ride');
       expect(ride && ride.kind === 'ride' ? ride.line : null).toBe('22');
       expect(ride && ride.kind === 'ride' ? ride.delaySeconds : null).not.toBeNull();

@@ -87,12 +87,12 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
       now,
       eventStart: new Date(event.start),
       bufferMinutes: settings.bufferMinutes,
-      comfortMinutes: settings.comfortMinutes,
+      minMarginMinutes: settings.minMarginMinutes,
       itineraries,
       accessibleOnly: settings.accessibleOnly,
       preferAirConditioned: settings.preferAirConditioned,
     });
-  }, [event, result, itineraries, now, settings.bufferMinutes, settings.comfortMinutes, settings.accessibleOnly, settings.preferAirConditioned]);
+  }, [event, result, itineraries, now, settings.bufferMinutes, settings.minMarginMinutes, settings.accessibleOnly, settings.preferAirConditioned]);
 
   const selectedId = useUiStore((s) => (event ? s.selectedTrip[event.id] : undefined));
   const selected = useMemo(() => pickItinerary(plan, selectedId, now), [plan, selectedId, now]);

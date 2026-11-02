@@ -42,6 +42,7 @@ import { navigateTo } from '../../hooks/useAppShell';
 import { testGolemioKey } from '../../services/api';
 import { refreshIcsSource, runMoodleTokenSync, useSyncStore } from '../../services/syncCenter';
 import { importAllSyllabi, useSyllabusSync } from '../../services/syllabusSync';
+import { importSisIcsFile, type SisFileResult } from '../../services/icsFileImport';
 import { pickPersisted, useAppStore } from '../../store/appStore';
 import { appNow, useClockStore } from '../../store/clockStore';
 import { confirmAction, toast, useUiStore } from '../../store/uiStore';
@@ -184,7 +185,7 @@ function MoodleSection() {
           <p className="flex items-center gap-2 text-[14px] font-bold text-accent">
             <Zap className="size-4" aria-hidden /> Doporučeno: kalendář Moodlu – žádný token
           </p>
-          <p className="mt-1 text-[13px] text-muted">RSS klíč nepotřebuješ. Moodle umí sdílet všechny termíny jako odkaz na kalendář – Stihnu z něj průběžně vytáhne úkoly, testy a odevzdávárny.</p>
+          <p className="mt-1 text-[13px] text-muted">Klíč z Moodlu nepotřebuješ. Moodle umí sdílet všechny termíny jako odkaz na kalendář – Stihnu z něj průběžně vytáhne úkoly, testy a odevzdávárny. Odevzdání a známky pak přeneseš záložkou „→ Stihnu“, nebo je stáhne token (níže).</p>
         </div>
         <Steps
           items={[
@@ -196,7 +197,7 @@ function MoodleSection() {
               .
             </>,
             <>
-              Vyber <strong>Všechny události</strong> a období <strong>Nedávné a příští</strong> (nebo 60 dní).
+              U <strong>Exportovat</strong> zvol <strong>Všechny události</strong> a období <strong>Nedávné a příštích 60 dní</strong>.
             </>,
             <>
               Klikni <strong>Získat URL kalendáře</strong>, zkopíruj odkaz a vlož ho sem.
@@ -211,10 +212,14 @@ function MoodleSection() {
             ))}
           </ul>
         )}
-        <Collapsible title="Plné propojení přes token (materiály, PDF, prezentace)" icon={KeyRound} defaultOpen={Boolean(moodle)}>
+        <Collapsible title="Plné propojení přes klíč (odevzdání, známky, materiály)" icon={KeyRound} defaultOpen={Boolean(moodle)}>
           <div className="space-y-3 text-[13px] leading-relaxed text-muted">
             <p>
-              Token stáhne i soubory z kurzů. Najdeš ho v <strong>Předvolby → Klíče zabezpečení</strong> jako <em>Moodle mobile web service</em> – objeví se ale až poté, co se aspoň jednou přihlásíš v oficiální aplikaci Moodle v mobilu. RSS klíč na to nefunguje.
+              S klíčem Stihnu samo odškrtne odevzdané úkoly, zapíše známky a stáhne soubory z kurzů. Nový Moodle klíč v{' '}
+              <a className="font-semibold text-accent hover:underline" href={`${base}/user/managetoken.php`} target="_blank" rel="noreferrer">
+                Bezpečnostních klíčích
+              </a>{' '}
+              neukazuje – ukáže ho <strong>jen jednou, hned po kliknutí na Reset</strong> u „Moodle mobile web service“. Pak ho zkopíruj sem (aplikace Moodle v mobilu tě jen znovu přihlásí).
             </p>
             {moodle && (
               <div className="flex flex-wrap items-center gap-2">
@@ -236,6 +241,60 @@ function MoodleSection() {
 /* ------------------------------------------------------------------ */
 /* SIS                                                                 */
 /* ------------------------------------------------------------------ */
+
+function SisFileUpload() {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [last, setLast] = useState<SisFileResult | null>(null);
+  const upload = async (file: File) => {
+    setBusy(true);
+    try {
+      const result = await importSisIcsFile(file);
+      setLast(result);
+      const n = result.newSubjects;
+      toast.success(`Rozvrh nahrán: ${result.events} akcí${n ? `, ${n} ${n === 1 ? 'nový předmět' : n < 5 ? 'nové předměty' : 'nových předmětů'}` : ''}. Stahuji k nim sylaby…`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Soubor se nepodařilo načíst.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="mt-3">
+      <div
+        className="flex flex-wrap items-center gap-3 rounded-[18px] border-2 border-dashed border-line-strong p-3"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          const file = e.dataTransfer.files?.[0];
+          if (file) void upload(file);
+        }}
+      >
+        <Button variant="primary" icon={Upload} loading={busy} onClick={() => fileRef.current?.click()}>
+          Nahrát rozvrh (.ics)
+        </Button>
+        <span className="text-[12.5px] text-muted">nebo soubor přetáhni sem</span>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".ics,text/calendar"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) void upload(file);
+          }}
+        />
+      </div>
+      {last && (
+        <p className="mt-2 text-[12.5px] text-muted">
+          Načteno {last.events} akcí{last.online ? ` (${last.online} online – bez cesty MHD)` : ''}.
+          {last.unresolved.length > 0 && ` Neznámá místa: ${last.unresolved.slice(0, 3).join(', ')} – přiřadíš je v kartě cesty.`}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function SyllabiBlock() {
   const subjects = useAppStore((s) => s.subjects);
@@ -281,24 +340,28 @@ function SisSection() {
     linkRef.current?.setAttribute('href', sisBookmarklet(appOrigin));
   }, [appOrigin]);
   return (
-    <Card id="sis" className="scroll-mt-24" eyebrow="Rozvrh, sylaby, zkoušky" title={<>SIS <em className="italic text-moss">průběžně</em></>}>
+    <Card id="sis" className="scroll-mt-24" eyebrow="Rozvrh, sylaby, zkoušky" title={<>SIS <em className="italic text-moss">rozvrh a sylaby</em></>}>
       <div className="space-y-4">
         <div>
-          <p className="mb-2 text-[14px] font-bold">Rozvrh – obnovuje se sám</p>
+          <p className="mb-2 text-[14px] font-bold">Rozvrh ze SISu</p>
           <Steps
             items={[
               <>
                 V SISu otevři <strong>Rozvrh NG</strong> → svůj rozvrh.
               </>,
               <>
-                Najdi <strong>Export → iCalendar</strong> a zkopíruj odkaz (je osobní, nikomu ho nedávej).
+                Klikni na <strong>Export → iCalendar</strong> – stáhne se soubor <em>rozvrh.ics</em>.
               </>,
-              <>Vlož ho sem – změny v rozvrhu se propíšou samy, i do Google Kalendáře.</>,
+              <>Nahraj ho sem. Když se rozvrh změní (zápis, výměna semináře), nahraj nový – starý se nahradí.</>,
             ]}
           />
-          <div className="mt-3">
-            <AddSource kind="sis" placeholder="https://is.cuni.cz/…/rozvrh.ics" />
-          </div>
+          <SisFileUpload />
+          <details className="mt-3 text-[13px]">
+            <summary className="cursor-pointer font-semibold text-muted hover:text-fg">Máš místo souboru odkaz na kalendář (iCal)?</summary>
+            <div className="mt-2">
+              <AddSource kind="sis" placeholder="https://is.cuni.cz/…/rozvrh.ics" />
+            </div>
+          </details>
           {sources.length > 0 && (
             <ul className="mt-3 space-y-2">
               {sources.map((s) => (
@@ -307,16 +370,20 @@ function SisSection() {
             </ul>
           )}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[13px]">
-            <span className="text-muted">Obnovovat každých</span>
-            <Select value={refreshHours} onChange={(e) => updateSettings({ icsRefreshHours: Number(e.target.value) })} className="h-9 w-32">
-              {[1, 3, 6, 12, 24].map((h) => (
-                <option key={h} value={h}>
-                  {h} h
-                </option>
-              ))}
-            </Select>
+            {sources.length > 0 && (
+              <>
+                <span className="text-muted">Odkazy obnovovat každých</span>
+                <Select value={refreshHours} onChange={(e) => updateSettings({ icsRefreshHours: Number(e.target.value) })} className="h-9 w-32">
+                  {[1, 3, 6, 12, 24].map((h) => (
+                    <option key={h} value={h}>
+                      {h} h
+                    </option>
+                  ))}
+                </Select>
+              </>
+            )}
             <Button size="sm" variant="ghost" icon={CalendarDays} onClick={() => openConnect('ics')}>
-              Pokročilý import (.ics soubor, Google)
+              Pokročilý import (náhled, přiřazení míst, Google)
             </Button>
           </div>
         </div>
@@ -402,20 +469,20 @@ function TransitSection() {
           </Button>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="Rezerva v učebně">
+          <Field label="Na místě předem" hint="Doporučený spoj">
             <Select value={settings.bufferMinutes} onChange={(e) => updateSettings({ bufferMinutes: Number(e.target.value) })}>
-              {[0, 2, 3, 5, 7, 10, 15].map((m) => (
+              {[3, 5, 7, 10, 15, 20].map((m) => (
                 <option key={m} value={m}>
                   {m} min
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Pohodlná rezerva">
-            <Select value={settings.comfortMinutes} onChange={(e) => updateSettings({ comfortMinutes: Number(e.target.value) })}>
-              {[4, 6, 8, 10, 15, 20].map((m) => (
+          <Field label="Nejpozději v budově" hint="Poslední možné spoje">
+            <Select value={settings.minMarginMinutes ?? 3} onChange={(e) => updateSettings({ minMarginMinutes: Number(e.target.value) })}>
+              {[0, 2, 3, 5].map((m) => (
                 <option key={m} value={m}>
-                  +{m} min
+                  {m} min předem
                 </option>
               ))}
             </Select>

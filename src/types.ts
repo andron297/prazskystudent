@@ -153,6 +153,8 @@ export interface ScheduleEvent {
   google?: GoogleEventRef;
   /** Ze kterého iCal zdroje událost pochází (víc kalendářů najednou). */
   icsSourceId?: string;
+  /** Výuka online – žádná cesta MHD. */
+  online?: boolean;
   createdAt?: ISODateTime;
   updatedAt?: ISODateTime;
   demo?: boolean;
@@ -373,6 +375,8 @@ export interface Settings {
   /** Čas na odchod z domu (obout, zamknout, schody) – přičítá se před cestou na zastávku. */
   prepMinutes: number;
   /** Další rezerva, aby byl spoj „doporučený“ (min). */
+  /** Nejpozději v budově před začátkem (poslední možný spoj), min. */
+  minMarginMinutes?: number;
   comfortMinutes: number;
   walkSpeed: WalkSpeed;
   accessibleOnly: boolean;
@@ -499,6 +503,11 @@ export interface RideLeg {
   vehicleNumber?: string;
   stopCount?: number;
   color?: string;
+  /** Přesná poloha nástupiště, kde se nastupuje / vystupuje (pro mapu a chůzi). */
+  fromCoords?: LatLng;
+  toCoords?: LatLng;
+  /** Nástupiště, kde se vystupuje. */
+  toPlatform?: string;
 }
 
 export type JourneyLeg = WalkLeg | RideLeg;

@@ -179,6 +179,32 @@ export function stopsToGeoJSON(groups: StopGroup[]) {
   };
 }
 
+/** Jednotlivá nástupiště (přesná poloha z dat PID) – na mapě při velkém přiblížení. */
+export function platformsToGeoJSON(groups: StopGroup[]) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: groups.flatMap((g) =>
+      g.platforms
+        .filter((p) => p.serves.some((s) => !s.night))
+        .map((p, i) => {
+          const day = p.serves.filter((s) => !s.night);
+          const mode = day.some((s) => s.mode === 'metro') ? 'metro' : day.some((s) => s.mode === 'train') ? 'train' : day.some((s) => s.mode === 'tram') ? 'tram' : (day[0]?.mode ?? g.mainMode);
+          return {
+            type: 'Feature' as const,
+            id: `${g.name}#${i}`,
+            properties: {
+              name: g.name,
+              code: p.code,
+              color: stopColor({ mainMode: mode, lines: day.map((s) => ({ name: s.line, mode: s.mode, night: false })) }),
+              lines: [...new Set(day.map((s) => s.line))].slice(0, 6).join(' · '),
+            },
+            geometry: { type: 'Point' as const, coordinates: [p.coords.lng, p.coords.lat] },
+          };
+        }),
+    ),
+  };
+}
+
 /** Nástupiště, ze kterého linka jede daným směrem (podle směrů v datech PID). */
 export function platformCode(groups: StopGroup[], stopName: string, line: string, headsign: string): string | undefined {
   const group = findStop(groups, stopName);

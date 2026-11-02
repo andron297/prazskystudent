@@ -48,7 +48,7 @@ describe('realistické časy a výběr spoje', () => {
   it('vybraný spoj se drží, dokud jde stihnout; jinak doporučený', () => {
     const now = new Date(2026, 10, 2, 12, 0);
     const its = [trip('a', 'tram', [13, 10], [13, 31]), trip('b', 'tram', [13, 20], [13, 41]), trip('c', 'tram', [13, 30], [13, 51])].map((it) => applyMargins(it, DEFAULT_MARGINS));
-    const plan = planJourney({ now, eventStart: new Date(2026, 10, 2, 14, 0), bufferMinutes: 5, comfortMinutes: 8, itineraries: its });
+    const plan = planJourney({ now, eventStart: new Date(2026, 10, 2, 14, 0), bufferMinutes: 5, itineraries: its });
     expect(plan.lastCall?.id).toBe('c');
     expect(pickItinerary(plan, null, now)?.id).toBe(plan.recommended?.id);
     expect(pickItinerary(plan, 'a', now)?.id).toBe('a');

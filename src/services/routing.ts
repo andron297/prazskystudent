@@ -12,6 +12,7 @@ import { errorMessage, requestJson } from './http';
 import { nearbyStops } from '../lib/stops';
 import { loadStops } from './stops';
 import type { GolemioClient, GolemioDeparture, TripStopTime } from './golemio';
+import { planGolemioJourneys } from './golemioPlanner';
 
 const MIN = 60_000;
 
@@ -52,6 +53,28 @@ async function destinationStopIds(golemio: GolemioClient, building: Building): P
 export async function planWithGolemio(params: LivePlanParams): Promise<Itinerary[]> {
   const golemio = params.golemio;
   if (!golemio) return [];
+  let groups: Awaited<ReturnType<typeof loadStops>> | null = null;
+  try {
+    groups = await loadStops();
+  } catch {
+    groups = null;
+  }
+  if (groups) {
+    return planGolemioJourneys(golemio, groups, {
+      origin: params.origin,
+      originLabel: params.originLabel,
+      building: params.building,
+      now: params.now,
+      eventStart: params.eventStart,
+      walkSpeed: params.walkSpeed,
+      originStop: params.originStop,
+    });
+  }
+  return planWithGolemioByNames(params, golemio);
+}
+
+/** Záloha bez datasetu zastávek: zastávky podle názvů z definice budovy. */
+async function planWithGolemioByNames(params: LivePlanParams, golemio: GolemioClient): Promise<Itinerary[]> {
   const groups = new Map<string, { name: string; walk: number }>();
   if (params.originStop) {
     groups.set(params.originStop.name, { name: params.originStop.name, walk: walkingMinutes(params.origin, params.originStop.coords, params.walkSpeed) });
@@ -103,11 +126,16 @@ export async function planWithGolemio(params: LivePlanParams): Promise<Itinerary
     const times = cached.stopTimes;
     const originIndex = times.findIndex((t) => t.stopId === deps[0].stopId);
     if (originIndex < 0) continue;
+    // Nejlepší výstup (jízda + chůze), ne první cílová zastávka na trase.
     let destIndex = -1;
+    let bestTotal = Number.POSITIVE_INFINITY;
     for (let k = originIndex + 1; k < times.length; k++) {
-      if (destinations.has(times[k].stopId)) {
+      const walk = destinations.get(times[k].stopId);
+      if (walk === undefined) continue;
+      const total = times[k].arrivalSec - times[originIndex].departureSec + walk * 60;
+      if (total < bestTotal) {
+        bestTotal = total;
         destIndex = k;
-        break;
       }
     }
     if (destIndex < 0) continue;

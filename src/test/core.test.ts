@@ -53,28 +53,45 @@ describe('zpětný výpočet trasy', () => {
     itinerary('d', 26, 32, 58), // pozdě
   ];
 
-  it('picks last call and a comfortable recommendation', () => {
-    const plan = planJourney({ now: base, eventStart, bufferMinutes: 5, comfortMinutes: 8, itineraries: its });
+  it('doporučí nejpozdější spoj s rezervou z nastavení, dřívější schová', () => {
+    const plan = planJourney({ now: base, eventStart, bufferMinutes: 5, itineraries: its });
+    expect(plan.recommended?.id).toBe('c');
     expect(plan.lastCall?.id).toBe('c');
-    expect(plan.recommended?.id).toBe('b');
+    expect(plan.bufferMet).toBe(true);
+    expect(plan.upcoming.map((i) => i.id)).toEqual(['c']);
+    expect(plan.earlier.map((i) => i.id)).toEqual(['b', 'a']);
     expect(plan.status).toBe('prepare');
-    expect(plan.slackMinutes).toBe(0);
+    expect(plan.slackMinutes).toBe(2);
+
+    const roomy = planJourney({ now: base, eventStart, bufferMinutes: 10, itineraries: its });
+    expect(roomy.recommended?.id).toBe('b');
+    expect(roomy.lastCall?.id).toBe('c');
+    expect(roomy.upcoming.map((i) => i.id)).toEqual(['b', 'c']);
+    expect(roomy.earlier.map((i) => i.id)).toEqual(['a']);
+  });
+
+  it('když rezerva už nejde dodržet, zbývá poslední možný spoj', () => {
+    const later = new Date(base.getTime() + 11 * 60_000);
+    const plan = planJourney({ now: later, eventStart, bufferMinutes: 10, itineraries: its });
+    expect(plan.bufferMet).toBe(false);
+    expect(plan.recommended?.id).toBe('c');
+    expect(planJourney({ now: base, eventStart, bufferMinutes: 10, minMarginMinutes: 0, itineraries: [...its, itinerary('e', 27, 33, 54)] }).lastCall?.id).toBe('e');
   });
 
   it('turns red under 10 minutes and missed when nothing fits', () => {
     const later = new Date(base.getTime() + 12 * 60_000);
-    expect(planJourney({ now: later, eventStart, bufferMinutes: 5, comfortMinutes: 8, itineraries: its }).status).toBe('critical');
+    expect(planJourney({ now: later, eventStart, bufferMinutes: 5, itineraries: its }).status).toBe('critical');
     const tooLate = new Date(base.getTime() + 19 * 60_000);
-    const missed = planJourney({ now: tooLate, eventStart, bufferMinutes: 5, comfortMinutes: 8, itineraries: its });
+    const missed = planJourney({ now: tooLate, eventStart, bufferMinutes: 5, itineraries: its });
     expect(missed.status).toBe('missed');
     expect(missed.fastestLate?.id).toBe('d');
     expect(missed.lateByMinutes).toBe(3);
   });
 
   it('respects accessibility and AC preferences', () => {
-    const plan = planJourney({ now: base, eventStart, bufferMinutes: 5, comfortMinutes: 8, itineraries: its, accessibleOnly: true });
+    const plan = planJourney({ now: base, eventStart, bufferMinutes: 5, itineraries: its, accessibleOnly: true });
     expect(plan.lastCall?.id).toBe('b');
-    const ac = planJourney({ now: base, eventStart, bufferMinutes: 5, comfortMinutes: 8, itineraries: its, preferAirConditioned: true });
+    const ac = planJourney({ now: base, eventStart, bufferMinutes: 10, itineraries: its, preferAirConditioned: true });
     expect(ac.recommended?.id).toBe('a');
   });
 

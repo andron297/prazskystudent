@@ -80,6 +80,7 @@ export const DEFAULT_SETTINGS: Settings = {
   bufferMinutes: 5,
   prepMinutes: 3,
   comfortMinutes: 8,
+  minMarginMinutes: 3,
   walkSpeed: 'normal',
   accessibleOnly: false,
   preferAirConditioned: false,
