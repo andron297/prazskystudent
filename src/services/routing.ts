@@ -9,6 +9,8 @@
 import type { Building, Itinerary, JourneyLeg, LatLng, RideLeg, TransitMode, TransitResult, WalkSpeed } from '../types';
 import { haversineMeters, walkingMinutes } from '../lib/geo';
 import { errorMessage, requestJson } from './http';
+import { nearbyStops } from '../lib/stops';
+import { loadStops } from './stops';
 import type { GolemioClient, GolemioDeparture, TripStopTime } from './golemio';
 
 const MIN = 60_000;
@@ -54,7 +56,14 @@ export async function planWithGolemio(params: LivePlanParams): Promise<Itinerary
   if (params.originStop) {
     groups.set(params.originStop.name, { name: params.originStop.name, walk: walkingMinutes(params.origin, params.originStop.coords, params.walkSpeed) });
   } else {
-    const nearby = await golemio.nearbyStops(params.origin, 900);
+    // Zastávky v okolí z vlastního datasetu PID (Golemio `gtfs/stops?latlng` občas vrací HTTP 500);
+    // Golemio hledání je jen záloha, kdyby se dataset nenačetl.
+    let nearby: { name: string; coords: LatLng }[] = [];
+    try {
+      nearby = nearbyStops(await loadStops(), params.origin, { walkSpeed: params.walkSpeed, maxMeters: 900, limit: 6 }).filter((s) => s.lines.some((l) => !l.night));
+    } catch {
+      nearby = await golemio.nearbyStops(params.origin, 900);
+    }
     for (const stop of nearby) {
       const walk = walkingMinutes(params.origin, stop.coords, params.walkSpeed);
       const prev = groups.get(stop.name);
