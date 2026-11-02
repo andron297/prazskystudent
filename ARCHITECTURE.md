@@ -6,13 +6,14 @@ v prohlížeči; server slouží jen jako bezpečná proxy k externím API, kter
 ```mermaid
 flowchart LR
   subgraph Zdroje
-    SIS["SIS – soukromý .ics"]
-    GCAL["Google Kalendář – tajná adresa iCal"]
-    MOODLE["Moodle REST API (wstoken)"]
+    SIS["SIS – iCal rozvrhu, záložka → Stihnu"]
+    MOODLE["Moodle – export kalendáře / REST (wstoken)"]
     TEXT["Text harmonogramu / sylabu"]
     GPS["navigator.geolocation"]
     GOL["PID Golemio API"]
     ROUTES["Google Routes API"]
+    PID["data.pid.cz – zastávky"]
+    METEO["Open-Meteo"]
   end
 
   subgraph Proxy["Vercel Functions /api – CORS, SSRF ochrana, klíče"]
@@ -21,32 +22,48 @@ flowchart LR
     PGOL["/api/golemio"]
     PRT["/api/routes"]
     PAI["/api/ai-parse (Claude)"]
+    PGOO["/api/google – refresh token v HttpOnly cookie"]
   end
 
   subgraph Klient["Prohlížeč (PWA)"]
-    API["services/api.ts – Demo | Live"]
-    ICSP["lib/ics + icsImport"]
-    SYNC["services/moodleSync"]
-    PARSER["lib/scheduleTextParser"]
-    ROUTING["services/routing"]
+    API["services/api.ts – Sandbox | Live"]
+    CENTER["services/syncCenter – plánovač na pozadí"]
+    ENGINE["lib/sync – engine Kalendář/Úkoly, slučování Disku"]
+    ICSP["lib/ics + icsImport + moodleIcs"]
+    SISP["lib/sisImport + services/sisBridge"]
     PLAN["lib/transitPlanner – zpětný výpočet"]
+    MAP["components/map – MapLibre"]
+    WEATHER["lib/weather – rada na oblečení"]
     STORE[("Zustand store → localStorage + IndexedDB")]
-    UI["Dashboard · Předměty · Harmonogram · Nastavení"]
-    EXPORT["lib/calendarExport + googleCalendar"]
+    UI["Dnes · Doprava · Předměty · Kalendář · Propojení"]
   end
 
-  SIS --> PICS
-  GCAL --> PICS
-  PICS --> API --> ICSP --> STORE
-  MOODLE --> PMOO --> API --> SYNC --> STORE
-  TEXT --> PARSER --> STORE
-  TEXT -. volitelně .-> PAI --> PARSER
-  GPS --> ROUTING
-  GOL --> PGOL --> ROUTING
-  ROUTES --> PRT --> ROUTING
-  STORE --> ROUTING --> PLAN --> UI
+  subgraph Google
+    GCAL["Google Kalendář"]
+    GTASKS["Google Úkoly"]
+    GDRIVE["Google Disk (appDataFolder + složka)"]
+  end
+
+  SIS --> PICS --> API --> ICSP --> STORE
+  MOODLE --> PICS
+  MOODLE --> PMOO --> API
+  SIS -. postMessage .-> SISP --> STORE
+  TEXT --> STORE
+  TEXT -. volitelně .-> PAI
+  GPS --> PLAN
+  GOL --> PGOL --> PLAN
+  ROUTES --> PRT --> PLAN
+  PID --> MAP
+  METEO --> WEATHER --> UI
+  STORE --> PLAN --> UI
+  CENTER --> ICSP
+  CENTER --> ENGINE
+  ENGINE <--> GCAL
+  ENGINE <--> GTASKS
+  ENGINE <--> GDRIVE
+  ENGINE --> STORE
+  PGOO -. access token .-> ENGINE
   STORE --> UI
-  UI --> EXPORT --> GOOGLE["Google Kalendář / .ics s VALARM"]
 ```
 
 ## 1. SIS a Google Kalendář → rozvrh a budovy
@@ -114,7 +131,9 @@ do toho, zda spoj ještě stihneš.
 
 ## 5. Stav, perzistence a backend
 
-- `store/appStore.ts` (Zustand + `persist`) – předměty, rozvrh, povinnosti s podúkoly, materiály, milníky, nastavení.
+- `store/appStore.ts` (Zustand + `persist`, verze 2 s migrací z v1) – předměty, rozvrh, povinnosti s podúkoly, vlastní úkoly,
+  materiály, milníky, nastavení, stav synchronizace s Googlem (zvlášť pro Sandbox a Live) a **tombstones** výslovně smazaných položek.
+  Každá změna nastaví `updatedAt` – z toho žije slučování mezi zařízeními i řešení konfliktů.
   Ukládá se do `localStorage` (se záložní pamětí pro anonymní okna); nahrané soubory do IndexedDB (`lib/blobStore.ts`).
 - `lib/persistence.ts` – volitelná write-through synchronizace na vlastní backend (`VITE_SYNC_URL`, GET/PUT `/state`).
 - `services/api.ts` – jediná fasáda pro data zvenčí; `createApi(settings)` vrátí Demo nebo Live implementaci.
@@ -128,6 +147,8 @@ do toho, zda spoj ještě stihneš.
 - `services/demo/seed.ts` – předměty FSV UK, rozvrh (Hollar, Jinonice, Opletalova), rozpracované seminárky,
   materiály z Moodlu a harmonogram roku. Demo položky se každý den posouvají na dnešek.
 - `store/clockStore.ts` – simulované hodiny startující ve 13:05, aby byl odpočet k semináři ve 14:00 vidět kdykoli.
+- `services/google/fakeBackend.ts` – simulovaný Google (kalendáře, úkoly, Disk) se stejným rozhraním jako REST klient;
+  smazané položky zůstávají se stavem `cancelled`/`deleted` jako v Google API. Slouží Sandboxu i testům enginu.
 
 ## 7. Export do kalendáře
 
@@ -140,3 +161,56 @@ do toho, zda spoj ještě stihneš.
 Manifest s ikonami a zkratkami, service worker (`public/sw.js`): síť první pro navigaci s offline zálohou,
 cache první pro hashované assety; build generuje `precache-manifest.json`, takže po prvním načtení funguje offline
 i každá líně načítaná sekce. `/api/*` se nikdy necachuje.
+
+## 9. Synchronizace s Googlem
+
+`lib/sync/engine.ts` – `syncCalendar()` a `syncTasks()` dostanou snímek dat, nastavení a backend a vrátí **lokální operace**
+(`LocalOp`) a nové vazby; store je pak provede (`lib/sync/apply.ts`). Engine tak nesahá do stavu a je testovatelný proti simulaci.
+
+1. **Kandidáti**: výuka (v okně N týdnů), zkoušky, termíny povinností, milníky, vlastní události; u Úkolů vlastní úkoly,
+   povinnosti s termínem a volitelně podúkoly (jako podřízené úkoly).
+2. **Vazby** (`SyncLink`): `služba|klíč` → vzdálené ID, kontejner, původ (`app` / `google`) a otisky obou stran
+   (`hashPayload` nad normalizovaným tvarem). Změna = jiný otisk než při poslední synchronizaci.
+3. **Rozhodnutí**: změna jen na jedné straně se přenese; změna na obou = konflikt podle politiky. Výuka upravená v Googlu
+   se nepřepisuje, dokud se nezmění v aplikaci. Smazání v Googlu: osobní položky se smažou i lokálně, výuka se jen vyřadí
+   (`excluded`). Lokální smazání se promítne jen s tombstone. Zastaralé kopie importu se uklidí s pojistkou proti hromadnému mazání.
+4. **Párování bez duplikátů**: události nesou `extendedProperties.private.stihnuKey`, úkoly patičku `— Stihnu · req:…`.
+5. **Zrcadla**: vybrané kalendáře (výchozí hlavní) se zobrazí jen ke čtení, vybrané seznamy úkolů (výchozí „Moje úkoly“) obousměrně.
+
+`services/google/client.ts` je REST klient (Calendar v3, Tasks v1, Drive v3) s opakováním při limitech a obnovou tokenu;
+`services/google/auth.ts` řeší přihlášení přes Google Identity Services – s nastaveným `GOOGLE_CLIENT_SECRET` přes autorizační
+kód a `/api/google` (refresh token zašifrovaný v HttpOnly cookie), jinak klientským tokenem.
+`services/syncCenter.ts` spouští synchronizaci po změnách (do 20 s), v intervalu, po návratu do okna a po obnovení sítě.
+
+## 10. Data mezi zařízeními (Google Disk)
+
+`lib/sync/driveState.ts` – snímek dat (bez ukázkových položek a zrcadel) v `appDataFolder` (`stihnu-state.json`).
+Slučuje se po položkách podle `updatedAt`, tombstones mají přednost před staršími verzemi, sdílené nastavení podle
+`settingsUpdatedAt`, vazby na Google se sjednotí (aby druhé zařízení nevytvářelo duplikáty). Volitelně se poznámky nahrají
+jako Google dokumenty (`lib/markdownHtml.ts` → HTML → konverze) a soubory do složek podle předmětů.
+
+## 11. Moodle přes export kalendáře
+
+`lib/moodleIcs.ts` – iCal z `calendar/export_execute.php` (žádný token): rozpozná termíny odevzdání a uzavření testů
+v češtině i angličtině, otevírání a „hodnocení“ přeskočí, kurz z `CATEGORIES` spáruje s předmětem (kód nebo název),
+povinnosti mají stabilní `externalId` (`moodle-ics:UID`) a opakovaný import zachová odškrtnutí. Duplicity s plným
+propojením přes token se hledají podle předmětu, názvu a termínu.
+
+## 12. SIS – záložka a import
+
+`lib/sisImport.ts` – rozpozná stránku předmětu (sylabus: garant, kredity, zakončení, anotace, podmínky, sylabus, literatura)
+a termíny zkoušek (datum, čas, místnost, zkoušející, přihlášení). `services/sisBridge.ts` přijímá `postMessage` jen z
+`https://*.cuni.cz` a odpovídá potvrzením; záložku generuje `sisBookmarklet()`. SIS se nikdy nestahuje ze serveru.
+
+## 13. Počasí
+
+`lib/weather.ts` – převod Open-Meteo (`timeformat=unixtime`), simulace pro offline režim a `weatherAdvice()`:
+okna cest (tam = před nejbližší výukou nebo od plánovaného odchodu, zpět = po poslední výuce), úroveň pohodlí podle pocitové
+teploty a citlivosti na zimu, deštník (nebo kapuce při silném větru), boty při sněhu, brýle při UV, vrstva navíc při ochlazení.
+
+## 14. Mapa zastávek
+
+`scripts/build-stops.mjs` zkomprimuje otevřená data PID na `public/data/stops-praha.json` (skupiny, nástupiště, linky a směry).
+`lib/stops.ts` – dekódování, hledání bez diakritiky a nejbližší zastávky. Mapa (`components/map`, MapLibre GL + OpenFreeMap) se načítá
+líně, podklad se přebarví do palety aplikace. Odjezdy: Golemio (`/v2/pid/departureboards`), v Sandboxu simulace podle linek
+a směrů zastávky. Zvolená zastávka (`originStop`) omezí plánování na odjezdy z ní (demo síť, Golemio i Google Routes).

@@ -1,61 +1,58 @@
-# Stihnu – rozvrh, deadliny a poslední spoj MHD v jedné aplikaci
+# Stihnu – studium, MHD a Google v jedné aplikaci
 
-PWA pro vysokoškoláky v Praze (primárně ekosystém Univerzity Karlovy – SIS, Moodle, Google Kalendář a PID).
-Filozofie **Zero‑Friction & Action‑First**: žádné ruční přepisování termínů a místo „za 55 minut máš seminář“
-rovnou **odpočet do odchodu na poslední spoj MHD**, kterým to z aktuální polohy ještě stihneš – včetně živého
-zpoždění, klimatizace a nízkopodlažnosti z PID Golemio.
+PWA pro vysokoškoláky v Praze (primárně Univerzita Karlova – SIS, Moodle, PID). Všechno, co student potřebuje,
+na jednom klidném místě: **rozvrh ze SISu, úkoly z Moodlu, vlastní úkoly a události, Google Kalendář, Úkoly a Disk
+(oboustranně), mapa zastávek MHD s živými odjezdy, počasí na cestu** a velký odpočet do odchodu na poslední spoj.
 
-![Dashboard – Dnes & doprava](docs/screenshots/dashboard.png)
+![Dnes](docs/screenshots/dashboard.png)
 
-| Hero „Poslední záchrana“ | Mobil | Tmavý režim |
+| Mapa zastávek | Mobil | Tmavý režim |
 | --- | --- | --- |
-| ![Hero](docs/screenshots/hero.png) | ![Mobil](docs/screenshots/mobile.png) | ![Tmavý režim](docs/screenshots/dashboard-dark.png) |
+| ![Doprava](docs/screenshots/map.png) | ![Mobil](docs/screenshots/mobile.png) | ![Tmavý režim](docs/screenshots/dashboard-dark.png) |
 
-> Aplikace je hned po spuštění plně interaktivní v **Demo / Sandbox režimu** (realistická data FSV UK, simulace PID,
-> simulovaný Moodle i SIS). Do **Live režimu** se přepíná jedním kliknutím.
+> Po spuštění je aplikace v **Sandboxu**: realistická ukázková data FSV UK, simulovaná doprava, Moodle **i Google**.
+> Do **Live** režimu se přepíná jedním kliknutím.
 
 ---
 
 ## Co umí
 
-### 1. Dnes & doprava – chytrý dopravní navigátor
-- **Zpětný výpočet** od začátku výuky: `začátek − rezerva − chůze ze zastávky − jízda MHD (se zpožděním) − chůze z GPS na zastávku`.
-  Rozpis výpočtu je vidět pod tlačítkem *Jak to počítám*.
-- **Dva spoje**: *Doporučený* (s pohodlnou rezervou) a *Poslední možný* (Last Call) s velkým odpočtem:
-  „Seminář na Hollaru začíná za 55 min. Poslední tramvaj 22, kterou to stihneš, ti jede za 24 min ze zastávky Břevnovský klášter.“
-- U spoje: **zpoždění** (`+2 min` oranžově, `0 min` zeleně, „dle JŘ“ bez online polohy), **❄ klimatizace**, **♿ nízkopodlažnost**, typ vozu.
-- **Barevná sémantika**: zelená > 20 min do odchodu, oranžová 10–20 min, červená < 10 min (pulzuje); stav „MHD už to nestihneš“ s nejrychlejším
-  náhradním příjezdem a předvyplněnou omluvou; „Jsi na místě“, když už stojíš u budovy.
-- Poloha přes `navigator.geolocation` (Live), nebo simulovaná / uložená místa. Volby: jen nízkopodlažní spoje, preferovat klimatizaci, rychlost chůze, rezervy.
-- Dnešní rozvrh (kliknutím zvolíš cílovou výuku), nejbližší deadliny z Moodlu/SISu, progress předmětů a milníky harmonogramu.
+### Dnes
+- **Fotka podle denní doby** a pozdrav; skleněná karta „**Vyraz nejpozději za 19 min**“ s linkou, zastávkou, zpožděním a časem příchodu.
+- **Rada na cestu**: co si obléct (bunda, čepice, deštník…) podle pocitové teploty a toho, jestli bude pršet **cestou tam
+  a cestou zpět** – okna cest se počítají z rozvrhu a z plánu MHD. Graf teploty a srážek na 12 hodin. Data z [Open-Meteo](https://open-meteo.com).
+- **Časová osa dne**: výuka, vlastní události, události z Google Kalendáře, úkoly a termíny s ukazatelem „teď“.
+- **Úkoly a termíny** s rychlým zadáním přirozenou češtinou:
+  `zítra 18:00 trénink @Strahov`, `esej do pátku #JSB065 !`, `pá 10–12 konzultace na Hollaru`, `koupit lítačku za 3 dny`.
+- Pás s čísly (dnes na tobě, termíny do 3 dnů, hodiny ve škole, hotový semestr), předměty s prstenci, harmonogram.
 
-### 2. Propojit studium – tři cesty bez nastavování
-- **A · Moodle REST API** – 3krokový návod (Předvolby → Klíče zabezpečení → klíč *Moodle mobile web service*), adresa Moodlu + `wstoken`.
-  Volá `core_webservice_get_site_info`, `core_enrol_get_users_courses`, `mod_assign_get_assignments`,
-  `core_calendar_get_action_events_by_timesort` a `core_course_get_contents`. Prezentace a PDF z týdenních sekcí se otevírají
-  jedním klikem (k `fileurl` se připojí `?token=WSTOKEN`). Opakovaná synchronizace nic nezdvojí a zachová odškrtané podúkoly.
-- **B · SIS / Google Kalendář (.ics)** – soukromý iCal odkaz, tajná adresa Google Kalendáře, nebo nahraný soubor.
-  Parser RFC 5545 (RRULE, EXDATE, přesunuté hodiny, časová pásma) → předměty, časy a **místnosti → budovy** (`H212` → Hollar, `J3014` → Jinonice).
-  Neznámé místnosti jde jedním výběrem přiřadit budově.
-- **C · Chytrý parser harmonogramu a sylabů** – vložíš text z webu fakulty nebo ze SISu, okamžitě (offline) se rozpoznají data
-  (`5. 10. 2026`, `5.–9. 10.`, `5. října`, `do 18. 10.`, časy, váhy v %), kategorie (výuka, zkouškové, zápis, volno, mezní termín, test).
-  Položky zkontroluješ checkboxy a uložíš jako milníky nebo povinnosti předmětu – a rovnou exportuješ do kalendáře.
-  Volitelně **AI zpřesnění** přes Claude (Anthropic API) se strukturovaným výstupem.
+### Doprava
+- **Mapa všech 1 483 pražských zastávek** (MapLibre + OpenFreeMap, přebarvená do palety aplikace), hledání bez diakritiky,
+  filtry metro/tram/bus/vlak, zastávky v okolí podle pěší vzdálenosti.
+- Po kliknutí na zastávku **odjezdová tabule** (Golemio živě, v Sandboxu simulace) se zpožděním, klimatizací a bezbariérovostí.
+- **„Jet odsud“** – vybraná zastávka se použije při plánování cesty (jinak se hledá automaticky nejrychlejší spoj z okolí).
+- Zpětný výpočet trasy: `začátek − rezerva − chůze ze zastávky − jízda (se zpožděním) − chůze na zastávku`, doporučený a poslední možný spoj,
+  plán B při zpoždění.
 
-### 3. Předměty & materiály
-- Karty předmětů s progress barem („65 % splněno do zápočtu“), Subject Hub s povinnostmi, vahami a **checklisty podúkolů** –
-  odškrtnutí okamžitě přepočítá progress povinnosti i předmětu (vážený průměr).
-- Materiály: soubory z Moodlu seskupené podle týdnů, vlastní soubory (IndexedDB), Markdown poznámky, odkazy na Google Docs / Drive;
-  materiál jde připojit ke konkrétní povinnosti.
+### Předměty a kalendář
+- Předměty s váženým progressem, povinnosti s checklisty, materiály (Moodle, vlastní soubory, poznámky), **sylabus ze SISu**.
+- Kalendář: časová osa akademického roku, agenda (termíny, úkoly, harmonogram) a týden včetně vlastních událostí.
 
-### 4. Harmonogram & kalendář
-- Časová osa akademického roku (výuka, zkouškové, zápis, volno) s body deadlinů v barvě předmětu, agenda po měsících a týdenní rozvrh.
-- Každý termín má tlačítko **Do kalendáře**: Google Calendar API s připomínkami (OAuth), přímý odkaz do Google Kalendáře, nebo `.ics`
-  s `VALARM` připomínkami (Google, Apple, Outlook). Hromadný export všech budoucích termínů.
+### Propojení
+| Služba | Jak | Co přinese |
+| --- | --- | --- |
+| **Google Kalendář** | přihlášení Google | rozvrh, zkoušky, harmonogram a vlastní události v kalendáři „Stihnu · studium“ (nebo v hlavním); události z hlavního kalendáře se zobrazí v aplikaci |
+| **Google Úkoly** | přihlášení Google | vlastní úkoly a studijní termíny v seznamu „Stihnu“; úkoly z „Moje úkoly“ se stáhnou – odškrtnutí platí oběma směry |
+| **Google Disk** | přihlášení Google | data mezi zařízeními (skrytá složka aplikace), volitelně poznámky jako Google dokumenty a soubory podle předmětů |
+| **Moodle** | odkaz z *Kalendář → Exportovat kalendář* | úkoly, testy a odevzdávárny – **bez tokenu**, obnovuje se samo |
+| **Moodle (plné)** | token *Moodle mobile web service* | navíc materiály, PDF a prezentace z kurzů |
+| **SIS – rozvrh** | odkaz z *Rozvrh NG → Export → iCalendar* | předměty, časy, místnosti → budovy; obnovuje se samo |
+| **SIS – sylaby a zkoušky** | záložka „→ Stihnu“ nebo vložený text | sylabus, podmínky, literatura; termíny zkoušek do kalendáře |
+| **PID Golemio** | API klíč | živé odjezdy, zpoždění, klimatizace |
 
-### 5. Integrace & nastavení
-Režim Demo/Live, API klíče (Golemio, Google Maps Routes, Google OAuth Client ID, Anthropic), doprava a poloha, budovy fakulty
-s cílovými zastávkami a pěšími časy, připomínky, záloha/obnova JSON, motiv (systém / světlý / tmavý).
+Pokročilé nastavení synchronizace: cílový kalendář/seznam, co zapisovat, směr (obousměrně / jen zapisovat / jen číst),
+rozsah, připomínky, barvy předmětů, další zrcadlené kalendáře a seznamy, interval, řešení konfliktů (novější / Stihnu / Google),
+promítání smazání a historie běhů.
 
 ---
 
@@ -71,8 +68,7 @@ npm install
 npm run dev
 ```
 
-Aplikace běží na http://localhost:5173. Dev server obsluhuje i serverové funkce `/api/*` (stejný kód jako na Vercelu),
-takže Live režim funguje i lokálně.
+Aplikace běží na http://localhost:5173 a obsluhuje i serverové funkce `/api/*` (stejný kód jako na Vercelu).
 
 ```bash
 npm test
@@ -82,91 +78,108 @@ npm test
 npm run build
 ```
 
-`build` spustí typovou kontrolu (frontend i server) a vytvoří statický web v `dist/`.
+Dataset zastávek se obnovuje z otevřených dat PID:
+
+```bash
+npm run stops
+```
 
 ## Nasazení na Vercel
 
-1. Nahraj repozitář na GitHub (vlastní, samostatný repozitář).
-2. Ve Vercelu: **Add New… → Project → Import Git Repository** a vyber repozitář. Framework se pozná sám (Vite),
-   `vercel.json` nastavuje build, hlavičky i funkce v `api/`.
-3. Volitelně v **Settings → Environment Variables** nastav serverové klíče (pak je studenti nemusí zadávat):
+1. Repozitář na GitHubu → ve Vercelu **Add New → Project → Import**. `vercel.json` nastavuje build, hlavičky i funkce v `api/`.
+2. Volitelné proměnné prostředí (**Settings → Environment Variables**):
 
    | Proměnná | K čemu |
    | --- | --- |
-   | `GOLEMIO_API_KEY` | PID Golemio – odjezdy, zpoždění, klimatizace ([api.golemio.cz](https://api.golemio.cz/api-keys)) |
-   | `GOOGLE_MAPS_API_KEY` | Google Routes API – trasy A → B s přestupy |
+   | `VITE_GOOGLE_CLIENT_ID` | OAuth Client ID pro Google (Kalendář, Úkoly, Disk) – pak ho není potřeba vkládat v aplikaci |
+   | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` | trvalé přihlášení: server drží refresh token v šifrované HttpOnly cookie a synchronizace běží i na pozadí |
+   | `GOOGLE_TOKEN_SECRET` | volitelný vlastní klíč pro šifrování cookie (jinak se odvodí z client secret) |
+   | `GOLEMIO_API_KEY` | PID Golemio – odjezdy, zpoždění ([api.golemio.cz](https://api.golemio.cz/api-keys)) |
+   | `GOOGLE_MAPS_API_KEY` | Google Routes API – trasy s přestupy |
    | `ANTHROPIC_API_KEY` | AI zpřesnění parseru harmonogramu a sylabů |
-   | `PROXY_ALLOWED_HOSTS` | Allowlist domén pro Moodle/iCal proxy, např. `*.cuni.cz,calendar.google.com` |
-   | `VITE_SYNC_URL`, `VITE_SYNC_TOKEN` | Volitelná synchronizace stavu na vlastní backend (viz níže) |
+   | `PROXY_ALLOWED_HOSTS` | allowlist domén pro Moodle/iCal proxy, např. `*.cuni.cz,calendar.google.com` |
 
-4. Deploy. PWA jde nainstalovat z prohlížeče (Přidat na plochu) a funguje i offline.
+3. Deploy. PWA jde nainstalovat (Přidat na plochu) a funguje offline.
 
-## Demo vs. Live
+## Propojení s Googlem (jednorázově, ~5 minut)
 
-| | Demo / Sandbox | Live |
+1. [Google Cloud Console](https://console.cloud.google.com/projectcreate) → založ projekt.
+2. **APIs & Services → Library**: zapni *Google Calendar API*, *Google Tasks API* a *Google Drive API*.
+3. **OAuth consent screen**: typ *External*, stav *Testing*, do *Test users* přidej svůj Gmail.
+4. **Credentials → Create credentials → OAuth client ID → Web application**:
+   - *Authorized JavaScript origins*: `https://prazskystudent.vercel.app` a `http://localhost:5173`.
+   - Pro trvalé přihlášení (volitelné) ulož i *Client secret* do Vercelu jako `GOOGLE_CLIENT_SECRET` a Client ID jako `GOOGLE_CLIENT_ID`.
+5. Client ID vlož v aplikaci (**Propojení → Google**), nebo ho nastav jako `VITE_GOOGLE_CLIENT_ID` a znovu nasaď.
+6. V aplikaci přepni na **Live** a klikni **Propojit s Googlem**.
+
+Oprávnění: `calendar`, `tasks`, `drive.file` (jen soubory vytvořené aplikací) a `drive.appdata` (skrytá složka aplikace).
+Žádá se jen o zapnuté služby. Přístup jde kdykoli odebrat v [účtu Google](https://myaccount.google.com/connections).
+
+### Jak synchronizace funguje
+- Každá propojená položka má vazbu s otiskem lokální i vzdálené podoby; změna se pozná porovnáním otisků. Když se změní obě strany,
+  rozhodne nastavená politika (výchozí: novější změna).
+- Položky ze Stihnu nesou značku (`extendedProperties` u událostí, patička poznámky u úkolů), takže ani na novém zařízení nevznikají duplikáty.
+- Smazání se promítá jen při výslovném smazání (tombstone). Když se změní rozvrh, zastaralé kopie se uklidí – a pokud by šlo o hromadné
+  mazání, aplikace se nejdřív zeptá. Výuka smazaná v Googlu se v aplikaci nesmaže, jen se přestane zapisovat.
+- Disk: data se slučují po položkách podle `updatedAt` a tombstones, takže se nic neztratí ani při práci na dvou zařízeních.
+- Sandbox používá simulovaný Google uložený v prohlížeči (s tlačítkem „Simulovat změnu v Googlu“) – do skutečného účtu se nic nezapíše.
+
+## Moodle bez tokenu
+Klíč *Moodle mobile web service* se v **Předvolby → Klíče zabezpečení** objeví až po prvním přihlášení v oficiální aplikaci Moodle;
+RSS klíč k tomu nefunguje. Proto je doporučená cesta **export kalendáře**:
+Moodle → **Kalendář → Exportovat kalendář** → *Všechny události*, *Nedávné a příští* → **Získat URL kalendáře** → vložit do Stihnu.
+Odkaz (`…/calendar/export_execute.php?userid=…&authtoken=…`) se stahuje přes serverovou iCal proxy a obnovuje se v nastaveném intervalu.
+
+## SIS
+- **Rozvrh**: odkaz na export iCalendar z Rozvrhu NG se obnovuje sám (výchozí každých 6 h) a změny se propíšou i do Google Kalendáře.
+- **Sylaby a termíny zkoušek**: v *Propojení → SIS* přetáhni tlačítko **→ Stihnu** do lišty záložek. Na stránce předmětu nebo termínů
+  zkoušek v SISu na záložku klikni – otevře se Stihnu a stránku přečte (přihlášení zůstává v SISu, data se předávají jen mezi tvými okny,
+  aplikace přijímá zprávy jen z domén `*.cuni.cz`). Alternativa: zkopírovat text stránky do *Import ze SISu*.
+- Aplikace sama SIS nestahuje a neobchází jeho přihlášení ani ochrany.
+
+## Sandbox vs. Live
+
+| | Sandbox | Live |
 | --- | --- | --- |
-| Čas | simulovaný, start ve 13:05 (lze posouvat v hlavičce) | reálný |
-| Poloha | simulovaná (Kolej Kajetánka, Kolej Hvězda, …) | GPS, záložní místo |
-| Doprava | simulace PID: tramvaje 22 a 2, metro A/B/C, zpoždění, klimatizace, přestupy | Golemio + volitelně Google Routes |
-| Moodle | simulované odpovědi ve formátu skutečného API | `/api/moodle` → Moodle REST |
-| SIS iCal | ukázkový export rozvrhu (RRULE) | `/api/ics` → tvůj odkaz |
+| Čas | simulovaný, start ve 13:05 (posouvání v hlavičce) | reálný |
+| Poloha | Kolej Kajetánka a další místa | GPS, záložní místo |
+| Doprava | simulace PID (tramvaje 22 a 2, metro A/B/C + obecné odjezdy pro všechny zastávky) | Golemio + volitelně Google Routes |
+| Google | simulovaný účet se svátky, brigádou a úkoly | tvůj účet |
+| Moodle, SIS | ukázkové exporty ve formátu skutečných služeb | serverové proxy |
+| Počasí | Open-Meteo (simulace bez sítě) | Open-Meteo |
 
-Ukázková data se každý den automaticky posunou na dnešek (dnešek má vždy seminář na Hollaru ve 14:00).
-V Nastavení jde demo obnovit nebo smazat.
-
-## Klíče a přístupy
-
-- **Golemio**: registrace zdarma na [api.golemio.cz](https://api.golemio.cz/api-keys). Používají se endpointy
-  `/v2/pid/departureboards`, `/v2/gtfs/stops`, `/v2/gtfs/trips/{id}` a `/v2/vehiclepositions/{tripId}`. Klíč lze v Nastavení otestovat.
-- **Moodle**: v Moodlu Předvolby → Klíče zabezpečení → klíč služby *Moodle mobile web service* (na UK typicky `https://dl1.cuni.cz`).
-- **Google Routes API** (volitelné): klíč s povoleným Routes API. Bez něj se hledají přímé spoje z Golemia (bez přestupů).
-- **Google Calendar API** (volitelné): OAuth Client ID typu *Webová aplikace* s povoleným originem nasazené aplikace, scope `calendar.events`.
-- **Anthropic** (volitelné): klíč pro AI parser. Lokální parser funguje bez něj.
-
-Klíče zadané v aplikaci zůstávají jen v prohlížeči a posílají se výhradně na vlastní proxy této aplikace.
-
-## Bezpečnost
-
-- Proxy `/api/*` řeší CORS (Moodle ani SIS ho neposílají) a chrání proti SSRF: jen `https`, žádné privátní/loopback IP
-  (kontrola DNS i u přesměrování), limit velikosti odpovědi, časové limity, volitelný allowlist domén.
-- Moodle proxy povoluje jen čtecí funkce, Golemio proxy jen potřebné endpointy.
-- Odpovědi proxy nemají CORS hlavičky, takže je nemůže v prohlížeči zneužít cizí web.
+## Bezpečnost a soukromí
+- Data jsou v zařízení (localStorage, soubory v IndexedDB); s Googlem jen to, co zapneš. Access token Google se drží jen v paměti.
+- Serverové přihlášení: refresh token je zašifrovaný AES-256-GCM v cookie `HttpOnly; SameSite=Strict`, endpoint vyžaduje vlastní hlavičku.
+- Proxy `/api/*` chrání proti SSRF (jen `https`, kontrola DNS i u přesměrování, limity velikosti a času), Moodle proxy povoluje jen čtecí funkce.
 - Záloha (export JSON) neobsahuje API klíče ani Moodle token.
-
-## Napojení na backend
-
-Stav je v `localStorage` (soubory v IndexedDB), takže aplikace funguje bez účtu. Pro synchronizaci mezi zařízeními stačí
-backend s jednoduchým REST kontraktem a proměnná `VITE_SYNC_URL`:
-
-- `GET {VITE_SYNC_URL}/state` → `{ "updatedAt": "ISO", "state": { subjects, events, requirements, materials, milestones, meta } }` (nebo 404)
-- `PUT {VITE_SYNC_URL}/state` ← stejný tvar
-
-Po startu se stáhne novější stav, každá změna se s debounce odešle (`src/lib/persistence.ts`). Volitelně `VITE_SYNC_TOKEN`
-jako Bearer token. Doménový model je v `src/types.ts`.
 
 ## Struktura projektu
 
 ```
 api/                 Vercel Functions (tenké obálky nad server/)
-server/              proxy: golemio, moodle, ics, routes (Google), aiParse (Claude), health, SSRF ochrana
+server/              proxy: golemio, moodle, ics, routes, aiParse, google (OAuth), health; SSRF ochrana
+scripts/             build-stops (dataset PID), generate-icons
 src/
   types.ts           doménový model
-  lib/               čistá logika: ics, icsImport, scheduleTextParser, transitPlanner, calendarExport, googleCalendar, …
-  services/          api.ts (fasáda Demo/Live), golemio, moodle, moodleSync, routing, aiParser, demo/ (síť PID, simulace, seed)
-  store/             Zustand: appStore (persistováno), clockStore (simulovaný čas), uiStore
-  hooks/             useNow, useGeolocation, useOrigin, useTransitPlan, …
-  components/        dashboard, transit (hero), subjects, calendar, integrations, layout, ui
-  test/              Vitest – ICS, parser, výpočet trasy, simulace, Moodle sync
-public/              manifest, service worker, ikony
-docs/                screenshoty
+  lib/               čistá logika: ics, icsImport, moodleIcs, sisImport, quickAdd, weather, stops, transitPlanner, …
+  lib/sync/          synchronizační engine (Kalendář, Úkoly), Disk (slučování), mapování, klíče
+  services/          api.ts (Sandbox/Live), google/ (auth, REST klient, simulace), syncCenter, weather, stops, sisBridge, demo/
+  store/             Zustand: appStore (persistováno, migrace v1 → v2), clockStore, uiStore
+  components/        dashboard, transit, map, weather, subjects, calendar, integrations, common, layout, ui
+  test/              Vitest – sync engine, Disk, počasí, Moodle iCal, SIS, zastávky, rychlé zadání, ICS, parser, MHD
+public/              manifest, service worker, ikony, fotky, data/stops-praha.json
 ```
 
-Podrobný popis datového toku je v [ARCHITECTURE.md](ARCHITECTURE.md).
+Podrobně v [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Zdroje dat a poděkování
+Zastávky: [PID – data.pid.cz](https://data.pid.cz) · mapové podklady: [OpenFreeMap](https://openfreemap.org), © přispěvatelé
+[OpenStreetMap](https://www.openstreetmap.org/copyright) · počasí: [Open-Meteo](https://open-meteo.com) (CC BY 4.0) ·
+fotografie: [Unsplash](https://unsplash.com) · písma: Instrument Serif, Manrope (SIL OFL).
 
 ## Známá omezení
-
-- Live napojení bylo ověřeno proti skutečným službám (Moodle UK odpovídá, Golemio odpovídá, iCal se stahuje),
-  ale bez platných klíčů – zpracování živých odjezdů a tras vychází z dokumentovaného tvaru Golemio a Google Routes API.
-- Bez Google Routes klíče hledá Live režim jen přímé spoje (bez přestupu); jinak zobrazí odhad podle vzdálenosti.
-- Demo síť PID je zjednodušená (5 linek) a souřadnice jsou orientační.
-- Název položky pro export iCal se v SISu může lišit podle fakulty; aplikace přijme libovolný soukromý `.ics` odkaz.
+- Google funkce potřebují vlastní OAuth Client ID (aplikace v režimu *Testing* je jen pro přidané testovací uživatele).
+- Bez `GOOGLE_CLIENT_SECRET` platí přihlášení Google asi hodinu; potom stačí kliknout na „Přihlásit znovu“.
+- Bez Google Routes klíče hledá Live režim jen přímé spoje z Golemia; jinak zobrazí odhad podle vzdálenosti.
+- Rozpoznání stránek SISu stojí na jejich textu – při změně vzhledu SISu může být potřeba parser doladit.
