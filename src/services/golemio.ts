@@ -123,7 +123,34 @@ export class GolemioClient {
     });
   }
 
-  async departureBoards(options: {
+  /** Golemio vrací nejvýš 100 odjezdů na dotaz – delší okno se načte po stránkách (podle času). */
+  async departureBoards(options: Parameters<GolemioClient['departureBoardsPage']>[0]): Promise<GolemioDeparture[]> {
+    const wanted = options.limit ?? 100;
+    if (wanted <= 100) return this.departureBoardsPage(options);
+    const start = options.timeFrom ?? new Date();
+    const end = start.getTime() + (options.minutesAfter ?? 120) * 60_000;
+    const seen = new Set<string>();
+    const out: GolemioDeparture[] = [];
+    let from = start;
+    for (let page = 0; page < 5 && out.length < wanted; page++) {
+      const minutesAfter = Math.max(1, Math.round((end - from.getTime()) / 60_000));
+      const batch = await this.departureBoardsPage({ ...options, timeFrom: from, minutesAfter, limit: 100 });
+      for (const d of batch) {
+        const key = `${d.tripId}|${d.stopId}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          out.push(d);
+        }
+      }
+      if (batch.length < 100) break;
+      const last = Math.max(...batch.map((d) => d.scheduled.getTime()));
+      if (last >= end || last <= from.getTime()) break;
+      from = new Date(last);
+    }
+    return out.sort((a, b) => a.predicted.getTime() - b.predicted.getTime());
+  }
+
+  private async departureBoardsPage(options: {
     names?: string[];
     ids?: string[];
     minutesBefore?: number;
