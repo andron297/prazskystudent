@@ -24,7 +24,7 @@ const ORDER: MoodleSyncStep[] = ['site', 'courses', 'assignments', 'events', 'co
 
 export function GuideStep({ n, icon: Icon, title, children }: { n: number; icon: typeof LogIn; title: string; children: ReactNode }) {
   return (
-    <li className="glass relative min-w-0 rounded-2xl p-3.5">
+    <li className="relative min-w-0 rounded-[20px] bg-surface-2 p-3.5">
       <span className="absolute right-3 top-3 font-mono text-[11px] font-semibold text-subtle">0{n}</span>
       <span className="mb-2 grid size-9 place-items-center rounded-xl bg-accent-soft text-accent">
         <Icon className="size-[18px]" aria-hidden />
@@ -101,12 +101,12 @@ export function MoodleConnect() {
           </a>
         </GuideStep>
         <GuideStep n={3} icon={Copy} title="Zkopíruj klíč">
-          U služby <strong>Moodle mobile web service</strong> zkopíruj klíč (32 znaků) a vlož ho níže.
+          U služby <strong>Moodle mobile web service</strong> zkopíruj klíč (32 znaků). Vidíš jen <em>RSS klíč</em>? Klíč se objeví až po prvním přihlášení v oficiální aplikaci <strong>Moodle</strong> (Android/iOS).
         </GuideStep>
       </ol>
 
       {settings.mode === 'demo' && (
-        <p className="rounded-2xl bg-violet-500/10 px-3.5 py-2.5 text-[13px] text-violet-800 dark:text-violet-200">
+        <p className="rounded-2xl bg-sand/15 px-3.5 py-2.5 text-[13px] text-clay">
           Sandbox: odpovědi Moodlu jsou simulované (stejný formát jako skutečné API), takže si celý tok vyzkoušíš bez účtu. Token „invalid“ nasimuluje chybu.
         </p>
       )}

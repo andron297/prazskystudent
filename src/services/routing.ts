@@ -24,6 +24,8 @@ export interface LivePlanParams {
   golemio: GolemioClient | null;
   googleKey: string;
   useGoogle: boolean;
+  /** Zastávka zvolená studentem – jede se jen z ní. */
+  originStop?: { name: string; coords: LatLng } | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -48,12 +50,16 @@ async function destinationStopIds(golemio: GolemioClient, building: Building): P
 export async function planWithGolemio(params: LivePlanParams): Promise<Itinerary[]> {
   const golemio = params.golemio;
   if (!golemio) return [];
-  const nearby = await golemio.nearbyStops(params.origin, 900);
   const groups = new Map<string, { name: string; walk: number }>();
-  for (const stop of nearby) {
-    const walk = walkingMinutes(params.origin, stop.coords, params.walkSpeed);
-    const prev = groups.get(stop.name);
-    if (!prev || walk < prev.walk) groups.set(stop.name, { name: stop.name, walk });
+  if (params.originStop) {
+    groups.set(params.originStop.name, { name: params.originStop.name, walk: walkingMinutes(params.origin, params.originStop.coords, params.walkSpeed) });
+  } else {
+    const nearby = await golemio.nearbyStops(params.origin, 900);
+    for (const stop of nearby) {
+      const walk = walkingMinutes(params.origin, stop.coords, params.walkSpeed);
+      const prev = groups.get(stop.name);
+      if (!prev || walk < prev.walk) groups.set(stop.name, { name: stop.name, walk });
+    }
   }
   const origins = [...groups.values()].sort((a, b) => a.walk - b.walk).slice(0, 4);
   if (origins.length === 0) return [];
@@ -311,7 +317,11 @@ async function enrichWithGolemio(itineraries: Itinerary[], golemio: GolemioClien
   });
 }
 
-export async function planWithGoogle(params: LivePlanParams): Promise<Itinerary[]> {
+export async function planWithGoogle(input: LivePlanParams): Promise<Itinerary[]> {
+  // Se zvolenou zastávkou plánujeme od ní a pěší přesun k ní přidáme na začátek.
+  const stop = input.originStop;
+  const preWalk = stop ? walkingMinutes(input.origin, stop.coords, input.walkSpeed) : 0;
+  const params: LivePlanParams = stop ? { ...input, origin: stop.coords, originLabel: stop.name } : input;
   const deadline = params.eventStart.getTime() - params.bufferMinutes * MIN;
   const arrivalTimes = [deadline, deadline - 12 * MIN, deadline - 24 * MIN];
   const results = await Promise.all(
@@ -338,6 +348,14 @@ export async function planWithGoogle(params: LivePlanParams): Promise<Itinerary[
     } catch {
       // Bez živých dat zůstává jízdní řád z Google.
     }
+  }
+  if (stop && preWalk > 0) {
+    itineraries = itineraries.map((it) => ({
+      ...it,
+      legs: [{ kind: 'walk' as const, minutes: preWalk, from: input.originLabel, to: stop.name }, ...it.legs],
+      leaveAt: new Date(new Date(it.leaveAt).getTime() - preWalk * MIN).toISOString(),
+      walkToStopMinutes: it.walkToStopMinutes + preWalk,
+    }));
   }
   return itineraries;
 }

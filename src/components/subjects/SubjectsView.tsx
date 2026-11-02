@@ -6,6 +6,7 @@ import { requirementToCalendarItem } from '../../lib/calendarExport';
 import { SUBJECT_COLOR_CLASSES, SUBJECT_COLORS, nextSubjectColor } from '../../lib/colors';
 import { formatDeadline, formatTime, formatWeekdayShort, formatDayMonth } from '../../lib/dates';
 import { uid } from '../../lib/id';
+import { sisSubjectUrl } from '../../lib/sisImport';
 import { isRequirementComplete, subjectProgress } from '../../lib/progress';
 import { DEADLINE_STYLES, deadlineUrgency } from '../../lib/urgency';
 import { navigateTo } from '../../hooks/useAppShell';
@@ -40,36 +41,41 @@ function SubjectGrid() {
   const subjects = useAppStore((s) => s.subjects);
   const requirements = useAppStore((s) => s.requirements);
   const materials = useAppStore((s) => s.materials);
-  const openConnect = useUiStore((s) => s.openConnect);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
 
   return (
     <div className="space-y-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[13px] font-medium text-muted">{subjects.length} předmětů v semestru</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Předměty & materiály</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button icon={Plug} onClick={() => openConnect('moodle')}>
-            Načíst z Moodlu
-          </Button>
-          <Button
-            variant="primary"
-            icon={Plus}
-            onClick={() => {
-              setEditorKey((k) => k + 1);
-              setEditorOpen(true);
-            }}
-          >
-            Přidat předmět
-          </Button>
+      <header className="relative overflow-hidden rounded-[32px] bg-forest px-6 py-8 text-white sm:px-10 sm:py-11">
+        <img src="/images/forest-1200.webp" alt="" className="absolute inset-0 size-full object-cover opacity-70" />
+        <div className="photo-scrim absolute inset-0" />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow text-white/75">{subjects.length} předmětů v semestru</p>
+            <h1 className="mt-2 font-display text-[48px] leading-[0.95] sm:text-[62px]">
+              Předměty <em className="text-[#e7d6b5]">a materiály</em>
+            </h1>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="glass" icon={Plug} onClick={() => navigateTo('propojeni', 'moodle')}>
+              Moodle
+            </Button>
+            <Button
+              variant="sand"
+              icon={Plus}
+              onClick={() => {
+                setEditorKey((k) => k + 1);
+                setEditorOpen(true);
+              }}
+            >
+              Předmět
+            </Button>
+          </div>
         </div>
       </header>
 
       {subjects.length === 0 ? (
-        <EmptyState icon={BookOpen} title="Zatím žádné předměty" action={<Button variant="primary" icon={Plug} onClick={() => openConnect('ics')}>Importovat rozvrh ze SISu</Button>}>
+        <EmptyState icon={BookOpen} title="Zatím žádné předměty" action={<Button variant="primary" icon={Plug} onClick={() => navigateTo('propojeni', 'sis')}>Propojit SIS</Button>}>
           Předměty se vytvoří automaticky z rozvrhu (.ics) nebo z kurzů v Moodlu.
         </EmptyState>
       ) : (
@@ -92,7 +98,7 @@ function SubjectGrid() {
                 transition={{ delay: index * 0.03 }}
                 whileHover={{ y: -2 }}
                 onClick={() => navigateTo('predmety', subject.id)}
-                className="card group relative isolate flex min-w-0 flex-col overflow-hidden rounded-3xl p-5 text-left"
+                className="card group relative isolate flex min-w-0 flex-col overflow-hidden rounded-[26px] p-5 text-left"
               >
                 <span className={cn('pointer-events-none absolute -right-10 -top-10 -z-10 size-40 rounded-full bg-gradient-to-br to-transparent blur-2xl', color.glow)} />
                 <span className="flex items-center justify-between gap-2">
@@ -105,7 +111,7 @@ function SubjectGrid() {
                     <span className="text-[11px] font-semibold tabular">{progress.percent}%</span>
                   </ProgressRing>
                 </span>
-                <span className="mt-3 text-[16px] font-semibold leading-snug tracking-tight group-hover:text-accent">{subject.name}</span>
+                <span className="mt-3 font-display text-[25px] leading-[1.05] group-hover:text-accent">{subject.name}</span>
                 {subject.teacher && <span className="mt-0.5 truncate text-[12.5px] text-muted">{subject.teacher}</span>}
                 <span className="mt-4">
                   <ProgressBar value={progress.ratio} barClassName={color.bar} />
@@ -176,7 +182,7 @@ function SubjectHub({ subject }: { subject: Subject }) {
         <ArrowLeft className="size-4" aria-hidden /> Všechny předměty
       </button>
 
-      <section className="card relative isolate overflow-hidden rounded-[28px] p-5 sm:p-6">
+      <section className="card relative isolate overflow-hidden rounded-[30px] p-5 sm:p-7">
         <span className={cn('pointer-events-none absolute -right-16 -top-20 -z-10 size-64 rounded-full bg-gradient-to-br to-transparent blur-3xl', color.glow)} />
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
           <ProgressRing value={progress.ratio} size={96} stroke={9} className={color.text}>
@@ -191,7 +197,7 @@ function SubjectHub({ subject }: { subject: Subject }) {
               {subject.credits && <Chip>{subject.credits} kr.</Chip>}
               {subject.completion && <Chip>{subject.completion}</Chip>}
             </div>
-            <h1 className="mt-2 text-2xl font-semibold leading-tight tracking-tight">{subject.name}</h1>
+            <h1 className="mt-2 font-display text-[34px] leading-[1.02] sm:text-[42px]">{subject.name}</h1>
             <p className="mt-1 text-[13.5px] text-muted">
               {subject.teacher ?? 'Vyučující neuveden'} · {progress.completed}/{progress.total} povinností hotovo · {progress.percent} % do{' '}
               {subject.completion?.includes('Zk') ? 'zkoušky' : 'zápočtu'}
@@ -199,8 +205,13 @@ function SubjectHub({ subject }: { subject: Subject }) {
           </div>
           <div className="flex flex-wrap gap-2 sm:flex-col sm:items-stretch">
             {subject.moodleCourseUrl && (
-              <a href={subject.moodleCourseUrl} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-surface px-2.5 text-[13px] font-medium hover:bg-surface-2">
+              <a href={subject.moodleCourseUrl} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 text-[13px] font-semibold hover:bg-surface-2">
                 <ExternalLink className="size-3.5" aria-hidden /> Kurz v Moodlu
+              </a>
+            )}
+            {subject.code && (
+              <a href={sisSubjectUrl(subject.code)} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center justify-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 text-[13px] font-semibold hover:bg-surface-2">
+                <ExternalLink className="size-3.5" aria-hidden /> Předmět v SISu
               </a>
             )}
             <Button
@@ -235,8 +246,8 @@ function SubjectHub({ subject }: { subject: Subject }) {
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="min-w-0 space-y-3 lg:col-span-7">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
-              <ListChecks className="size-4 text-subtle" aria-hidden /> Studijní povinnosti
+            <h2 className="flex items-center gap-2 font-display text-[26px] leading-none">
+              <ListChecks className="size-5 text-moss" aria-hidden /> Povinnosti
             </h2>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="ghost" icon={ScrollText} onClick={() => openConnect('parser', subject.id)}>
@@ -265,6 +276,7 @@ function SubjectHub({ subject }: { subject: Subject }) {
           )}
         </div>
         <div className="min-w-0 space-y-4 lg:col-span-5">
+          <SyllabusCard subject={subject} />
           <MaterialsPanel subject={subject} materials={materials} requirements={requirements} onOpen={openMaterial} />
           <Card title="Nejbližší výuka" icon={CalendarDays}>
             {upcomingClasses.length === 0 ? (
@@ -375,5 +387,60 @@ export function SubjectEditor({ open, onClose, subject }: { open: boolean; onClo
         </div>
       </div>
     </Modal>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Sylabus ze SISu                                                     */
+/* ------------------------------------------------------------------ */
+
+const SYLLABUS_PARTS: { key: 'annotation' | 'requirements' | 'syllabus' | 'literature'; label: string }[] = [
+  { key: 'annotation', label: 'Anotace' },
+  { key: 'requirements', label: 'Podmínky zakončení' },
+  { key: 'syllabus', label: 'Sylabus' },
+  { key: 'literature', label: 'Literatura' },
+];
+
+function SyllabusCard({ subject }: { subject: Subject }) {
+  const [open, setOpen] = useState<string | null>('requirements');
+  const syllabus = subject.syllabus;
+  if (!syllabus) {
+    return (
+      <Card title="Sylabus" eyebrow="Ze SISu" icon={ScrollText}>
+        <p className="text-[13px] text-muted">Otevři předmět v SISu a klikni na záložku „→ Stihnu“ – sylabus, podmínky i literatura se uloží sem.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {subject.code && (
+            <a href={sisSubjectUrl(subject.code)} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-[13px] font-bold text-accent-fg">
+              <ExternalLink className="size-3.5" aria-hidden /> Otevřít v SISu
+            </a>
+          )}
+          <Button size="sm" variant="ghost" onClick={() => navigateTo('propojeni', 'sis')}>
+            Jak na záložku
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+  return (
+    <Card title="Sylabus" eyebrow={syllabus.guarantor ? `Garant: ${syllabus.guarantor}` : 'Ze SISu'} icon={ScrollText}>
+      <div className="flex flex-wrap gap-1.5">
+        {syllabus.credits ? <Chip>{syllabus.credits} kreditů</Chip> : null}
+        {syllabus.completion && <Chip>{syllabus.completion}</Chip>}
+        {syllabus.semester && <Chip>{syllabus.semester}</Chip>}
+        {syllabus.language && <Chip>{syllabus.language}</Chip>}
+      </div>
+      <ul className="mt-3 divide-y divide-[var(--line)]">
+        {SYLLABUS_PARTS.filter((p) => syllabus[p.key]).map((p) => (
+          <li key={p.key}>
+            <button type="button" onClick={() => setOpen((o) => (o === p.key ? null : p.key))} className="flex w-full items-center justify-between py-2.5 text-left text-[13.5px] font-bold" aria-expanded={open === p.key}>
+              {p.label}
+              <span className="text-xs font-semibold text-subtle">{open === p.key ? 'skrýt' : 'zobrazit'}</span>
+            </button>
+            {open === p.key && <p className="whitespace-pre-line pb-3 text-[13px] leading-relaxed text-muted">{syllabus[p.key]}</p>}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[11px] text-subtle">Načteno {new Date(syllabus.importedAt).toLocaleDateString('cs-CZ')}</p>
+    </Card>
   );
 }

@@ -11,6 +11,9 @@ export type ThemePref = 'system' | 'light' | 'dark';
 
 export type DataSource = 'demo' | 'sis' | 'google' | 'ics-file' | 'moodle' | 'parser' | 'ai' | 'manual';
 
+/** Klíč položky pro synchronizaci a mazání: 'event:<id>', 'task:<id>', 'req:<id>', 'sub:<reqId>:<subId>', 'ms:<id>', 'subject:<id>', 'material:<id>'. */
+export type LocalKey = string;
+
 export interface LatLng {
   lat: number;
   lng: number;
@@ -57,6 +60,13 @@ export interface OriginPref {
   custom?: { label: string; coords: LatLng };
 }
 
+/** Zastávka, ze které chce student vyjíždět (místo automatického výběru nejbližší). */
+export interface OriginStopPref {
+  /** Název skupiny zastávek v PID (shodný s Golemio `stop_name`). */
+  name: string;
+  coords: LatLng;
+}
+
 /* ------------------------------------------------------------------ */
 /* Studium                                                             */
 /* ------------------------------------------------------------------ */
@@ -73,6 +83,22 @@ export type SubjectColor =
   | 'fuchsia'
   | 'lime';
 
+/** Sylabus a údaje o předmětu (import ze SISu přes záložku nebo vložený text). */
+export interface SubjectSyllabus {
+  annotation?: string;
+  syllabus?: string;
+  requirements?: string;
+  literature?: string;
+  guarantor?: string;
+  teachers?: string[];
+  credits?: number;
+  completion?: string;
+  semester?: string;
+  language?: string;
+  url?: string;
+  importedAt: ISODateTime;
+}
+
 export interface Subject {
   id: string;
   code?: string;
@@ -84,12 +110,26 @@ export interface Subject {
   source: DataSource;
   moodleCourseId?: number;
   moodleCourseUrl?: string;
+  syllabus?: SubjectSyllabus;
   createdAt: ISODateTime;
+  updatedAt?: ISODateTime;
   /** Položka ukázkových dat (posouvá se s dneškem, lze hromadně smazat). */
   demo?: boolean;
 }
 
-export type EventKind = 'lecture' | 'seminar' | 'exam' | 'consultation' | 'other';
+export type EventKind = 'lecture' | 'seminar' | 'exam' | 'consultation' | 'personal' | 'other';
+
+/** Odkaz na událost v Google Kalendáři (zrcadlo nebo propojená osobní událost). */
+export interface GoogleEventRef {
+  calendarId: string;
+  eventId: string;
+  calendarName?: string;
+  /** Barva kalendáře (hex) pro zobrazení. */
+  color?: string;
+  htmlLink?: string;
+  /** Zrcadlo z kalendáře, do kterého aplikace nezapisuje. */
+  readOnly?: boolean;
+}
 
 export interface ScheduleEvent {
   id: string;
@@ -105,6 +145,15 @@ export interface ScheduleEvent {
   buildingId?: string;
   teacher?: string;
   source: DataSource;
+  /** Vlastní poznámka (osobní události). */
+  notes?: string;
+  /** Celodenní událost (start = lokální půlnoc, end = půlnoc dne PO posledním dni). */
+  allDay?: boolean;
+  google?: GoogleEventRef;
+  /** Ze kterého iCal zdroje událost pochází (víc kalendářů najednou). */
+  icsSourceId?: string;
+  createdAt?: ISODateTime;
+  updatedAt?: ISODateTime;
   demo?: boolean;
 }
 
@@ -133,6 +182,25 @@ export interface Requirement {
   externalId?: string;
   url?: string;
   createdAt: ISODateTime;
+  updatedAt?: ISODateTime;
+  demo?: boolean;
+}
+
+/** Vlastní úkol (to-do) – zapisuje ho student, nebo přichází z Google Úkolů. */
+export interface Task {
+  id: string;
+  title: string;
+  notes?: string;
+  /** 'YYYY-MM-DD' (celý den) nebo ISO čas. */
+  due?: string;
+  done: boolean;
+  completedAt?: ISODateTime;
+  subjectId?: string;
+  priority?: 'high';
+  source: DataSource;
+  externalId?: string;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
   demo?: boolean;
 }
 
@@ -155,6 +223,11 @@ export interface Material {
   blobKey?: string;
   markdown?: string;
   externalId?: string;
+  /** Kopie v Google Disku (export materiálů). */
+  driveFileId?: string;
+  driveUrl?: string;
+  /** Verze (updatedAt), která je na Disku. */
+  driveSyncedAt?: ISODateTime;
   source: DataSource;
   createdAt: ISODateTime;
   updatedAt?: ISODateTime;
@@ -185,6 +258,7 @@ export interface Milestone {
   note?: string;
   /** Demo položky, které se posouvají s aktuálním dnem. */
   relative?: boolean;
+  updatedAt?: ISODateTime;
 }
 
 /* ------------------------------------------------------------------ */
@@ -201,14 +275,83 @@ export interface MoodleConnection {
   stats?: { courses: number; requirements: number; materials: number };
 }
 
-export interface IcsConnection {
+/** Odebíraný kalendář iCal: rozvrh SIS, kalendář Moodlu (termíny), cokoliv dalšího. */
+export type IcsSourceKind = 'sis' | 'moodle' | 'google' | 'other';
+
+export interface IcsSource {
+  id: string;
+  kind: IcsSourceKind;
   url: string;
   label?: string;
+  /** Průběžně obnovovat na pozadí. */
+  autoRefresh: boolean;
   lastSync?: ISODateTime;
-  eventCount?: number;
+  lastError?: string;
+  /** Počet načtených položek (událostí nebo termínů). */
+  itemCount?: number;
 }
 
 export type WalkSpeed = 'slow' | 'normal' | 'fast';
+
+export type SyncDirection = 'two-way' | 'push' | 'pull';
+export type ConflictPolicy = 'newest' | 'app' | 'google';
+
+export interface GoogleCalendarSyncSettings {
+  enabled: boolean;
+  /** 'dedicated' = vlastní kalendář „Stihnu“, 'primary' = hlavní kalendář, jinak ID kalendáře. */
+  target: string;
+  direction: SyncDirection;
+  push: { classes: boolean; exams: boolean; deadlines: boolean; milestones: boolean; personal: boolean };
+  /** Další kalendáře, jejichž události se zobrazí v aplikaci (jen ke čtení). */
+  pullCalendars: string[];
+  /** Kolik týdnů dopředu zapisovat výuku. */
+  rangeWeeks: number;
+  remindersClasses: number[];
+  remindersDeadlines: number[];
+  /** Barvy předmětů → barvy událostí v Google Kalendáři. */
+  colors: boolean;
+}
+
+export interface GoogleTasksSyncSettings {
+  enabled: boolean;
+  /** 'dedicated' = seznam „Stihnu“, '@default' = Moje úkoly, jinak ID seznamu. */
+  target: string;
+  direction: SyncDirection;
+  push: { personal: boolean; requirements: boolean; subtasks: boolean };
+  /** Další seznamy úkolů, které se obousměrně synchronizují. */
+  pullLists: string[];
+  /** Hotové úkoly z Googlu starší než N dní se do aplikace nestahují. */
+  keepCompletedDays: number;
+}
+
+export interface GoogleDriveSyncSettings {
+  enabled: boolean;
+  /** Synchronizace všech dat aplikace mezi zařízeními (skrytá složka aplikace na Disku). */
+  syncState: boolean;
+  /** Poznámky a nahrané soubory jako soubory ve složce na Disku. */
+  exportMaterials: boolean;
+  folderName: string;
+}
+
+export interface GoogleSyncSettings {
+  enabled: boolean;
+  /** OAuth Client ID (typ Webová aplikace). Prázdné = z proměnné VITE_GOOGLE_CLIENT_ID nebo ze serveru. */
+  clientId: string;
+  auto: boolean;
+  intervalMinutes: number;
+  conflict: ConflictPolicy;
+  /** Promítat smazání do druhé strany ('mirror'), nebo jen rozpojit ('keep'). */
+  deletions: 'mirror' | 'keep';
+  calendar: GoogleCalendarSyncSettings;
+  tasks: GoogleTasksSyncSettings;
+  drive: GoogleDriveSyncSettings;
+}
+
+export interface WeatherSettings {
+  enabled: boolean;
+  /** Jak snadno je studentovi zima: posouvá doporučení oblečení. */
+  feel: 'cold' | 'normal' | 'warm';
+}
 
 export interface Settings {
   mode: AppMode;
@@ -218,7 +361,9 @@ export interface Settings {
   googleOAuthClientId: string;
   anthropicApiKey: string;
   moodle: MoodleConnection | null;
-  ics: IcsConnection | null;
+  icsSources: IcsSource[];
+  /** Jak často obnovovat odebírané kalendáře (h). */
+  icsRefreshHours: number;
   /** Rezerva před začátkem výuky (min) – „být v učebně 5 min předem“. */
   bufferMinutes: number;
   /** Další rezerva, aby byl spoj „doporučený“ (min). */
@@ -227,6 +372,8 @@ export interface Settings {
   accessibleOnly: boolean;
   preferAirConditioned: boolean;
   origin: Record<AppMode, OriginPref>;
+  /** Preferovaná výchozí zastávka (null = automaticky nejbližší). */
+  originStop: Record<AppMode, OriginStopPref | null>;
   /** V demo režimu běží simulované hodiny (vždy začínají ve 13:05). */
   demoClock: boolean;
   /** Výchozí připomínky v minutách před termínem. */
@@ -234,6 +381,81 @@ export interface Settings {
   buildings: Building[];
   /** Ruční mapování textu lokace → budova. */
   locationAliases: Record<string, string>;
+  google: GoogleSyncSettings;
+  weather: WeatherSettings;
+  /** Jméno pro pozdrav (jinak z Moodlu / Googlu). */
+  displayName: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Synchronizace                                                       */
+/* ------------------------------------------------------------------ */
+
+export type SyncService = 'calendar' | 'tasks' | 'drive';
+
+/** Vazba lokální položky na položku v Googlu. */
+export interface SyncLink {
+  service: 'calendar' | 'tasks';
+  /** ID kalendáře / seznamu úkolů. */
+  container: string;
+  remoteId: string;
+  /** Kdo položku založil: aplikace, nebo Google (import). */
+  origin: 'app' | 'google';
+  /** Otisk lokální podoby při poslední synchronizaci. */
+  localHash: string;
+  /** Otisk vzdálené podoby při poslední synchronizaci. */
+  remoteHash: string;
+  remoteUpdated?: string;
+  /** Začátek položky (kontroly omezujeme na stažený časový rozsah). */
+  at?: string;
+  syncedAt: ISODateTime;
+}
+
+export interface SyncCounts {
+  created: number;
+  updated: number;
+  deleted: number;
+}
+
+export interface SyncReport {
+  at: ISODateTime;
+  ok: boolean;
+  durationMs: number;
+  services: SyncService[];
+  pushed: SyncCounts;
+  pulled: SyncCounts;
+  conflicts: number;
+  errors: string[];
+  notes: string[];
+}
+
+export interface GoogleAccount {
+  email?: string;
+  name?: string;
+  picture?: string;
+}
+
+/** Stav synchronizace s Googlem (zvlášť pro Sandbox a Live). */
+export interface GoogleSyncState {
+  account?: GoogleAccount;
+  connectedAt?: ISODateTime;
+  /** Udělená oprávnění (scopes). */
+  scopes: string[];
+  lastSync?: ISODateTime;
+  /** Klíč: '<služba>|<LocalKey>', např. 'calendar|event:evt_1', 'tasks|req:req_2'. */
+  links: Record<string, SyncLink>;
+  containers: {
+    calendarId?: string;
+    taskListId?: string;
+    driveFolderId?: string;
+    driveStateFileId?: string;
+    subjectFolders?: Record<string, string>;
+  };
+  /** Položky, které uživatel z Googlu odebral – znovu je nezapisujeme ('calendar|req:…', 'tasks|remote:…'). */
+  excluded: string[];
+  /** Kdy jsme naposledy sloučili stav z Disku. */
+  driveStateSyncedAt?: ISODateTime;
+  history: SyncReport[];
 }
 
 /* ------------------------------------------------------------------ */

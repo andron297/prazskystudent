@@ -3,7 +3,7 @@
  * (dnešní den má vždy seminář na Hollaru ve 14:00), harmonogram je
  * vázaný na kalendář aktuálního akademického roku.
  */
-import type { Material, Milestone, Requirement, ScheduleEvent, Subject, SubjectColor } from '../../types';
+import type { Material, Milestone, Requirement, ScheduleEvent, Subject, SubjectColor, Task } from '../../types';
 import { academicYearStart, addDays, atTime, mondayOnOrAfter, startOfDay, startOfWeek, toDateKey } from '../../lib/dates';
 import { uid } from '../../lib/id';
 
@@ -13,6 +13,7 @@ export interface DemoSeed {
   requirements: Requirement[];
   materials: Material[];
   milestones: Milestone[];
+  tasks: Task[];
   seedDate: string;
 }
 
@@ -461,10 +462,26 @@ export function buildAcademicYearMilestones(ayStart: number): Milestone[] {
   ];
 }
 
+/** Vlastní úkoly a osobní události studenta (ukázka obousměrné synchronizace s Googlem). */
+function buildPersonal(today: Date, nowIso: string): { tasks: Task[]; events: ScheduleEvent[] } {
+  const tasks: Task[] = [
+    { id: 'demo-task-knihy', title: 'Vrátit knihy do knihovny v Jinonicích', due: atTime(addDays(today, 1), 17, 0).toISOString(), done: false, priority: 'high', source: 'manual', createdAt: nowIso, updatedAt: nowIso },
+    { id: 'demo-task-litacka', title: 'Prodloužit lítačku', due: toDateKey(addDays(today, 3)), done: false, source: 'manual', createdAt: nowIso, updatedAt: nowIso },
+    { id: 'demo-task-vedouci', title: 'Napsat vedoucí kvůli tématu práce', done: false, subjectId: 'demo-akp', source: 'manual', createdAt: nowIso, updatedAt: nowIso },
+    { id: 'demo-task-kolej', title: 'Zaplatit kolej', due: toDateKey(addDays(today, -1)), done: true, completedAt: atTime(addDays(today, -1), 20, 0).toISOString(), source: 'manual', createdAt: nowIso, updatedAt: nowIso },
+  ];
+  const events: ScheduleEvent[] = [
+    { id: 'demo-personal-volejbal', title: 'Volejbal', kind: 'personal', start: atTime(today, 19, 0).toISOString(), end: atTime(today, 20, 30).toISOString(), location: 'Hala Juliska', source: 'manual', createdAt: nowIso, updatedAt: nowIso },
+    { id: 'demo-personal-kafe', title: 'Kafe s Aničkou', kind: 'personal', start: atTime(addDays(today, 1), 17, 30).toISOString(), end: atTime(addDays(today, 1), 18, 30).toISOString(), location: 'Kavárna Místo', source: 'manual', createdAt: nowIso, updatedAt: nowIso },
+  ];
+  return { tasks, events };
+}
+
 export function createDemoSeed(now: Date): DemoSeed {
   const today = startOfDay(now);
   const nowIso = now.toISOString();
   const mark = <T extends object>(items: T[]): T[] => items.map((item) => ({ ...item, demo: true }));
+  const personal = buildPersonal(today, nowIso);
   return {
     subjects: DEMO_SUBJECTS.map((s) => ({
       id: s.id,
@@ -480,10 +497,11 @@ export function createDemoSeed(now: Date): DemoSeed {
       createdAt: nowIso,
       demo: true,
     })),
-    events: mark(buildEvents(today)),
+    events: mark([...buildEvents(today), ...personal.events]).sort((a, b) => a.start.localeCompare(b.start)),
     requirements: mark(buildRequirements(today, nowIso)),
     materials: mark(buildMaterials(nowIso)),
     milestones: buildAcademicYearMilestones(academicYearStart(today)),
+    tasks: mark(personal.tasks),
     seedDate: toDateKey(today),
   };
 }

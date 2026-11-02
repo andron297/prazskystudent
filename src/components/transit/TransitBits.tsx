@@ -15,20 +15,21 @@ export const MODE_ICON: Record<TransitMode, LucideIcon> = {
   funicular: CableCar,
 };
 
-export function LineBadge({ ride, size = 'md' }: { ride: Pick<RideLeg, 'mode' | 'line'>; size?: 'sm' | 'md' | 'lg' }) {
+export function LineBadge({ ride, size = 'md' }: { ride: Pick<RideLeg, 'mode' | 'line'>; size?: 'xs' | 'sm' | 'md' | 'lg' }) {
   const Icon = MODE_ICON[ride.mode] ?? Bus;
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-lg font-semibold tabular shadow-sm',
+        'inline-flex shrink-0 items-center gap-1 font-bold tabular',
         lineBadgeClasses(ride.mode, ride.line),
-        size === 'sm' && 'h-6 px-1.5 text-xs',
-        size === 'md' && 'h-7 px-2 text-[13px]',
-        size === 'lg' && 'h-9 px-2.5 text-base',
+        size === 'xs' && 'h-5 min-w-5 justify-center rounded-md px-1 text-[11px]',
+        size === 'sm' && 'h-6 rounded-lg px-1.5 text-xs',
+        size === 'md' && 'h-7 rounded-lg px-2 text-[13px] shadow-sm',
+        size === 'lg' && 'h-9 rounded-xl px-2.5 text-base shadow-sm',
       )}
-      title={`${ride.mode === 'metro' ? 'Metro' : ride.mode === 'tram' ? 'Tramvaj' : 'Linka'} ${ride.line}`}
+      title={`${ride.mode === 'metro' ? 'Metro' : ride.mode === 'tram' ? 'Tramvaj' : ride.mode === 'train' ? 'Vlak' : 'Linka'} ${ride.line}`}
     >
-      <Icon className={size === 'lg' ? 'size-4' : 'size-3.5'} aria-hidden />
+      {size !== 'xs' && <Icon className={size === 'lg' ? 'size-4' : 'size-3.5'} aria-hidden />}
       {ride.line}
     </span>
   );

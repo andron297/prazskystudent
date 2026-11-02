@@ -80,7 +80,7 @@ function extractTeacher(event: IcsEvent): string | undefined {
   return event.organizer;
 }
 
-function findSubject(subjects: Subject[], code: string | undefined, name: string): Subject | undefined {
+export function findSubject(subjects: Subject[], code: string | undefined, name: string): Subject | undefined {
   if (code) {
     const byCode = subjects.find((s) => s.code && s.code.toUpperCase() === code.toUpperCase());
     if (byCode) return byCode;

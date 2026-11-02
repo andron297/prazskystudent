@@ -107,6 +107,8 @@ export interface TransitStyle {
   gradient: string;
   countdown: string;
   pulse: boolean;
+  /** Štítek na skle nad fotografií. */
+  glass: string;
 }
 
 export const TRANSIT_STYLES: Record<TransitStatus, TransitStyle> = {
@@ -120,6 +122,7 @@ export const TRANSIT_STYLES: Record<TransitStatus, TransitStyle> = {
     gradient: 'from-emerald-400/25 via-emerald-300/10 to-transparent dark:from-emerald-500/25 dark:via-emerald-500/5',
     countdown: 'text-emerald-700 dark:text-emerald-300',
     pulse: false,
+    glass: 'bg-emerald-300/25 text-emerald-50 ring-1 ring-inset ring-emerald-200/40',
   },
   prepare: {
     label: 'Připrav se',
@@ -131,6 +134,7 @@ export const TRANSIT_STYLES: Record<TransitStatus, TransitStyle> = {
     gradient: 'from-orange-400/30 via-amber-300/10 to-transparent dark:from-orange-500/25 dark:via-amber-500/5',
     countdown: 'text-orange-700 dark:text-orange-300',
     pulse: false,
+    glass: 'bg-amber-300/30 text-amber-50 ring-1 ring-inset ring-amber-200/50',
   },
   critical: {
     label: 'Last call',
@@ -142,6 +146,7 @@ export const TRANSIT_STYLES: Record<TransitStatus, TransitStyle> = {
     gradient: 'from-red-500/30 via-rose-400/10 to-transparent dark:from-red-600/30 dark:via-rose-600/5',
     countdown: 'text-red-600 dark:text-red-300',
     pulse: true,
+    glass: 'bg-red-500/45 text-white ring-1 ring-inset ring-red-300/60',
   },
   missed: {
     label: 'Nestihneš MHD',
@@ -153,6 +158,7 @@ export const TRANSIT_STYLES: Record<TransitStatus, TransitStyle> = {
     gradient: 'from-zinc-400/25 via-zinc-300/10 to-transparent dark:from-zinc-600/30 dark:via-zinc-700/5',
     countdown: 'text-zinc-700 dark:text-zinc-200',
     pulse: false,
+    glass: 'bg-zinc-900/50 text-white ring-1 ring-inset ring-white/20',
   },
   'on-site': {
     label: 'Jsi na místě',
@@ -164,6 +170,7 @@ export const TRANSIT_STYLES: Record<TransitStatus, TransitStyle> = {
     gradient: 'from-sky-400/25 via-sky-300/10 to-transparent dark:from-sky-500/25 dark:via-sky-500/5',
     countdown: 'text-sky-700 dark:text-sky-300',
     pulse: false,
+    glass: 'bg-sky-300/25 text-sky-50 ring-1 ring-inset ring-sky-200/40',
   },
   'no-data': {
     label: 'Bez dat o spojích',
@@ -175,17 +182,19 @@ export const TRANSIT_STYLES: Record<TransitStatus, TransitStyle> = {
     gradient: 'from-zinc-300/25 via-zinc-200/10 to-transparent dark:from-zinc-600/20 dark:via-zinc-700/5',
     countdown: 'text-zinc-700 dark:text-zinc-200',
     pulse: false,
+    glass: 'bg-white/15 text-white ring-1 ring-inset ring-white/25',
   },
   idle: {
     label: 'Dnes v klidu',
     short: 'Volno',
-    text: 'text-indigo-700 dark:text-indigo-300',
-    chip: 'bg-indigo-500/15 text-indigo-800 ring-1 ring-inset ring-indigo-500/30 dark:text-indigo-200',
-    dot: 'bg-indigo-500',
-    ring: 'ring-indigo-500/20',
-    gradient: 'from-indigo-400/20 via-violet-300/10 to-transparent dark:from-indigo-500/20 dark:via-violet-500/5',
-    countdown: 'text-indigo-700 dark:text-indigo-300',
+    text: 'text-moss',
+    chip: 'bg-accent-soft text-accent ring-1 ring-inset ring-accent/25',
+    dot: 'bg-moss',
+    ring: 'ring-accent/20',
+    gradient: 'from-moss/20 via-sand/10 to-transparent',
+    countdown: 'text-accent',
     pulse: false,
+    glass: 'bg-white/15 text-white ring-1 ring-inset ring-white/25',
   },
   loading: {
     label: 'Počítám trasu…',
@@ -197,6 +206,7 @@ export const TRANSIT_STYLES: Record<TransitStatus, TransitStyle> = {
     gradient: 'from-zinc-300/25 via-zinc-200/10 to-transparent dark:from-zinc-600/20 dark:via-zinc-700/5',
     countdown: 'text-zinc-700 dark:text-zinc-200',
     pulse: false,
+    glass: 'bg-white/15 text-white ring-1 ring-inset ring-white/25',
   },
 };
 
@@ -212,6 +222,6 @@ export function delayChipClasses(delaySeconds: number | null): string {
 export function formatDelay(delaySeconds: number | null): string {
   if (delaySeconds === null) return 'dle JŘ';
   const minutes = Math.floor(delaySeconds / 60);
-  if (minutes <= 0) return '0 min';
+  if (minutes <= 0) return 'včas';
   return `+${minutes} min`;
 }

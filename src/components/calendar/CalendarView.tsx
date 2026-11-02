@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { CalendarRange, ChevronLeft, ChevronRight, Clock, Flag, MapPin, Plus, ScrollText, Trash } from 'lucide-react';
-import type { Milestone, MilestoneCategory, Requirement, Subject } from '../../types';
+import type { Milestone, MilestoneCategory, Requirement, Subject, Task } from '../../types';
 import { milestoneToCalendarItem, requirementToCalendarItem, type CalendarItem } from '../../lib/calendarExport';
 import { SUBJECT_COLOR_CLASSES } from '../../lib/colors';
 import {
@@ -21,6 +21,7 @@ import {
   toDate,
   toDateKey,
   capitalize,
+  isDateKey,
 } from '../../lib/dates';
 import { uid } from '../../lib/id';
 import { isRequirementComplete } from '../../lib/progress';
@@ -34,18 +35,18 @@ import { toast, useUiStore } from '../../store/uiStore';
 import { AddToCalendar } from '../common/AddToCalendar';
 import { MILESTONE_STYLES } from '../dashboard/DashboardCards';
 import { Modal } from '../ui/overlays';
-import { Button, Card, Chip, cn, EmptyState, Field, IconButton, Segmented, Select, TextInput, Toggle } from '../ui/primitives';
+import { Button, Card, Checkbox, Chip, cn, EmptyState, Field, IconButton, Segmented, Select, TextInput, Toggle } from '../ui/primitives';
 
 
 const BAR_COLORS: Record<MilestoneCategory, string> = {
-  semester: 'bg-violet-500/70',
-  teaching: 'bg-indigo-500/75',
-  'exam-period': 'bg-rose-500/75',
-  enrollment: 'bg-amber-500/75',
-  holiday: 'bg-emerald-500/75',
-  deadline: 'bg-red-500',
-  assessment: 'bg-orange-500',
-  event: 'bg-sky-500',
+  semester: 'bg-moss/70',
+  teaching: 'bg-accent/75',
+  'exam-period': 'bg-rose-700/65',
+  enrollment: 'bg-sand',
+  holiday: 'bg-emerald-600/55',
+  deadline: 'bg-red-600',
+  assessment: 'bg-clay',
+  event: 'bg-sky-600/70',
 };
 
 const LANES: { label: string; categories: MilestoneCategory[] }[] = [
@@ -168,14 +169,17 @@ function SemesterTimeline({ milestones, requirements, subjects }: { milestones: 
 
 type AgendaItem =
   | { kind: 'milestone'; id: string; date: Date; end?: Date; milestone: Milestone }
-  | { kind: 'deadline'; id: string; date: Date; requirement: Requirement; subject?: Subject };
+  | { kind: 'deadline'; id: string; date: Date; requirement: Requirement; subject?: Subject }
+  | { kind: 'task'; id: string; date: Date; task: Task; allDay: boolean; subject?: Subject };
 
 function Agenda({ items, now, showPast }: { items: AgendaItem[]; now: Date; showPast: boolean }) {
   const removeMilestone = useAppStore((s) => s.removeMilestone);
+  const toggleTask = useAppStore((s) => s.toggleTask);
+  const openEditor = useUiStore((s) => s.openEditor);
   const subjects = useAppStore((s) => s.subjects);
   const byId = subjectMap(subjects);
   const today = startOfDay(now);
-  const visible = items.filter((i) => showPast || (i.kind === 'milestone' ? (i.end ?? i.date) >= today : i.date >= addDays(today, -1)));
+  const visible = items.filter((i) => showPast || (i.kind === 'milestone' ? (i.end ?? i.date) >= today : i.kind === 'task' ? !i.task.done || i.date >= addDays(today, -1) : i.date >= addDays(today, -1)));
   const groups = new Map<string, AgendaItem[]>();
   for (const item of visible) {
     const key = formatMonthYear(item.date);
@@ -195,6 +199,28 @@ function Agenda({ items, now, showPast }: { items: AgendaItem[]; now: Date; show
           <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-subtle">{month}</h3>
           <ul className="space-y-1">
             {list.map((item) => {
+              if (item.kind === 'task') {
+                const t = item.task;
+                const urgency = deadlineUrgency(item.allDay ? new Date(item.date.getFullYear(), item.date.getMonth(), item.date.getDate(), 23, 59) : item.date, now, t.done);
+                return (
+                  <li key={`task-${item.id}`} className="group flex items-center gap-3 rounded-2xl px-2 py-2 hover:bg-surface-2">
+                    <div className={cn('grid w-11 shrink-0 place-items-center rounded-xl py-1 text-center ring-1 ring-inset ring-line', isSameDay(item.date, now) ? 'bg-accent text-accent-fg' : 'bg-surface')}>
+                      <span className="text-[15px] font-semibold leading-none tabular">{item.date.getDate()}</span>
+                      <span className="text-[10px] uppercase leading-tight opacity-80">{formatWeekdayShort(item.date)}</span>
+                    </div>
+                    <Checkbox checked={t.done} onChange={() => toggleTask(t.id)} label={`Hotovo: ${t.title}`} className="rounded-full" />
+                    <button type="button" className="min-w-0 flex-1 text-left" onClick={() => openEditor({ type: 'task', id: t.id })}>
+                      <span className={cn('block truncate text-[13.5px] font-medium', t.done && 'text-subtle line-through')}>{t.title}</span>
+                      <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                        <Chip className={DEADLINE_STYLES[urgency].chip}>{t.done ? 'Hotovo' : 'Úkol'}</Chip>
+                        {item.subject && <span className="truncate">{item.subject.code ?? item.subject.name}</span>}
+                        {!item.allDay && <span className="tabular">{formatTime(item.date)}</span>}
+                        {t.source === 'google' && <span className="text-subtle">Google Úkoly</span>}
+                      </span>
+                    </button>
+                  </li>
+                );
+              }
               const isMs = item.kind === 'milestone';
               const calendarItem: CalendarItem | null = isMs
                 ? milestoneToCalendarItem(item.milestone, item.milestone.subjectId ? byId.get(item.milestone.subjectId) : undefined)
@@ -264,8 +290,11 @@ function Agenda({ items, now, showPast }: { items: AgendaItem[]; now: Date; show
 function WeekSchedule() {
   const now = useNow(60_000);
   const events = useAppStore((s) => s.events);
+  const tasks = useAppStore((s) => s.tasks);
   const subjects = useAppStore((s) => s.subjects);
   const settings = useAppStore((s) => s.settings);
+  const toggleTask = useAppStore((s) => s.toggleTask);
+  const openEditor = useUiStore((s) => s.openEditor);
   const byId = subjectMap(subjects);
   const [offset, setOffset] = useState(0);
   const monday = addDays(startOfWeek(now), offset * 7);
@@ -290,33 +319,54 @@ function WeekSchedule() {
     >
       <div className="space-y-3">
         {days.map((day) => {
-          const list = events.filter((e) => isSameDay(new Date(e.start), day));
-          if (list.length === 0 && day.getDay() % 6 === 0) return null;
+          const list = events
+            .filter((e) => (e.allDay ? new Date(e.start) <= day && new Date(e.end) > day : isSameDay(new Date(e.start), day)))
+            .sort((a, b) => Number(Boolean(b.allDay)) - Number(Boolean(a.allDay)) || a.start.localeCompare(b.start));
+          const dayTasks = tasks.filter((t) => t.due && isSameDay(toDate(t.due), day));
+          if (list.length === 0 && dayTasks.length === 0 && day.getDay() % 6 === 0) return null;
           const isToday = isSameDay(day, now);
           return (
             <div key={toDateKey(day)}>
               <p className={cn('mb-1 text-[12px] font-semibold uppercase tracking-wide', isToday ? 'text-accent' : 'text-subtle')}>
                 {capitalize(formatWeekdayShort(day))} {formatDayMonth(day)} {isToday && '· dnes'}
               </p>
-              {list.length === 0 ? (
-                <p className="text-xs text-subtle">Bez výuky</p>
+              {list.length === 0 && dayTasks.length === 0 ? (
+                <p className="text-xs text-subtle">Volno</p>
               ) : (
                 <ul className="space-y-1">
                   {list.map((e) => {
                     const subject = e.subjectId ? byId.get(e.subjectId) : undefined;
-                    const { building, room } = buildingForEvent(e, settings);
+                    const personal = e.kind === 'personal';
+                    const { building, room } = personal ? { building: undefined, room: undefined } : buildingForEvent(e, settings);
                     return (
-                      <li key={e.id} className="flex items-center gap-2.5 rounded-xl bg-surface-2/60 px-2.5 py-1.5 text-[13px]">
-                        <span className={cn('h-7 w-1 shrink-0 rounded-full', subject ? SUBJECT_COLOR_CLASSES[subject.color].bar : 'bg-zinc-400')} />
-                        <span className="w-11 shrink-0 font-mono text-xs text-muted tabular">{formatTime(new Date(e.start))}</span>
-                        <span className="min-w-0 flex-1 truncate font-medium">{subject?.name ?? e.title}</span>
-                        <span className="hidden shrink-0 items-center gap-1 text-xs text-muted sm:flex">
-                          <MapPin className="size-3" aria-hidden />
-                          {building ? `${building.name}${room ? ` ${room}` : ''}` : (e.location ?? '')}
-                        </span>
+                      <li key={e.id}>
+                        <button
+                          type="button"
+                          onClick={() => (personal ? openEditor({ type: 'event', id: e.id }) : subject && navigateTo('predmety', subject.id))}
+                          className="flex w-full items-center gap-2.5 rounded-xl bg-surface-2/60 px-2.5 py-1.5 text-left text-[13px] hover:bg-surface-2"
+                        >
+                          <span
+                            className={cn('h-7 w-1 shrink-0 rounded-full', subject ? SUBJECT_COLOR_CLASSES[subject.color].bar : personal && !e.google?.color ? 'bg-sand' : 'bg-zinc-400')}
+                            style={!subject && e.google?.color ? { background: e.google.color } : undefined}
+                          />
+                          <span className="w-11 shrink-0 text-xs font-semibold text-muted tabular">{e.allDay ? 'den' : formatTime(new Date(e.start))}</span>
+                          <span className="min-w-0 flex-1 truncate font-medium">{personal ? e.title : (subject?.name ?? e.title)}</span>
+                          <span className="hidden shrink-0 items-center gap-1 text-xs text-muted sm:flex">
+                            {(building || e.location) && <MapPin className="size-3" aria-hidden />}
+                            {building ? `${building.name}${room ? ` ${room}` : ''}` : (e.location ?? e.google?.calendarName ?? '')}
+                          </span>
+                        </button>
                       </li>
                     );
                   })}
+                  {dayTasks.map((t) => (
+                    <li key={t.id} className="flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[13px]">
+                      <Checkbox checked={t.done} onChange={() => toggleTask(t.id)} label={`Hotovo: ${t.title}`} className="rounded-full" />
+                      <button type="button" onClick={() => openEditor({ type: 'task', id: t.id })} className={cn('min-w-0 flex-1 truncate text-left font-medium', t.done && 'text-subtle line-through')}>
+                        {t.title}
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
@@ -423,9 +473,11 @@ export function CalendarView() {
   const now = useNow(60_000);
   const milestones = useAppStore((s) => s.milestones);
   const requirements = useAppStore((s) => s.requirements);
+  const tasks = useAppStore((s) => s.tasks);
   const subjects = useAppStore((s) => s.subjects);
   const openConnect = useUiStore((s) => s.openConnect);
-  const [filter, setFilter] = useState<'all' | 'harmonogram' | 'deadlines'>('all');
+  const openEditor = useUiStore((s) => s.openEditor);
+  const [filter, setFilter] = useState<'all' | 'harmonogram' | 'deadlines' | 'tasks'>('all');
   const [showPast, setShowPast] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
@@ -433,48 +485,65 @@ export function CalendarView() {
 
   const items = useMemo<AgendaItem[]>(() => {
     const list: AgendaItem[] = [];
-    if (filter !== 'deadlines') {
+    if (filter === 'all' || filter === 'harmonogram') {
       for (const m of milestones) {
         list.push({ kind: 'milestone', id: m.id, date: toDate(m.start), end: m.end ? toDate(m.end) : undefined, milestone: m });
       }
     }
-    if (filter !== 'harmonogram') {
+    if (filter === 'all' || filter === 'deadlines') {
       for (const r of requirements) {
         if (r.deadline) list.push({ kind: 'deadline', id: r.id, date: new Date(r.deadline), requirement: r, subject: byId.get(r.subjectId) });
       }
     }
+    if (filter === 'all' || filter === 'tasks') {
+      for (const t of tasks) {
+        if (t.due) list.push({ kind: 'task', id: t.id, date: toDate(t.due), task: t, allDay: isDateKey(t.due), subject: t.subjectId ? byId.get(t.subjectId) : undefined });
+      }
+    }
     return list.sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, [milestones, requirements, filter, byId]);
+  }, [milestones, requirements, tasks, filter, byId]);
 
   const exportItems = useMemo(() => {
     const today = startOfDay(now);
     return items
-      .filter((i) => (i.kind === 'milestone' ? (i.end ?? i.date) >= today : i.date >= today))
-      .map((i) => (i.kind === 'milestone' ? milestoneToCalendarItem(i.milestone, i.milestone.subjectId ? byId.get(i.milestone.subjectId) : undefined) : requirementToCalendarItem(i.requirement, i.subject)))
+      .filter((i) => i.kind !== 'task' && (i.kind === 'milestone' ? (i.end ?? i.date) >= today : i.date >= today))
+      .map((i) => (i.kind === 'milestone' ? milestoneToCalendarItem(i.milestone, i.milestone.subjectId ? byId.get(i.milestone.subjectId) : undefined) : i.kind === 'deadline' ? requirementToCalendarItem(i.requirement, i.subject) : null))
       .filter((x): x is CalendarItem => Boolean(x));
   }, [items, now, byId]);
 
   return (
     <div className="space-y-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[13px] font-medium text-muted">Výuka, zkouškové, volno a všechny termíny na jednom místě</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-[28px]">Harmonogram & kalendář</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button icon={ScrollText} onClick={() => openConnect('parser')}>
-            Vložit harmonogram
-          </Button>
-          <Button
-            icon={Plus}
-            onClick={() => {
-              setEditorKey((k) => k + 1);
-              setEditorOpen(true);
-            }}
-          >
-            Milník
-          </Button>
-          <AddToCalendar items={exportItems} filename="stihnu-harmonogram" label={`Exportovat (${exportItems.length})`} />
+      <header className="relative overflow-hidden rounded-[32px] bg-forest px-6 py-8 text-white sm:px-10 sm:py-11">
+        <img src="/images/mist-1200.webp" alt="" className="absolute inset-0 size-full object-cover opacity-75" />
+        <div className="photo-scrim absolute inset-0" />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow text-white/75">Výuka · termíny · úkoly · volno</p>
+            <h1 className="mt-2 font-display text-[48px] leading-[0.95] sm:text-[62px]">
+              Kalendář <em className="text-[#e7d6b5]">a harmonogram</em>
+            </h1>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="sand" icon={Plus} onClick={() => openEditor({ type: 'event' })}>
+              Událost
+            </Button>
+            <Button variant="glass" icon={Plus} onClick={() => openEditor({ type: 'task' })}>
+              Úkol
+            </Button>
+            <Button variant="glass" icon={ScrollText} onClick={() => openConnect('parser')}>
+              Harmonogram
+            </Button>
+            <Button
+              variant="glass"
+              icon={Flag}
+              onClick={() => {
+                setEditorKey((k) => k + 1);
+                setEditorOpen(true);
+              }}
+            >
+              Milník
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -485,21 +554,21 @@ export function CalendarView() {
           className="min-w-0 lg:col-span-7"
           title="Agenda"
           icon={Flag}
-          action={
+          action={<AddToCalendar items={exportItems} filename="stihnu-harmonogram" label={`Export (${exportItems.length})`} compact />}
+        >
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <Segmented
               size="sm"
               value={filter}
               onChange={setFilter}
               options={[
                 { value: 'all', label: 'Vše' },
+                { value: 'deadlines', label: 'Termíny' },
+                { value: 'tasks', label: 'Úkoly' },
                 { value: 'harmonogram', label: 'Harmonogram' },
-                { value: 'deadlines', label: 'Deadliny' },
               ]}
             />
-          }
-        >
-          <div className="mb-3">
-            <Toggle checked={showPast} onChange={setShowPast} label="Zobrazit i proběhlé" />
+            <Toggle checked={showPast} onChange={setShowPast} label={<span className="text-[13px]">Proběhlé</span>} />
           </div>
           <Agenda items={items} now={now} showPast={showPast} />
         </Card>

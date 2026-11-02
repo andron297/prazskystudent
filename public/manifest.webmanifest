@@ -1,24 +1,62 @@
 {
   "name": "Stihnu – studium & MHD",
   "short_name": "Stihnu",
-  "description": "Rozvrh ze SISu, úkoly a materiály z Moodlu, harmonogram roku a odpočet do posledního spoje MHD.",
+  "description": "Rozvrh ze SISu, úkoly z Moodlu, Google Kalendář a Úkoly, mapa zastávek MHD, počasí na cestu a odpočet do posledního spoje.",
   "lang": "cs",
   "dir": "ltr",
   "start_url": "/#/dnes",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f3f4f8",
-  "theme_color": "#4f46e5",
-  "categories": ["education", "productivity", "navigation"],
+  "background_color": "#eeeae0",
+  "theme_color": "#1d3a2a",
+  "categories": [
+    "education",
+    "productivity",
+    "navigation"
+  ],
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
   ],
   "shortcuts": [
-    { "name": "Dnes & doprava", "short_name": "Dnes", "url": "/#/dnes" },
-    { "name": "Předměty & materiály", "short_name": "Předměty", "url": "/#/predmety" },
-    { "name": "Harmonogram & kalendář", "short_name": "Harmonogram", "url": "/#/harmonogram" }
+    {
+      "name": "Dnes",
+      "short_name": "Dnes",
+      "url": "/#/dnes"
+    },
+    {
+      "name": "Mapa zastávek",
+      "short_name": "Doprava",
+      "url": "/#/doprava"
+    },
+    {
+      "name": "Kalendář",
+      "short_name": "Kalendář",
+      "url": "/#/kalendar"
+    },
+    {
+      "name": "Propojení",
+      "short_name": "Propojení",
+      "url": "/#/propojeni"
+    }
   ]
 }

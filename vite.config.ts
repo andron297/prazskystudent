@@ -83,9 +83,12 @@ function precacheManifestPlugin(): Plugin {
     apply: 'build',
     generateBundle(_options, bundle) {
       const files = Object.keys(bundle)
-        .filter((file) => /\.(js|css|woff2)$/.test(file))
+        .filter((file) => /\.(js|mjs|css|woff2)$/.test(file))
         .filter((file) => !/(cyrillic|greek|vietnamese|symbols)/.test(file))
+        // Mapa (~1,6 MB) se uloží až při prvním otevření Dopravy.
+        .filter((file) => !/(maplibre|TransitMapView)/.test(file))
         .map((file) => `/${file}`)
+        .concat(['/data/stops-praha.json', '/images/forest-1200.webp', '/images/mist-1200.webp', '/images/riverside-1200.webp'])
         .sort();
       this.emitFile({ type: 'asset', fileName: 'precache-manifest.json', source: JSON.stringify({ files }, null, 2) });
     },
@@ -97,6 +100,6 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: false,
-    chunkSizeWarningLimit: 900,
+    chunkSizeWarningLimit: 1200,
   },
 });

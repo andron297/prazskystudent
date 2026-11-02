@@ -5,24 +5,29 @@ import { AppShell } from './components/layout/AppShell';
 import { ConfirmHost, Toaster } from './components/ui/overlays';
 import { Skeleton } from './components/ui/primitives';
 import { useHashRoute, useThemeEffect } from './hooks/useAppShell';
+import { useSisBridge } from './services/sisBridge';
+import { useBackgroundSync } from './services/syncCenter';
 import { useAppStore } from './store/appStore';
 import { useClockStore } from './store/clockStore';
 import { useUiStore } from './store/uiStore';
 
 // Méně používané sekce se načítají až při otevření (menší první načtení PWA).
+const TransitMapView = lazy(() => import('./components/map/TransitMapView').then((m) => ({ default: m.TransitMapView })));
 const SubjectsView = lazy(() => import('./components/subjects/SubjectsView').then((m) => ({ default: m.SubjectsView })));
 const CalendarView = lazy(() => import('./components/calendar/CalendarView').then((m) => ({ default: m.CalendarView })));
-const IntegrationsView = lazy(() => import('./components/integrations/IntegrationsView').then((m) => ({ default: m.IntegrationsView })));
+const ConnectionsView = lazy(() => import('./components/integrations/ConnectionsView').then((m) => ({ default: m.ConnectionsView })));
+const ImportView = lazy(() => import('./components/integrations/ImportView').then((m) => ({ default: m.ImportView })));
 const ConnectStudyModal = lazy(() => import('./components/integrations/ConnectStudyModal').then((m) => ({ default: m.ConnectStudyModal })));
+const ItemEditor = lazy(() => import('./components/common/ItemEditor').then((m) => ({ default: m.ItemEditor })));
 
 function ViewFallback() {
   return (
     <div className="space-y-4" aria-busy="true">
-      <Skeleton className="h-10 w-72 max-w-full" />
+      <Skeleton className="h-12 w-72 max-w-full rounded-full" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <Skeleton className="h-48" />
-        <Skeleton className="h-48" />
-        <Skeleton className="h-48" />
+        <Skeleton className="h-48 rounded-[26px]" />
+        <Skeleton className="h-48 rounded-[26px]" />
+        <Skeleton className="h-48 rounded-[26px]" />
       </div>
     </div>
   );
@@ -33,18 +38,25 @@ export default function App() {
   const mode = useAppStore((s) => s.settings.mode);
   const { view, param } = useHashRoute();
   const connectOpen = useUiStore((s) => s.connectOpen);
+  const editor = useUiStore((s) => s.editor);
   const [connectMounted, setConnectMounted] = useState(false);
+  const [editorMounted, setEditorMounted] = useState(false);
   useThemeEffect(theme);
+  useBackgroundSync();
+  useSisBridge();
 
   useEffect(() => {
     if (connectOpen) setConnectMounted(true);
   }, [connectOpen]);
+  useEffect(() => {
+    if (editor) setEditorMounted(true);
+  }, [editor]);
 
   useEffect(() => {
     void useUiStore.getState().refreshServer();
   }, []);
 
-  // Demo: posun ukázkových dat na dnešek a simulované hodiny; Live: reálný čas.
+  // Sandbox: posun ukázkových dat na dnešek a simulované hodiny; Live: reálný čas.
   useEffect(() => {
     const clock = useClockStore.getState();
     if (mode === 'demo') {
@@ -56,16 +68,20 @@ export default function App() {
     }
   }, [mode]);
 
+  const fullBleed = view === 'doprava';
+
   return (
     <MotionConfig reducedMotion="user">
-      <AppShell view={view}>
+      <AppShell view={view} fullBleed={fullBleed}>
         <AnimatePresence mode="wait" initial={false}>
-          <motion.div key={`${view}/${param ?? ''}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
+          <motion.div key={`${view}/${param ?? ''}`} className={fullBleed ? 'h-full' : undefined} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
             <Suspense fallback={<ViewFallback />}>
               {view === 'dnes' && <DashboardView />}
+              {view === 'doprava' && <TransitMapView />}
               {view === 'predmety' && <SubjectsView subjectId={param} />}
-              {view === 'harmonogram' && <CalendarView />}
-              {view === 'integrace' && <IntegrationsView />}
+              {view === 'kalendar' && <CalendarView />}
+              {view === 'propojeni' && <ConnectionsView section={param} />}
+              {view === 'import' && <ImportView />}
             </Suspense>
           </motion.div>
         </AnimatePresence>
@@ -73,6 +89,11 @@ export default function App() {
       {connectMounted && (
         <Suspense fallback={null}>
           <ConnectStudyModal />
+        </Suspense>
+      )}
+      {editorMounted && (
+        <Suspense fallback={null}>
+          <ItemEditor />
         </Suspense>
       )}
       <ConfirmHost />

@@ -126,15 +126,16 @@ export function nextSubjectColor(used: SubjectColor[]): SubjectColor {
 export function lineBadgeClasses(mode: string, line: string): string {
   if (mode === 'metro') {
     const l = line.toUpperCase();
-    if (l === 'A') return 'bg-emerald-600 text-white';
-    if (l === 'B') return 'bg-yellow-400 text-zinc-900';
-    if (l === 'C') return 'bg-red-600 text-white';
+    if (l === 'A') return 'bg-[#1a9e5b] text-white';
+    if (l === 'B') return 'bg-[#e8a91a] text-zinc-900';
+    if (l === 'C') return 'bg-[#d22a3f] text-white';
     return 'bg-zinc-700 text-white';
   }
-  if (mode === 'tram') return 'bg-rose-700 text-white';
-  if (mode === 'bus') return 'bg-sky-700 text-white';
-  if (mode === 'trolleybus') return 'bg-teal-700 text-white';
-  if (mode === 'train') return 'bg-zinc-800 text-white';
-  if (mode === 'ferry') return 'bg-blue-700 text-white';
+  if (mode === 'tram') return 'bg-[#8e2b2b] text-white';
+  if (mode === 'bus') return 'bg-[#2f6f8f] text-white';
+  if (mode === 'trolleybus') return 'bg-[#7b3f8c] text-white';
+  if (mode === 'train') return 'bg-[#1f4e8c] text-white';
+  if (mode === 'ferry') return 'bg-[#1c7c9c] text-white';
+  if (mode === 'funicular') return 'bg-[#a36f45] text-white';
   return 'bg-zinc-600 text-white';
 }

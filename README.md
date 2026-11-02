@@ -107,7 +107,7 @@ npm run build
 | --- | --- | --- |
 | Čas | simulovaný, start ve 13:05 (lze posouvat v hlavičce) | reálný |
 | Poloha | simulovaná (Kolej Kajetánka, Kolej Hvězda, …) | GPS, záložní místo |
-| Doprava | simulace PID: tramvaje 22 a 18, metro A/B/C, zpoždění, klimatizace, přestupy | Golemio + volitelně Google Routes |
+| Doprava | simulace PID: tramvaje 22 a 2, metro A/B/C, zpoždění, klimatizace, přestupy | Golemio + volitelně Google Routes |
 | Moodle | simulované odpovědi ve formátu skutečného API | `/api/moodle` → Moodle REST |
 | SIS iCal | ukázkový export rozvrhu (RRULE) | `/api/ics` → tvůj odkaz |
 

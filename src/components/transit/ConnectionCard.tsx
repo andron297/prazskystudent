@@ -33,12 +33,12 @@ export function ConnectionCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        'glass relative min-w-0 rounded-2xl p-3.5 sm:p-4',
-        isLast ? 'ring-1 ring-inset ring-red-500/25' : 'ring-1 ring-inset ring-emerald-500/20',
+        'relative min-w-0 rounded-[22px] bg-surface-2/80 p-3.5 sm:p-4',
+        isLast ? 'ring-1 ring-inset ring-red-500/25' : 'ring-1 ring-inset ring-accent/25',
       )}
     >
       <header className="mb-2.5 flex items-center justify-between gap-2">
-        <span className={cn('inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide', isLast ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400')}>
+        <span className={cn('eyebrow inline-flex items-center gap-1.5', isLast ? 'text-red-700 dark:text-red-400' : 'text-accent')}>
           {isLast ? <Siren className="size-3.5" aria-hidden /> : <Armchair className="size-3.5" aria-hidden />}
           {merged ? 'Doporučený i poslední' : isLast ? 'Poslední možný spoj' : 'Doporučený spoj'}
         </span>
@@ -73,7 +73,7 @@ export function ConnectionCard({
             </div>
             <div>
               <dt className="text-subtle">Rezerva</dt>
-              <dd className={cn('text-[13.5px] font-semibold tabular', slack <= 1 ? 'text-red-600 dark:text-red-400' : slack < 6 ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400')}>
+              <dd className={cn('text-[13.5px] font-semibold tabular', slack <= 1 ? 'text-red-600 dark:text-red-400' : slack < 6 ? 'text-orange-600 dark:text-orange-400' : 'text-accent')}>
                 {slack} min
               </dd>
             </div>

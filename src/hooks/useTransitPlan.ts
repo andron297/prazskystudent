@@ -45,7 +45,8 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
   const onSite = Boolean(building && haversineMeters(origin.coords, building.coords) < 300);
   const refreshEvery = settings.mode === 'demo' ? 15_000 : 30_000;
   const bucket = Math.floor(now.getTime() / refreshEvery);
-  const originKey = `${origin.coords.lat.toFixed(4)},${origin.coords.lng.toFixed(4)}`;
+  const originStop = settings.originStop[settings.mode];
+  const originKey = `${origin.coords.lat.toFixed(4)},${origin.coords.lng.toFixed(4)}|${originStop?.name ?? ''}`;
 
   useEffect(() => {
     if (!event || !building || tooFar || onSite || minutesUntil < -5) {
@@ -56,7 +57,7 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
     let cancelled = false;
     setLoading(true);
     api
-      .planTransit({ origin: origin.coords, originLabel: origin.label, building, eventStart: new Date(event.start), now: appNow() })
+      .planTransit({ origin: origin.coords, originLabel: origin.label, building, eventStart: new Date(event.start), now: appNow(), originStop })
       .then((r) => {
         if (cancelled) return;
         setResult(r);

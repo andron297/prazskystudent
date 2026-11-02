@@ -1,6 +1,7 @@
 /** Směrovač pro lokální vývoj (Vite middleware). Na Vercelu každou cestu obsluhuje soubor v `api/`. */
 import { handleAiParse } from './aiParse.js';
 import { handleGolemio } from './golemio.js';
+import { handleGoogle } from './google.js';
 import { handleHealth } from './health.js';
 import { handleIcs } from './ics.js';
 import { json } from './http.js';
@@ -14,6 +15,7 @@ const ROUTES: Record<string, (request: Request) => Promise<Response>> = {
   '/api/routes': handleRoutes,
   '/api/ai-parse': handleAiParse,
   '/api/health': handleHealth,
+  '/api/google': handleGoogle,
 };
 
 export async function routeApiRequest(request: Request): Promise<Response> {

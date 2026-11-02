@@ -6,7 +6,7 @@ import { extendTailwindMerge } from 'tailwind-merge';
 const twMerge = extendTailwindMerge({
   extend: {
     theme: {
-      color: ['canvas', 'surface', 'surface-2', 'fg', 'muted', 'subtle', 'line', 'line-strong', 'accent', 'accent-fg', 'accent-soft'],
+      color: ['canvas', 'surface', 'surface-2', 'fg', 'muted', 'subtle', 'line', 'line-strong', 'accent', 'accent-fg', 'accent-soft', 'forest', 'forest-fg', 'moss', 'sand', 'clay'],
     },
   },
 });
@@ -20,24 +20,26 @@ export function cn(...classes: (string | false | null | undefined)[]): string {
 /* Tlačítka                                                            */
 /* ------------------------------------------------------------------ */
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'soft';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'soft' | 'glass' | 'sand';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 const BUTTON_BASE =
   'inline-flex select-none items-center justify-center gap-2 whitespace-nowrap font-medium transition-[background-color,box-shadow,color,transform] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50';
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-accent-fg shadow-sm hover:brightness-110 hover:shadow-md',
+  primary: 'bg-accent text-accent-fg shadow-[0_8px_20px_-10px_var(--accent)] hover:brightness-110',
   secondary: 'border border-line-strong bg-surface text-fg hover:bg-surface-2',
   ghost: 'text-muted hover:bg-surface-2 hover:text-fg',
-  danger: 'bg-red-600 text-white hover:bg-red-500',
+  danger: 'bg-red-700 text-white hover:bg-red-600',
   soft: 'bg-accent-soft text-accent hover:brightness-110',
+  glass: 'border border-white/25 bg-white/15 text-white backdrop-blur-md hover:bg-white/25',
+  sand: 'bg-sand text-[#1d2a20] hover:brightness-105',
 };
 
 const BUTTON_SIZES: Record<ButtonSize, string> = {
-  sm: 'h-8 rounded-lg px-2.5 text-[13px]',
-  md: 'h-10 rounded-xl px-3.5 text-sm',
-  lg: 'h-12 rounded-2xl px-5 text-[15px]',
+  sm: 'h-8 rounded-full px-3 text-[13px]',
+  md: 'h-10 rounded-full px-4 text-sm',
+  lg: 'h-12 rounded-full px-5 text-[15px]',
 };
 
 export interface ButtonProps extends ComponentProps<'button'> {
@@ -94,17 +96,20 @@ export interface CardProps extends Omit<ComponentProps<'section'>, 'title'> {
   padded?: boolean;
 }
 
-export function Card({ title, icon: Icon, action, padded = true, className, children, ...rest }: CardProps) {
+export function Card({ title, icon: Icon, action, padded = true, eyebrow, className, children, ...rest }: CardProps & { eyebrow?: ReactNode }) {
   return (
-    <section className={cn('card min-w-0 rounded-3xl', padded && 'p-4 sm:p-5', className)} {...rest}>
+    <section className={cn('card min-w-0 rounded-[26px]', padded && 'p-4 sm:p-5', className)} {...rest}>
       {(title || action) && (
-        <header className={cn('mb-3 flex items-center justify-between gap-3', !padded && 'px-4 pt-4 sm:px-5 sm:pt-5')}>
-          {title && (
-            <h2 className="flex min-w-0 items-center gap-2 text-[15px] font-semibold tracking-tight">
-              {Icon && <Icon className="size-4 shrink-0 text-subtle" aria-hidden />}
-              <span className="truncate">{title}</span>
-            </h2>
-          )}
+        <header className={cn('mb-3.5 flex items-end justify-between gap-3', !padded && 'px-4 pt-4 sm:px-5 sm:pt-5')}>
+          <div className="min-w-0">
+            {eyebrow && <p className="eyebrow mb-1 text-subtle">{eyebrow}</p>}
+            {title && (
+              <h2 className="flex min-w-0 items-center gap-2 font-display text-[23px] leading-none">
+                {Icon && <Icon className="size-[18px] shrink-0 text-moss" aria-hidden />}
+                <span className="truncate">{title}</span>
+              </h2>
+            )}
+          </div>
           {action}
         </header>
       )}
@@ -113,9 +118,14 @@ export function Card({ title, icon: Icon, action, padded = true, className, chil
   );
 }
 
+/** Nadpis sekce ve stylu „Explore *the* nature“ – serif s kurzívou. */
+export function SerifTitle({ children, className, as: Tag = 'h2' }: { children: ReactNode; className?: string; as?: 'h1' | 'h2' | 'h3' }) {
+  return <Tag className={cn('font-display leading-[0.95] tracking-tight [&_em]:italic [&_em]:text-moss', className)}>{children}</Tag>;
+}
+
 export function Chip({ children, className, icon: Icon, title }: { children: ReactNode; className?: string; icon?: LucideIcon; title?: string }) {
   return (
-    <span title={title} className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-medium leading-5', className ?? 'bg-surface-2 text-muted ring-1 ring-inset ring-line')}>
+    <span title={title} className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-semibold leading-5', className ?? 'bg-surface-2 text-muted ring-1 ring-inset ring-line')}>
       {Icon && <Icon className="size-3" aria-hidden />}
       {children}
     </span>
@@ -176,7 +186,7 @@ export function ProgressRing({ value, size = 64, stroke = 7, className, trackCla
 /* ------------------------------------------------------------------ */
 
 const FIELD_BASE =
-  'w-full rounded-xl border border-line-strong bg-surface px-3 text-sm text-fg placeholder:text-subtle transition-shadow focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-60';
+  'w-full rounded-2xl border border-line-strong bg-surface px-3.5 text-sm text-fg placeholder:text-subtle transition-shadow focus:border-transparent focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-60';
 
 export function TextInput({ className, ...rest }: ComponentProps<'input'>) {
   return <input className={cn(FIELD_BASE, 'h-10', className)} {...rest} />;
@@ -227,7 +237,7 @@ export function Toggle({ checked, onChange, label, description, disabled }: { ch
 
 export function Segmented<T extends string>({ value, onChange, options, size = 'md', className }: { value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode; icon?: LucideIcon }[]; size?: 'sm' | 'md'; className?: string }) {
   return (
-    <div className={cn('inline-flex max-w-full rounded-xl bg-surface-2 p-1 ring-1 ring-inset ring-line', className)} role="tablist">
+    <div className={cn('inline-flex max-w-full rounded-full bg-surface-2 p-1 ring-1 ring-inset ring-line', className)} role="tablist">
       {options.map((o) => {
         const active = o.value === value;
         const Icon = o.icon;
@@ -238,9 +248,9 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
             role="tab"
             aria-selected={active}
             onClick={() => onChange(o.value)}
-            className={cn('relative inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg font-medium transition-colors', size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[13px]', active ? 'text-fg' : 'text-muted hover:text-fg')}
+            className={cn('relative inline-flex min-w-0 items-center justify-center gap-1.5 rounded-full font-semibold transition-colors', size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3.5 text-[13px]', active ? 'text-fg' : 'text-muted hover:text-fg')}
           >
-            {active && <motion.span layoutId={`seg-${options.map((x) => x.value).join('-')}`} className="absolute inset-0 rounded-lg bg-surface shadow-sm ring-1 ring-line" transition={{ type: 'spring', stiffness: 500, damping: 36 }} />}
+            {active && <motion.span layoutId={`seg-${options.map((x) => x.value).join('-')}`} className="absolute inset-0 rounded-full bg-surface shadow-sm ring-1 ring-line" transition={{ type: 'spring', stiffness: 500, damping: 36 }} />}
             {Icon && <Icon className="relative size-3.5" aria-hidden />}
             <span className="relative truncate">{o.label}</span>
           </button>
@@ -273,11 +283,11 @@ export function Checkbox({ checked, onChange, label, className, colorClass }: { 
 
 export function EmptyState({ icon: Icon, title, children, action }: { icon: LucideIcon; title: string; children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-line-strong px-6 py-10 text-center">
-      <div className="mb-3 grid size-11 place-items-center rounded-2xl bg-surface-2 text-subtle ring-1 ring-line">
+    <div className="flex flex-col items-center justify-center rounded-[22px] border border-dashed border-line-strong px-6 py-9 text-center">
+      <div className="mb-3 grid size-11 place-items-center rounded-full bg-accent-soft text-accent">
         <Icon className="size-5" aria-hidden />
       </div>
-      <p className="text-sm font-semibold">{title}</p>
+      <p className="font-display text-xl leading-tight">{title}</p>
       {children && <div className="mt-1 max-w-sm text-[13px] leading-relaxed text-muted">{children}</div>}
       {action && <div className="mt-4">{action}</div>}
     </div>

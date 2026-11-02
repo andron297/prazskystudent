@@ -178,6 +178,8 @@ export interface DemoPlanParams {
   nowMs: number;
   untilMs: number;
   walkSpeed: WalkSpeed;
+  /** Zastávka zvolená studentem (musí být v demo síti). */
+  originStop?: { name: string; coords: LatLng } | null;
 }
 
 export function nearbyDemoStops(origin: LatLng, walkSpeed: WalkSpeed, maxMeters = 1600) {
@@ -192,8 +194,15 @@ export function nearbyDemoStops(origin: LatLng, walkSpeed: WalkSpeed, maxMeters 
     .slice(0, 4);
 }
 
+export function demoNetworkHasStop(name: string): boolean {
+  return Boolean(DEMO_STOPS[name]) && linesServing(name).length > 0;
+}
+
 function findPatterns(params: DemoPlanParams): Pattern[] {
-  const origins = nearbyDemoStops(params.origin, params.walkSpeed);
+  const forced = params.originStop && demoNetworkHasStop(params.originStop.name) ? params.originStop : null;
+  const origins = forced
+    ? [{ name: forced.name, meters: haversineMeters(params.origin, DEMO_STOPS[forced.name]), walkMinutes: walkingMinutes(params.origin, DEMO_STOPS[forced.name], params.walkSpeed) }]
+    : nearbyDemoStops(params.origin, params.walkSpeed);
   const destinations = new Map(params.building.arrivalStops.filter((s) => DEMO_STOPS[s.name]).map((s) => [s.name, s.walkMinutes]));
   if (origins.length === 0 || destinations.size === 0) return [];
   const patterns: Pattern[] = [];

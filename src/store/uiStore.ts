@@ -1,6 +1,7 @@
 /** Přechodný stav UI: toasty, modální okno „Propojit studium“, schopnosti serveru. */
 import { create } from 'zustand';
 import { fetchServerCapabilities, NO_SERVER, type ServerCapabilities } from '../services/api';
+import type { SisPayload } from '../services/sisBridge';
 import { uid } from '../lib/id';
 
 export type ToastTone = 'success' | 'error' | 'info';
@@ -12,6 +13,12 @@ export interface Toast {
 }
 
 export type ConnectTab = 'moodle' | 'ics' | 'parser';
+
+/** Otevřený editor úkolu nebo události. */
+export type EditorTarget =
+  | { type: 'task'; id?: string; text?: string }
+  | { type: 'event'; id?: string; text?: string }
+  | { type: 'quick'; text?: string };
 
 export interface ConfirmOptions {
   title: string;
@@ -40,6 +47,14 @@ interface UiState {
   confirmRequest: ConfirmRequest | null;
   askConfirm: (options: ConfirmOptions) => Promise<boolean>;
   resolveConfirm: (value: boolean) => void;
+  editor: EditorTarget | null;
+  openEditor: (target: EditorTarget) => void;
+  closeEditor: () => void;
+  sisImport: SisPayload | null;
+  setSisImport: (payload: SisPayload | null) => void;
+  /** Vybraná zastávka na mapě (z jiné obrazovky). */
+  focusStop: string | null;
+  setFocusStop: (name: string | null) => void;
 }
 
 export const useUiStore = create<UiState>()((set, get) => ({
@@ -78,6 +93,13 @@ export const useUiStore = create<UiState>()((set, get) => ({
     get().confirmRequest?.resolve(value);
     set({ confirmRequest: null });
   },
+  editor: null,
+  openEditor: (target) => set({ editor: target }),
+  closeEditor: () => set({ editor: null }),
+  sisImport: null,
+  setSisImport: (payload) => set({ sisImport: payload }),
+  focusStop: null,
+  setFocusStop: (name) => set({ focusStop: name }),
 }));
 
 /** Potvrzení v rozhraní aplikace (nativní confirm() je na mobilu nevzhledný a v některých prostředích blokovaný). */

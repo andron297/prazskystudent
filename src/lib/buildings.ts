@@ -115,7 +115,7 @@ export const DEFAULT_BUILDINGS: Building[] = [
 
 /** Výchozí body pro simulaci polohy a záložní polohu bez GPS. */
 export const LOCATION_PRESETS: LocationPreset[] = [
-  { id: 'kajetanka', label: 'Kolej Kajetánka (Břevnov)', coords: { lat: 50.0838, lng: 14.3655 } },
+  { id: 'kajetanka', label: 'Kolej Kajetánka (Břevnov)', coords: { lat: 50.0862, lng: 14.3712 } },
   { id: 'hvezda', label: 'Kolej Hvězda (Praha 6)', coords: { lat: 50.0818, lng: 14.3422 } },
   { id: 'jednota', label: 'Kolej Jednota (Opletalova)', coords: { lat: 50.0828, lng: 14.4318 } },
   { id: 'andel', label: 'Anděl', coords: { lat: 50.0712, lng: 14.4031 } },

@@ -130,3 +130,27 @@ export function buildDemoIcs(now: Date): string {
   );
   return lines.join('\r\n');
 }
+
+function icsUtc(date: Date): string {
+  return `${date.getUTCFullYear()}${pad2(date.getUTCMonth() + 1)}${pad2(date.getUTCDate())}T${pad2(date.getUTCHours())}${pad2(date.getUTCMinutes())}00Z`;
+}
+
+/** Ukázkový export kalendáře Moodlu (Kalendář → Exportovat → URL kalendáře). */
+export function buildDemoMoodleIcs(now: Date): string {
+  const day = (d: number, h: number, m: number) => {
+    const t = addDays(now, d);
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate(), h, m);
+  };
+  const items: [string, string, Date, string][] = [
+    ['9001', 'Reflexe přednášky 6 is due', day(2, 23, 59), 'JSB022 Úvod do mediálních studií'],
+    ['9002', 'Kvíz: Popisná statistika opens', day(4, 8, 0), 'JSB110 Statistika pro sociální vědy'],
+    ['9003', 'Kvíz: Popisná statistika closes', day(6, 22, 0), 'JSB110 Statistika pro sociální vědy'],
+    ['9004', 'Návrh kódovací knihy is due', day(9, 12, 0), 'JSB065 Analýza mediálních obsahů'],
+  ];
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Moodle Pty Ltd//NONSGML Moodle Version 2024042200//EN'];
+  for (const [id, summary, at, course] of items) {
+    lines.push('BEGIN:VEVENT', `UID:${id}@dl1.cuni.cz`, `SUMMARY:${summary}`, `DTSTAMP:${icsUtc(now)}`, `DTSTART:${icsUtc(at)}`, `DTEND:${icsUtc(at)}`, `CATEGORIES:${course}`, 'END:VEVENT');
+  }
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}

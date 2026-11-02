@@ -1,5 +1,5 @@
 /* Stihnu – service worker: offline app shell + cache hashovaných assetů. API se nikdy necachuje. */
-const VERSION = 'stihnu-v3';
+const VERSION = 'stihnu-v4';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -52,8 +52,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Hashované assety a ikony: cache první.
-  if (url.pathname.startsWith('/assets/') || /\.(?:png|svg|woff2?|webmanifest|ico)$/.test(url.pathname)) {
+  // Data zastávek: z cache hned, na pozadí aktualizovat (stale-while-revalidate).
+  if (url.pathname.startsWith('/data/')) {
+    event.respondWith(
+      caches.open(VERSION).then((cache) =>
+        cache.match(request, { ignoreVary: true }).then((cached) => {
+          const network = fetch(request)
+            .then((response) => {
+              if (response.ok) cache.put(request, response.clone());
+              return response;
+            })
+            .catch(() => cached);
+          return cached || network;
+        }),
+      ),
+    );
+    return;
+  }
+
+  // Hashované assety, fotky a ikony: cache první.
+  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/images/') || /\.(?:png|svg|webp|jpe?g|woff2?|webmanifest|ico)$/.test(url.pathname)) {
     event.respondWith(
       // ignoreVary: moduly se načítají v CORS režimu (hlavička Origin), odpověď může mít „Vary: Origin“.
       caches.match(request, { ignoreVary: true }).then(

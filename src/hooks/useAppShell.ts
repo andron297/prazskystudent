@@ -21,7 +21,7 @@ export function useThemeEffect(pref: ThemePref): 'light' | 'dark' {
       const next = resolveTheme(pref);
       setResolved(next);
       document.documentElement.setAttribute('data-theme', next);
-      document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', next === 'dark' ? '#0a0c11' : '#f3f4f8'));
+      document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', next === 'dark' ? '#0b110d' : '#eeeae0'));
     };
     apply();
     if (pref !== 'system') return;
@@ -41,14 +41,17 @@ export function useThemeEffect(pref: ThemePref): 'light' | 'dark' {
 /* Hash routing (#/dnes, #/predmety/<id>, #/harmonogram, #/integrace)  */
 /* ------------------------------------------------------------------ */
 
-export type View = 'dnes' | 'predmety' | 'harmonogram' | 'integrace';
+export type View = 'dnes' | 'doprava' | 'predmety' | 'kalendar' | 'propojeni' | 'import';
 
-const VIEWS: View[] = ['dnes', 'predmety', 'harmonogram', 'integrace'];
+const VIEWS: View[] = ['dnes', 'doprava', 'predmety', 'kalendar', 'propojeni', 'import'];
+/** Staré adresy z první verze. */
+const ALIASES: Record<string, View> = { harmonogram: 'kalendar', integrace: 'propojeni', nastaveni: 'propojeni', mapa: 'doprava' };
 
 function parseHash(): { view: View; param?: string } {
   const raw = window.location.hash.replace(/^#\/?/, '');
-  const [view, param] = raw.split('/');
-  return VIEWS.includes(view as View) ? { view: view as View, param: param ? decodeURIComponent(param) : undefined } : { view: 'dnes' };
+  const [first, param] = raw.split('/');
+  const view = (ALIASES[first] ?? first) as View;
+  return VIEWS.includes(view) ? { view, param: param ? decodeURIComponent(param) : undefined } : { view: 'dnes' };
 }
 
 export function useHashRoute() {
@@ -69,4 +72,16 @@ export function useHashRoute() {
 
 export function navigateTo(view: View, param?: string): void {
   window.location.hash = `/${view}${param ? `/${encodeURIComponent(param)}` : ''}`;
+}
+
+/** Skutečně použitý motiv (sleduje atribut data-theme na <html>). */
+export function useResolvedTheme(): 'light' | 'dark' {
+  const read = () => (document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(read);
+  useEffect(() => {
+    const observer = new MutationObserver(() => setTheme(read()));
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+  return theme;
 }

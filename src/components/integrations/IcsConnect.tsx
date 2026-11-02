@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { CalendarDays, CircleAlert, CircleCheck, Download, FileUp, Link2, MapPin, School } from 'lucide-react';
-import type { DataSource } from '../../types';
+import type { DataSource, IcsSource } from '../../types';
+import { uid } from '../../lib/id';
 import { locationAliasKey } from '../../lib/buildings';
 import { downloadTextFile } from '../../lib/calendarExport';
 import { parseIcs } from '../../lib/ics';
@@ -26,7 +27,8 @@ export function IcsConnect() {
   const server = useUiStore((s) => s.server);
   const closeConnect = useUiStore((s) => s.closeConnect);
   const [source, setSource] = useState<Source>('sis');
-  const [url, setUrl] = useState(settings.ics?.url ?? '');
+  const existingSource = settings.icsSources.find((x) => x.kind === 'sis' || x.kind === 'google');
+  const [url, setUrl] = useState(existingSource?.url ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<IcsImportPreview | null>(null);
@@ -77,8 +79,14 @@ export function IcsConnect() {
     for (const [location, buildingId] of Object.entries(aliases)) if (buildingId) setLocationAlias(location, buildingId);
     const origin: DataSource = preview.events[0]?.source ?? 'sis';
     const replaceSources: DataSource[] = [];
-    if (replaceExisting) replaceSources.push(origin);
+    if (replaceExisting && source === 'ics-file') replaceSources.push(origin);
     if (replaceDemo && hasDemoEvents) replaceSources.push('demo');
+    const kind = source === 'google' ? 'google' : 'sis';
+    const known = settings.icsSources.find((x) => x.url === url.trim()) ?? (replaceExisting ? settings.icsSources.find((x) => x.kind === kind) : undefined);
+    const icsSource: IcsSource | undefined =
+      source === 'ics-file' || usedSample
+        ? undefined
+        : { id: known?.id ?? uid('ics'), kind, url: url.trim(), label: preview.calendarName, autoRefresh: true, lastSync: new Date().toISOString(), itemCount: preview.events.length };
     const events = preview.events.map((e) => {
       if (e.buildingId || !e.location) return e;
       const mapped = aliases[e.location];
@@ -88,7 +96,8 @@ export function IcsConnect() {
       subjects: preview.newSubjects,
       events,
       replaceSources,
-      connection: source === 'ics-file' ? undefined : { url: url.trim(), label: preview.calendarName, lastSync: new Date().toISOString(), eventCount: events.length },
+      replaceSourceId: icsSource?.id,
+      source: icsSource,
       demo: usedSample,
     });
     toast.success(`Importováno ${events.length} rozvrhových akcí${preview.newSubjects.length ? ` a ${preview.newSubjects.length} nových předmětů` : ''}.`);
@@ -162,7 +171,7 @@ export function IcsConnect() {
       )}
 
       {settings.mode === 'demo' && source !== 'ics-file' && (
-        <p className="rounded-2xl bg-violet-500/10 px-3.5 py-2.5 text-[13px] text-violet-800 dark:text-violet-200">
+        <p className="rounded-2xl bg-sand/15 px-3.5 py-2.5 text-[13px] text-clay">
           Sandbox načte ukázkový export rozvrhu ze SISu (týdenní RRULE, pásmo Europe/Prague). V Live režimu se odkaz stáhne přes serverovou iCal proxy.
         </p>
       )}

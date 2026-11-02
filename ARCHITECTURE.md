@@ -121,7 +121,7 @@ do toho, zda spoj ještě stihneš.
 
 ## 6. Demo / Sandbox
 
-- `services/demo/network.ts` + `transitSim.ts` – síť PID (tramvaje 22 a 18, metro A/B/C) s intervaly podle denní doby,
+- `services/demo/network.ts` + `transitSim.ts` – síť PID (tramvaje 22 a 2, metro A/B/C) s intervaly podle denní doby,
   deterministickými trip ID, plynule se měnícím zpožděním, klimatizací a nízkopodlažností podle vozového parku
   a vyhledáním spojení s jedním přestupem. Výstup má stejný tvar jako Live (`Itinerary`).
 - `services/demo/moodleDemo.ts` – simulovaný Moodle se stejným tvarem odpovědí, takže demo prochází stejnou synchronizací.

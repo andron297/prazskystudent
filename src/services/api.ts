@@ -6,13 +6,13 @@
  *  - Live: Golemio, Google Routes, Moodle REST a iCal přes serverové proxy.
  * Komponenty volají jen tuto fasádu, nikdy přímo fetch.
  */
-import type { AppMode, Building, LatLng, Settings, TransitResult } from '../types';
+import type { AppMode, Building, LatLng, OriginStopPref, Settings, TransitResult } from '../types';
 import type { ParseMode, ParsedItem } from '../lib/scheduleTextParser';
 import { parseScheduleText } from '../lib/scheduleTextParser';
 import { aiParseText } from './aiParser';
 import { buildDemoIcs } from './demo/samples';
 import { DemoMoodleClient } from './demo/moodleDemo';
-import { demoNetworkCovers, planDemoItineraries } from './demo/transitSim';
+import { demoNetworkCovers, demoNetworkHasStop, planDemoItineraries } from './demo/transitSim';
 import { GolemioClient } from './golemio';
 import { requestJson, requestText, sleep } from './http';
 import { LiveMoodleClient, type MoodleClient } from './moodle';
@@ -24,6 +24,8 @@ export interface TransitRequest {
   building: Building;
   eventStart: Date;
   now: Date;
+  /** Zvolená výchozí zastávka (jinak automaticky nejbližší). */
+  originStop?: OriginStopPref | null;
 }
 
 export interface ServerCapabilities {
@@ -31,9 +33,13 @@ export interface ServerCapabilities {
   golemio: boolean;
   google: boolean;
   anthropic: boolean;
+  /** OAuth Client ID nastavený na serveru (veřejný údaj). */
+  googleClientId: string | null;
+  /** Server umí obnovovat přihlášení Google (refresh token v HttpOnly cookie). */
+  googleServerFlow: boolean;
 }
 
-export const NO_SERVER: ServerCapabilities = { reachable: false, golemio: false, google: false, anthropic: false };
+export const NO_SERVER: ServerCapabilities = { reachable: false, golemio: false, google: false, anthropic: false, googleClientId: null, googleServerFlow: false };
 
 export interface StudyApi {
   readonly mode: AppMode;
@@ -58,6 +64,7 @@ function baseParams(request: TransitRequest, settings: Settings): LivePlanParams
     golemio: null,
     googleKey: settings.googleMapsApiKey,
     useGoogle: false,
+    originStop: request.originStop ?? null,
   };
 }
 
@@ -78,6 +85,10 @@ export function createApi(settings: Settings, server: ServerCapabilities, now: (
       canUseAi,
       async planTransit(request) {
         const nowMs = request.now.getTime();
+        const stopWarnings =
+          request.originStop && !demoNetworkHasStop(request.originStop.name)
+            ? [`Zastávka ${request.originStop.name} není v simulované síti – jedu z nejbližší. Živá data ji umí.`]
+            : [];
         const itineraries = planDemoItineraries({
           origin: request.origin,
           originLabel: request.originLabel,
@@ -85,9 +96,10 @@ export function createApi(settings: Settings, server: ServerCapabilities, now: (
           nowMs,
           untilMs: Math.max(request.eventStart.getTime() + 30 * MIN, nowMs + 60 * MIN),
           walkSpeed: settings.walkSpeed,
+          originStop: request.originStop ?? null,
         });
         if (itineraries.length > 0) {
-          return { itineraries, source: 'demo', fetchedAt: request.now.toISOString(), warnings: [], originLabel: request.originLabel };
+          return { itineraries, source: 'demo', fetchedAt: request.now.toISOString(), warnings: stopWarnings, originLabel: request.originLabel };
         }
         const warnings = demoNetworkCovers(request.building)
           ? ['Z této polohy nevede v demo síti žádný spoj – zobrazuji odhad.']
@@ -148,14 +160,18 @@ export async function testGolemioKey(key: string): Promise<{ ok: boolean; messag
 /** Zjistí, zda běží serverové funkce a které klíče má server nastavené. */
 export async function fetchServerCapabilities(): Promise<ServerCapabilities> {
   try {
-    const data = await requestJson<{ ok: boolean; serverKeys?: { golemio?: boolean; google?: boolean; anthropic?: boolean } }>('/api/health', {
-      timeoutMs: 6000,
-    });
+    const data = await requestJson<{
+      ok: boolean;
+      serverKeys?: { golemio?: boolean; google?: boolean; anthropic?: boolean };
+      google?: { clientId?: string | null; serverFlow?: boolean };
+    }>('/api/health', { timeoutMs: 6000 });
     return {
       reachable: Boolean(data.ok),
       golemio: Boolean(data.serverKeys?.golemio),
       google: Boolean(data.serverKeys?.google),
       anthropic: Boolean(data.serverKeys?.anthropic),
+      googleClientId: data.google?.clientId ?? null,
+      googleServerFlow: Boolean(data.google?.serverFlow),
     };
   } catch {
     return NO_SERVER;

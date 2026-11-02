@@ -49,7 +49,7 @@ export function Modal({ open, onClose, title, description, icon: Icon, size = 'm
     <AnimatePresence>
       {open && (
         <motion.div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <motion.div className="absolute inset-0 bg-zinc-950/45 backdrop-blur-[3px]" onClick={onClose} aria-hidden />
+          <motion.div className="absolute inset-0 bg-[#0b110d]/45 backdrop-blur-[4px]" onClick={onClose} aria-hidden />
           <motion.div
             ref={panelRef}
             role="dialog"
@@ -60,20 +60,20 @@ export function Modal({ open, onClose, title, description, icon: Icon, size = 'm
             exit={{ y: 48, opacity: 0, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 380, damping: 34 }}
             className={cn(
-              'card relative flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-3xl sm:rounded-3xl',
+              'card relative flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-[28px] sm:rounded-[28px]',
               size === 'md' && 'sm:max-w-lg',
               size === 'lg' && 'sm:max-w-2xl',
               size === 'xl' && 'sm:max-w-4xl',
             )}
           >
-            <header className="flex items-start gap-3 border-b border-line px-5 py-4">
+            <header className="flex items-center gap-3 border-b border-line px-5 py-4">
               {Icon && (
-                <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-accent-soft text-accent">
+                <div className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
                   <Icon className="size-5" aria-hidden />
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <h2 id={titleId} className="text-base font-semibold tracking-tight">
+                <h2 id={titleId} className="font-display text-[26px] leading-none">
                   {title}
                 </h2>
                 {description && <p className="mt-0.5 text-[13px] leading-relaxed text-muted">{description}</p>}
