@@ -4,13 +4,16 @@ import type { CalendarItem } from '../../lib/calendarExport';
 import { downloadIcs, formatReminder, googleCalendarUrl } from '../../lib/calendarExport';
 import { insertGoogleEvents } from '../../lib/googleCalendar';
 import { useAppStore } from '../../store/appStore';
-import { toast } from '../../store/uiStore';
+import { toast, useUiStore } from '../../store/uiStore';
+import { resolveClientId } from '../../services/google/auth';
 import { Menu, type MenuItem } from '../ui/overlays';
 import { Button, IconButton } from '../ui/primitives';
 
 /** Jednotné tlačítko „Do kalendáře“: Google API (s připomínkami), přímý odkaz, nebo .ics. */
 export function AddToCalendar({ items, filename, compact = false, label = 'Do kalendáře' }: { items: CalendarItem[]; filename: string; compact?: boolean; label?: string }) {
-  const clientId = useAppStore((s) => s.settings.googleOAuthClientId);
+  const settingsClientId = useAppStore((s) => s.settings.google.clientId || s.settings.googleOAuthClientId);
+  const server = useUiStore((s) => s.server);
+  const clientId = resolveClientId(settingsClientId, server.googleClientId);
   const reminders = useAppStore((s) => s.settings.reminders);
   const [busy, setBusy] = useState(false);
   const reminderText = reminders.length ? reminders.map(formatReminder).join(', ') : 'bez připomínek';
@@ -18,7 +21,7 @@ export function AddToCalendar({ items, filename, compact = false, label = 'Do ka
   const viaApi = async () => {
     setBusy(true);
     try {
-      const n = await insertGoogleEvents(clientId, items, reminders);
+      const n = await insertGoogleEvents(clientId, items, reminders, server.googleServerFlow);
       toast.success(`Přidáno do Google Kalendáře (${n}) s připomínkami: ${reminderText}.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
@@ -34,7 +37,7 @@ export function AddToCalendar({ items, filename, compact = false, label = 'Do ka
   if (items.length === 1) {
     menuItems.push({
       label: 'Google Kalendář (odkaz)',
-      hint: clientId ? 'Otevře předvyplněnou událost' : 'Otevře předvyplněnou událost – pro automatické připomínky použij .ics nebo propoj Google API v Nastavení',
+      hint: clientId ? 'Otevře předvyplněnou událost' : 'Otevře předvyplněnou událost – pro automatické připomínky použij .ics nebo propoj Google v Propojení',
       icon: ExternalLink,
       onSelect: () => window.open(googleCalendarUrl(items[0]), '_blank', 'noopener,noreferrer'),
     });

@@ -14,6 +14,7 @@ import { errorMessage } from '../../services/http';
 import { useAppStore } from '../../store/appStore';
 import { appNow } from '../../store/clockStore';
 import { toast, useUiStore } from '../../store/uiStore';
+import { resolveClientId } from '../../services/google/auth';
 import { Button, Checkbox, Chip, cn, Field, Segmented, Select, TextArea, TextInput } from '../ui/primitives';
 
 function itemDateLabel(item: ParsedItem): string {
@@ -33,6 +34,7 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
   const addRequirements = useAppStore((s) => s.addRequirements);
   const server = useUiStore((s) => s.server);
   const closeConnect = useUiStore((s) => s.closeConnect);
+  const googleClientId = resolveClientId(settings.google.clientId || settings.googleOAuthClientId, server.googleClientId);
   const [mode, setMode] = useState<ParseMode>(initialSubjectId ? 'syllabus' : 'harmonogram');
   const [text, setText] = useState('');
   const [subjectId, setSubjectId] = useState(initialSubjectId ?? subjects[0]?.id ?? '');
@@ -139,7 +141,7 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
       ];
       if (then === 'ics') downloadIcs(mode === 'harmonogram' ? 'harmonogram' : `sylabus-${subject?.code ?? 'predmet'}`, calendarItems, { calendarName: 'Stihnu', reminders: settings.reminders });
       if (then === 'google') {
-        const n = await insertGoogleEvents(settings.googleOAuthClientId, calendarItems, settings.reminders);
+        const n = await insertGoogleEvents(googleClientId, calendarItems, settings.reminders, server.googleServerFlow);
         toast.success(`Zapsáno do Google Kalendáře: ${n} událostí s připomínkami.`);
       }
       toast.success(`Uloženo: ${ms.length} milníků${reqs.length ? ` a ${reqs.length} povinností` : ''}.`);
@@ -257,7 +259,7 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
       {items.length > 0 && (
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line pt-3">
           <span className="mr-auto text-[12.5px] text-muted">Vybráno {selected.length} z {items.length}</span>
-          {settings.googleOAuthClientId && (
+          {googleClientId && (
             <Button size="sm" icon={CalendarPlus} onClick={() => void save('google')} loading={saving} disabled={selected.length === 0}>
               Uložit + Google Kalendář
             </Button>
