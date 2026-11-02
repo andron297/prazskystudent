@@ -57,7 +57,7 @@ export class GoogleRestBackend implements GoogleBackend {
       if (!response.ok) {
         const detail = await response.json().catch(() => null);
         const message = (detail as { error?: { message?: string } } | null)?.error?.message ?? `HTTP ${response.status}`;
-        throw new GoogleApiError(response.status, message);
+        throw new GoogleApiError(response.status, friendlyApiError(url, response.status, message));
       }
       if (response.status === 204) return undefined as T;
       return (init.raw ? await response.text() : await response.json()) as T;
@@ -226,4 +226,22 @@ async function isRateLimit(response: Response): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+const API_NAMES: { test: RegExp; name: string; library: string }[] = [
+  { test: /\/calendar\//, name: 'Google Calendar API', library: 'calendar-json.googleapis.com' },
+  { test: /tasks\.googleapis/, name: 'Google Tasks API', library: 'tasks.googleapis.com' },
+  { test: /\/drive\//, name: 'Google Drive API', library: 'drive.googleapis.com' },
+];
+
+/** Srozumitelná chyba místo anglické hlášky Googlu (hlavně „API není zapnuté“). */
+export function friendlyApiError(url: string, status: number, message: string): string {
+  const api = API_NAMES.find((a) => a.test.test(url));
+  if (status === 403 && /has not been used|is disabled|SERVICE_DISABLED|accessNotConfigured/i.test(message) && api) {
+    return `V Google Cloud projektu není zapnuté ${api.name}. Zapni ho na console.cloud.google.com/apis/library/${api.library} (tlačítko Enable) a zkus to za minutu znovu.`;
+  }
+  if (status === 403 && /insufficient|scope/i.test(message)) {
+    return 'Google nepovolil potřebná oprávnění – při přihlášení zaškrtni všechna políčka (Kalendář, Úkoly, Disk) a propoj znovu.';
+  }
+  return message;
 }

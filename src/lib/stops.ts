@@ -178,3 +178,15 @@ export function stopsToGeoJSON(groups: StopGroup[]) {
     })),
   };
 }
+
+/** Nástupiště, ze kterého linka jede daným směrem (podle směrů v datech PID). */
+export function platformCode(groups: StopGroup[], stopName: string, line: string, headsign: string): string | undefined {
+  const group = findStop(groups, stopName);
+  if (!group) return undefined;
+  const target = foldDiacritics(headsign);
+  const candidates = group.platforms.filter((p) => p.code && p.serves.some((s) => s.line === line));
+  if (candidates.length === 0) return undefined;
+  const exact = candidates.find((p) => p.serves.some((s) => s.line === line && s.direction && foldDiacritics(s.direction) === target));
+  if (exact) return exact.code;
+  return candidates.length === 1 ? candidates[0].code : undefined;
+}

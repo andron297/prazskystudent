@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Building, ScheduleEvent, TransitResult } from '../types';
+import type { Building, Itinerary, ScheduleEvent, TransitResult } from '../types';
 import { haversineMeters } from '../lib/geo';
-import { planJourney, type TransitPlan } from '../lib/transitPlanner';
+import { applyMargins, dedupeByTrip, DEFAULT_MARGINS, pickItinerary, planJourney, type TransitPlan } from '../lib/transitPlanner';
 import { createApi } from '../services/api';
 import { errorMessage } from '../services/http';
 import { useAppStore } from '../store/appStore';
@@ -12,6 +12,8 @@ import { useOrigin, type ResolvedOrigin } from './useOrigin';
 
 export interface TransitPlanState {
   plan: TransitPlan | null;
+  /** Spoj, podle kterého se řídí odpočet (volba studenta, jinak doporučený). */
+  selected: Itinerary | null;
   result: TransitResult | null;
   loading: boolean;
   error: string | null;
@@ -76,6 +78,9 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event?.id, event?.start, building?.id, building?.arrivalStops, originKey, api, bucket, manual, tooFar, onSite]);
 
+  const prep = settings.prepMinutes ?? DEFAULT_MARGINS.prep;
+  const itineraries = useMemo(() => (result ? dedupeByTrip(result.itineraries.map((it) => applyMargins(it, { ...DEFAULT_MARGINS, prep }))) : []), [result, prep]);
+
   const plan = useMemo(() => {
     if (!event || !result) return null;
     return planJourney({
@@ -83,12 +88,15 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
       eventStart: new Date(event.start),
       bufferMinutes: settings.bufferMinutes,
       comfortMinutes: settings.comfortMinutes,
-      itineraries: result.itineraries,
+      itineraries,
       accessibleOnly: settings.accessibleOnly,
       preferAirConditioned: settings.preferAirConditioned,
     });
-  }, [event, result, now, settings.bufferMinutes, settings.comfortMinutes, settings.accessibleOnly, settings.preferAirConditioned]);
+  }, [event, result, itineraries, now, settings.bufferMinutes, settings.comfortMinutes, settings.accessibleOnly, settings.preferAirConditioned]);
+
+  const selectedId = useUiStore((s) => (event ? s.selectedTrip[event.id] : undefined));
+  const selected = useMemo(() => pickItinerary(plan, selectedId, now), [plan, selectedId, now]);
 
   const refresh = useCallback(() => setManual((m) => m + 1), []);
-  return { plan, result, loading, error, origin, onSite, tooFar, refresh };
+  return { plan, selected, result, loading, error, origin, onSite, tooFar, refresh };
 }

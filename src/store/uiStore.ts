@@ -55,6 +55,9 @@ interface UiState {
   /** Vybraná zastávka na mapě (z jiné obrazovky). */
   focusStop: string | null;
   setFocusStop: (name: string | null) => void;
+  /** Spoj vybraný studentem pro danou událost (ID události → ID itineráře). */
+  selectedTrip: Record<string, string>;
+  selectTrip: (eventId: string, itineraryId: string | null) => void;
 }
 
 export const useUiStore = create<UiState>()((set, get) => ({
@@ -100,6 +103,14 @@ export const useUiStore = create<UiState>()((set, get) => ({
   setSisImport: (payload) => set({ sisImport: payload }),
   focusStop: null,
   setFocusStop: (name) => set({ focusStop: name }),
+  selectedTrip: {},
+  selectTrip: (eventId, itineraryId) =>
+    set((s) => {
+      const next = { ...s.selectedTrip };
+      if (itineraryId) next[eventId] = itineraryId;
+      else delete next[eventId];
+      return { selectedTrip: next };
+    }),
 }));
 
 /** Potvrzení v rozhraní aplikace (nativní confirm() je na mobilu nevzhledný a v některých prostředích blokovaný). */

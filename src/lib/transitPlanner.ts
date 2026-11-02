@@ -159,12 +159,162 @@ export function explainItinerary(it: Itinerary, eventStart: Date, bufferMinutes:
     time: new Date(first.predictedDeparture),
     emphasis: true,
   });
+  const m = it.margins ?? { prep: 0, early: 0, entry: 0, exit: 0 };
+  const depMs = new Date(first.predictedDeparture).getTime();
+  if (m.entry > 0) steps.push({ label: `Z ulice na nástupiště metra (${m.entry} min)`, time: new Date(depMs - (m.early + m.entry) * MIN_MS) });
+  if (m.early > 0 && m.entry === 0) steps.push({ label: `Na zastávce s předstihem ${m.early} min`, time: new Date(depMs - m.early * MIN_MS) });
   steps.push({
-    label: `Vyrazit (chůze ${it.walkToStopMinutes} min na zastávku ${first.fromStop})`,
+    label: `Chůze ${it.walkToStopMinutes} min na zastávku ${first.fromStop}`,
+    time: new Date(depMs - (m.early + m.entry + it.walkToStopMinutes) * MIN_MS),
+  });
+  steps.push({
+    label: m.prep > 0 ? `Vyrazit – ${m.prep} min na obutí a cestu z domu` : 'Vyrazit',
     time: new Date(it.leaveAt),
     emphasis: true,
   });
   return steps;
+}
+
+const MIN_MS = 60_000;
+
+/* ------------------------------------------------------------------ */
+/* Realistické rezervy                                                 */
+/* ------------------------------------------------------------------ */
+
+export interface Margins {
+  /** Odchod z domu (obout, zamknout, schody). */
+  prep: number;
+  /** Být na zastávce před odjezdem. */
+  early: number;
+  /** Metro: z ulice na nástupiště. */
+  metroEntry: number;
+  /** Metro: z nástupiště na ulici. */
+  metroExit: number;
+}
+
+export const DEFAULT_MARGINS: Margins = { prep: 3, early: 1, metroEntry: 3, metroExit: 2 };
+
+/**
+ * Jízdní řád počítá s odjezdem „na minutu“. Reálně člověk potřebuje vyjít z domu,
+ * být na zastávce chvíli předem a u metra sejít na nástupiště (a pak zase nahoru).
+ * Google Routes chůzi ve stanicích už započítává, tam metro nepřidáváme.
+ */
+export function applyMargins(it: Itinerary, margins: Margins): Itinerary {
+  if (it.margins) return it;
+  const rides = rideLegs(it);
+  const first = rides[0];
+  const last = rides[rides.length - 1];
+  const entry = first?.mode === 'metro' && it.source !== 'google' ? margins.metroEntry : 0;
+  const exit = last?.mode === 'metro' && it.source !== 'google' ? margins.metroExit : 0;
+  const early = first && it.source !== 'estimate' ? margins.early : 0;
+  const prep = margins.prep;
+  return {
+    ...it,
+    leaveAt: new Date(ms(it.leaveAt) - (prep + early + entry) * MIN_MS).toISOString(),
+    arriveAt: new Date(ms(it.arriveAt) + exit * MIN_MS).toISOString(),
+    margins: { prep, early, entry, exit },
+  };
+}
+
+/**
+ * Stejný fyzický spoj (stejné tripId) bývá dostupný z více zastávek v okolí.
+ * Necháme jen variantu, se kterou se dá vyrazit nejpozději (nejkratší chůze).
+ */
+export function dedupeByTrip(itineraries: Itinerary[]): Itinerary[] {
+  const best = new Map<string, Itinerary>();
+  const rest: Itinerary[] = [];
+  for (const it of itineraries) {
+    const trips = rideLegs(it).map((r) => r.tripId);
+    if (trips.length === 0 || trips.some((t) => !t)) {
+      rest.push(it);
+      continue;
+    }
+    const key = trips.join('>');
+    const prev = best.get(key);
+    if (!prev || ms(it.leaveAt) > ms(prev.leaveAt) || (ms(it.leaveAt) === ms(prev.leaveAt) && ms(it.arriveAt) < ms(prev.arriveAt))) best.set(key, it);
+  }
+  return [...best.values(), ...rest];
+}
+
+/* ------------------------------------------------------------------ */
+/* Výběr spoje                                                         */
+/* ------------------------------------------------------------------ */
+
+/** Vybraný spoj: volba uživatele, pokud je stále stihnutelná, jinak doporučený. */
+export function pickItinerary(plan: TransitPlan | null, selectedId: string | null | undefined, now: Date): Itinerary | null {
+  if (!plan || !plan.lastCall) return null;
+  if (selectedId) {
+    const chosen = plan.upcoming.find((it) => it.id === selectedId) ?? (plan.lastCall.id === selectedId ? plan.lastCall : undefined);
+    if (chosen && ms(chosen.leaveAt) >= now.getTime() - 20_000) return chosen;
+  }
+  return plan.recommended ?? plan.lastCall;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cesta krok za krokem                                                */
+/* ------------------------------------------------------------------ */
+
+export interface RouteStep {
+  kind: 'leave' | 'walk' | 'platform' | 'ride' | 'transfer' | 'exit' | 'arrive';
+  time: Date;
+  title: string;
+  detail?: string;
+  ride?: RideLeg;
+}
+
+/** Srozumitelný popis: kam jít, čím jet, kde vystoupit a kdy budeš na místě. */
+export function routeSteps(it: Itinerary, eventStart: Date, buildingName: string, platformFor?: (ride: RideLeg) => string | undefined): RouteStep[] {
+  const m = it.margins ?? { prep: 0, early: 0, entry: 0, exit: 0 };
+  const steps: RouteStep[] = [];
+  const leave = ms(it.leaveAt);
+  const rides = rideLegs(it);
+  if (rides.length === 0) {
+    steps.push({ kind: 'leave', time: new Date(leave), title: 'Vyraz', detail: m.prep ? `${m.prep} min na odchod z domu` : undefined });
+    steps.push({ kind: 'walk', time: new Date(leave + m.prep * MIN_MS), title: `Pěšky do budovy ${buildingName}`, detail: `${it.walkToStopMinutes} min` });
+    steps.push({ kind: 'arrive', time: new Date(it.arriveAt), title: `Na místě · ${buildingName}` });
+    return steps;
+  }
+  const first = rides[0];
+  const estimate = it.source === 'estimate';
+  steps.push({ kind: 'leave', time: new Date(leave), title: m.prep ? 'Obuj se a vyraz' : 'Vyraz', detail: m.prep ? `${m.prep} min na odchod z domu` : undefined });
+  const platform = first.platform ?? platformFor?.(first);
+  steps.push({
+    kind: 'walk',
+    time: new Date(leave + m.prep * MIN_MS),
+    title: `Jdi na zastávku ${first.fromStop}`,
+    detail: [`${it.walkToStopMinutes} min pěšky`, platform ? `nástupiště ${platform}` : null].filter(Boolean).join(' · '),
+  });
+  if (m.entry > 0) {
+    const depMs = new Date(first.predictedDeparture).getTime();
+    steps.push({ kind: 'platform', time: new Date(depMs - (m.entry + m.early) * MIN_MS), title: 'Sejdi na nástupiště metra', detail: `${m.entry} min eskalátory` });
+  }
+  rides.forEach((r, i) => {
+    if (i > 0) {
+      steps.push({ kind: 'transfer', time: new Date(rides[i - 1].predictedArrival), title: `Přestup na ${modeNoun(r.mode)} ${r.line}`, detail: `${r.fromStop}` });
+    }
+    const rideMin = Math.round((ms(r.predictedArrival) - ms(r.predictedDeparture)) / MIN_MS);
+    steps.push({
+      kind: 'ride',
+      time: new Date(r.predictedDeparture),
+      title: estimate ? 'Jeď MHD (odhad bez jízdního řádu)' : `${capitalizeFirst(modeNoun(r.mode))} ${r.line} směr ${r.headsign}`,
+      detail: estimate ? `asi ${rideMin} min` : [`${rideMin} min jízdy`, r.stopCount ? `${r.stopCount} ${r.stopCount === 1 ? 'zastávka' : r.stopCount < 5 ? 'zastávky' : 'zastávek'}` : null].filter(Boolean).join(' · '),
+      ride: r,
+    });
+  });
+  const last = rides[rides.length - 1];
+  steps.push({
+    kind: 'exit',
+    time: new Date(last.predictedArrival),
+    title: `Vystup: ${last.toStop}`,
+    detail: [m.exit ? `${m.exit} min z metra na ulici` : null, `${it.walkFromStopMinutes} min pěšky do budovy`].filter(Boolean).join(' · '),
+  });
+  const slack = Math.round((eventStart.getTime() - ms(it.arriveAt)) / MIN_MS);
+  steps.push({ kind: 'arrive', time: new Date(it.arriveAt), title: `Na místě · ${buildingName}`, detail: `${slack} min do začátku` });
+  return steps;
+}
+
+function capitalizeFirst(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
 export function modeLabel(mode: string): string {

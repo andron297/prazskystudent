@@ -326,7 +326,7 @@ export function planDemoItineraries(params: DemoPlanParams): Itinerary[] {
       const arriveAt = arrival + p.walkFrom * MIN;
       const leaveAt = dep.predicted - p.walkTo * MIN;
       itineraries.push({
-        id: `demo:${p.rides.map((r) => r.line.id).join('>')}:${dep.tripId}`,
+        id: `demo:${p.originStop}:${p.rides.map((r) => r.line.id).join('>')}:${dep.tripId}`,
         legs,
         leaveAt: new Date(leaveAt).toISOString(),
         departAt: new Date(dep.predicted).toISOString(),

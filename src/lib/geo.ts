@@ -11,18 +11,19 @@ export function haversineMeters(a: LatLng, b: LatLng): number {
 }
 
 /** Rychlost chůze v metrech za minutu. */
+/** Rychlost chůze včetně semaforů a přechodů (realisticky, ne „sportovně“). */
 export const WALK_SPEED_M_PER_MIN: Record<WalkSpeed, number> = {
-  slow: 65,
-  normal: 80,
-  fast: 95,
+  slow: 62,
+  normal: 75,
+  fast: 88,
 };
 
 /** Ulice nevedou vzdušnou čarou – koeficient zajížďky pro pěší přesun. */
-export const WALK_DETOUR_FACTOR = 1.25;
+export const WALK_DETOUR_FACTOR = 1.3;
 
 export function walkingMinutes(a: LatLng, b: LatLng, speed: WalkSpeed = 'normal'): number {
   const meters = haversineMeters(a, b) * WALK_DETOUR_FACTOR;
-  return Math.max(1, Math.round(meters / WALK_SPEED_M_PER_MIN[speed]));
+  return Math.max(1, Math.ceil(meters / WALK_SPEED_M_PER_MIN[speed]));
 }
 
 export function formatDistance(meters: number): string {

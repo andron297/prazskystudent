@@ -366,6 +366,8 @@ export interface Settings {
   icsRefreshHours: number;
   /** Rezerva před začátkem výuky (min) – „být v učebně 5 min předem“. */
   bufferMinutes: number;
+  /** Čas na odchod z domu (obout, zamknout, schody) – přičítá se před cestou na zastávku. */
+  prepMinutes: number;
   /** Další rezerva, aby byl spoj „doporučený“ (min). */
   comfortMinutes: number;
   walkSpeed: WalkSpeed;
@@ -512,6 +514,8 @@ export interface Itinerary {
   walkFromStopMinutes: number;
   transfers: number;
   source: ItinerarySource;
+  /** Rezervy navíc k jízdnímu řádu (min): odchod z domu, být na zastávce dřív, metro z ulice na nástupiště a zpět. */
+  margins?: { prep: number; early: number; entry: number; exit: number };
 }
 
 export interface TransitResult {

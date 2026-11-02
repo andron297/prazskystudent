@@ -1,19 +1,35 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Calculator, CircleAlert, KeyRound, ListOrdered, Mail, MapPin, Navigation, Radio, RefreshCw } from 'lucide-react';
-import type { Building as BuildingType, ScheduleEvent, Subject } from '../../types';
+import {
+  ArrowRightLeft,
+  Calculator,
+  CircleAlert,
+  CircleCheck,
+  DoorOpen,
+  Flag,
+  Footprints,
+  KeyRound,
+  Mail,
+  MapPin,
+  MoveDown,
+  Navigation,
+  Radio,
+  RefreshCw,
+} from 'lucide-react';
+import type { Building as BuildingType, Itinerary, ScheduleEvent, Subject } from '../../types';
 import { formatTime, formatWeekdayShort, formatDayMonth } from '../../lib/dates';
 import { googleMapsTransitUrl } from '../../lib/geo';
-import { explainItinerary, firstRide } from '../../lib/transitPlanner';
+import { explainItinerary, rideLegs, routeSteps, type RouteStep } from '../../lib/transitPlanner';
 import { TRANSIT_STYLES } from '../../lib/urgency';
 import type { TransitPlanState } from '../../hooks/useTransitPlan';
 import { useNow } from '../../hooks/useNow';
 import { navigateTo } from '../../hooks/useAppShell';
 import { useAppStore } from '../../store/appStore';
+import { useUiStore } from '../../store/uiStore';
 import { Button, Chip, cn, IconButton, Select, Skeleton } from '../ui/primitives';
-import { ConnectionCard } from './ConnectionCard';
-import { DelayChip, DepartureTime, JourneyBar, LineBadge, VehicleFlags } from './TransitBits';
+import { DelayChip, LineBadge, VehicleFlags } from './TransitBits';
 import { KIND_LABEL, transitStatusOf } from './transitStatus';
+import { usePlatformLookup } from './usePlatformLookup';
 
 const SOURCE_LABEL: Record<string, string> = {
   demo: 'Simulace PID',
@@ -23,7 +39,71 @@ const SOURCE_LABEL: Record<string, string> = {
   none: 'Bez dat',
 };
 
-/** Detail cesty: poslední a doporučený spoj, výpočet, další spoje, plán B. */
+const STEP_ICON: Record<RouteStep['kind'], typeof Footprints> = {
+  leave: DoorOpen,
+  walk: Footprints,
+  platform: MoveDown,
+  ride: Navigation,
+  transfer: ArrowRightLeft,
+  exit: Flag,
+  arrive: CircleCheck,
+};
+
+/** Vložení klíče Golemio přímo v kartě cesty (bez hledání v nastavení). */
+function GolemioKeyInline({ onSaved }: { onSaved: () => void }) {
+  const updateSettings = useAppStore((s) => s.updateSettings);
+  const [value, setValue] = useState('');
+  return (
+    <div className="mt-3 rounded-[18px] bg-accent-soft p-3 ring-1 ring-inset ring-accent/25">
+      <p className="text-[13px] font-semibold">Pro konkrétní spoje a zpoždění vlož klíč PID Golemio (stačí jednou):</p>
+      <form
+        className="mt-2 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!value.trim()) return;
+          updateSettings({ golemioApiKey: value.trim() });
+          setValue('');
+          onSaved();
+        }}
+      >
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="eyJhbGciOi…"
+          className="h-9 min-w-0 flex-1 rounded-full border border-line-strong bg-surface px-3 font-mono text-[12px] outline-none focus:ring-2 focus:ring-accent"
+          aria-label="Golemio API klíč"
+          autoComplete="off"
+        />
+        <Button size="sm" type="submit" variant="primary" disabled={!value.trim()}>
+          Uložit
+        </Button>
+      </form>
+      <p className="mt-1.5 text-[11.5px] text-muted">Klíč zůstane jen v tomto prohlížeči (a s Google Diskem i v dalších zařízeních).</p>
+    </div>
+  );
+}
+
+function ChoiceChips({ label, value, options, onChange, suffix }: { label: string; value: number; options: number[]; onChange: (v: number) => void; suffix: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="mr-1 text-[12.5px] font-semibold text-muted">{label}</span>
+      {options.map((o) => (
+        <button
+          key={o}
+          type="button"
+          aria-pressed={value === o}
+          onClick={() => onChange(o)}
+          className={cn('h-7 rounded-full px-2.5 text-[12.5px] font-bold tabular ring-1 ring-inset transition', value === o ? 'bg-accent text-accent-fg ring-accent' : 'bg-surface text-muted ring-line-strong hover:text-fg')}
+        >
+          {o}
+          {suffix}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Detail cesty: krok za krokem, výběr spoje, rezerva v cíli a čas na odchod z domu. */
 export function TransitPanel({
   event,
   building,
@@ -41,20 +121,25 @@ export function TransitPanel({
 }) {
   const now = useNow(1000);
   const settings = useAppStore((s) => s.settings);
+  const updateSettings = useAppStore((s) => s.updateSettings);
   const setLocationAlias = useAppStore((s) => s.setLocationAlias);
   const stop = useAppStore((s) => s.settings.originStop[s.settings.mode]);
+  const selectTrip = useUiStore((s) => s.selectTrip);
+  const server = useUiStore((s) => s.server);
+  const platformFor = usePlatformLookup();
   const [showMath, setShowMath] = useState(false);
-  const [showMore, setShowMore] = useState(false);
-  const { plan, result, loading, error, origin, refresh } = transit;
-  const status = transitStatusOf(event, building, transit);
+  const [showAll, setShowAll] = useState(false);
+  const { plan, selected, result, loading, error, origin, refresh } = transit;
+  const status = transitStatusOf(event, building, transit, now);
   const style = TRANSIT_STYLES[status];
   const eventStart = event ? new Date(event.start) : null;
-  const lastCall = plan?.lastCall ?? null;
-  const recommended = plan?.recommended ?? null;
-  const merged = Boolean(lastCall && recommended && lastCall.id === recommended.id);
   const updatedAgo = result ? Math.max(0, Math.round((now.getTime() - new Date(result.fetchedAt).getTime()) / 1000)) : null;
 
   if (!event) return null;
+
+  const options: Itinerary[] = plan ? plan.upcoming : [];
+  const shown = showAll ? options : options.slice(0, 5);
+  const active = status === 'calm' || status === 'prepare' || status === 'critical';
 
   return (
     <section id="cesta" className="card relative isolate scroll-mt-24 overflow-hidden rounded-[26px]" aria-label="Detail cesty">
@@ -90,11 +175,20 @@ export function TransitPanel({
           </div>
         </header>
 
+        {building && settings.mode === 'live' && !settings.golemioApiKey && !server.golemio && <GolemioKeyInline onSaved={refresh} />}
+
+        {building && (
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 rounded-[18px] bg-surface-2/70 px-3 py-2.5">
+            <ChoiceChips label="Na místě předem" value={settings.bufferMinutes} options={[0, 5, 10, 15]} suffix=" min" onChange={(bufferMinutes) => updateSettings({ bufferMinutes })} />
+            <ChoiceChips label="Odchod z domu" value={settings.prepMinutes ?? 3} options={[0, 3, 5, 8]} suffix=" min" onChange={(prepMinutes) => updateSettings({ prepMinutes })} />
+          </div>
+        )}
+
         <div className="mt-4">
           {status === 'loading' && (
             <div className="grid gap-3 md:grid-cols-2">
-              <Skeleton className="h-36 rounded-[22px]" />
-              <Skeleton className="h-36 rounded-[22px]" />
+              <Skeleton className="h-40 rounded-[22px]" />
+              <Skeleton className="h-40 rounded-[22px]" />
             </div>
           )}
 
@@ -127,67 +221,112 @@ export function TransitPanel({
 
           {status === 'on-site' && <p className="rounded-[22px] bg-surface-2 p-4 text-sm text-muted">Jsi u budovy – žádná MHD potřeba.</p>}
 
-          {(status === 'calm' || status === 'prepare' || status === 'critical') && lastCall && eventStart && plan && (
-            <div className="space-y-4">
-              <JourneyBar itinerary={lastCall} eventStart={eventStart} now={now} />
-              <div className="grid gap-3 md:grid-cols-2">
-                {recommended && !merged && <ConnectionCard itinerary={recommended} variant="recommended" now={now} deadline={plan.deadline} />}
-                <ConnectionCard itinerary={lastCall} variant="last" now={now} deadline={plan.deadline} merged={merged} />
-                {merged && <div className="flex items-center rounded-[22px] bg-surface-2 p-4 text-[13px] text-muted">Poslední spoj má i pohodlnou rezervu – dřívější netřeba.</div>}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="ghost" icon={Calculator} onClick={() => setShowMath((v) => !v)} aria-expanded={showMath}>
+          {active && selected && eventStart && plan && building && (
+            <div className="grid gap-4 lg:grid-cols-[1.05fr_1fr]">
+              {/* Vybraná cesta krok za krokem */}
+              <div>
+                <p className="eyebrow mb-2 text-subtle">{selected.id === plan.lastCall?.id ? 'Poslední možný spoj' : selected.id === plan.recommended?.id ? 'Doporučený spoj' : 'Tvůj spoj'}</p>
+                <ol className="relative space-y-0.5 before:absolute before:bottom-3 before:left-[3.55rem] before:top-3 before:w-px before:bg-line">
+                  {routeSteps(selected, eventStart, building.name, platformFor).map((step, i) => {
+                    const Icon = STEP_ICON[step.kind];
+                    const strong = step.kind === 'leave' || step.kind === 'ride' || step.kind === 'arrive';
+                    return (
+                      <li key={i} className="flex items-start gap-3 py-1.5">
+                        <span className={cn('w-11 shrink-0 pt-0.5 text-right text-[13px] tabular', strong ? 'font-bold' : 'text-muted')}>{formatTime(step.time)}</span>
+                        <span className={cn('relative z-10 grid size-7 shrink-0 place-items-center rounded-full ring-4 ring-[var(--surface)]', step.kind === 'ride' ? 'bg-accent text-accent-fg' : step.kind === 'arrive' ? 'bg-accent-soft text-accent' : 'bg-surface-2 text-muted')}>
+                          <Icon className="size-3.5" aria-hidden />
+                        </span>
+                        <span className="min-w-0 flex-1 pt-0.5">
+                          <span className={cn('flex flex-wrap items-center gap-1.5 text-[14px]', strong ? 'font-bold' : 'font-semibold')}>
+                            {step.ride && selected.source !== 'estimate' && <LineBadge ride={step.ride} size="sm" />}
+                            {step.title}
+                          </span>
+                          {(step.detail || step.ride) && (
+                            <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12.5px] text-muted">
+                              {step.detail}
+                              {step.ride && selected.source !== 'estimate' && <DelayChip delaySeconds={step.ride.delaySeconds} />}
+                              {step.ride && selected.source !== 'estimate' && <VehicleFlags ride={step.ride} />}
+                            </span>
+                          )}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+                <Button size="sm" variant="ghost" icon={Calculator} className="mt-2" onClick={() => setShowMath((v) => !v)} aria-expanded={showMath}>
                   Jak to počítám
                 </Button>
-                <Button size="sm" variant="ghost" icon={ListOrdered} onClick={() => setShowMore((v) => !v)} aria-expanded={showMore}>
-                  Další spoje ({plan.upcoming.length})
-                </Button>
-              </div>
-              <AnimatePresence initial={false}>
-                {showMath && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                    <ol className="rounded-[22px] bg-surface-2 p-4">
-                      {explainItinerary(lastCall, eventStart, settings.bufferMinutes).map((step, i) => (
-                        <li key={i} className="flex items-baseline gap-3 py-1 text-[13px]">
-                          <span className={cn('w-12 shrink-0 tabular', step.emphasis ? 'font-bold text-fg' : 'text-muted')}>{formatTime(step.time)}</span>
-                          <span className={cn(step.emphasis && 'font-semibold')}>
-                            {i > 0 && <span className="mr-1 text-subtle">−</span>}
-                            {step.label}
-                            {step.detail && <span className="block text-xs font-normal text-subtle">{step.detail}</span>}
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
-                  </motion.div>
-                )}
-                {showMore && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                    <ul className="divide-y divide-[var(--line)] rounded-[22px] bg-surface-2">
-                      {plan.upcoming.map((it) => {
-                        const r = firstRide(it);
-                        if (!r) return null;
-                        const slack = Math.floor((plan.deadline.getTime() - new Date(it.arriveAt).getTime()) / 60_000);
-                        return (
-                          <li key={it.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3.5 py-2.5 text-[13px]">
-                            <span className="w-12 font-semibold tabular">{formatTime(new Date(it.leaveAt))}</span>
-                            <span className="flex items-center gap-1">
-                              {it.legs.map((l, i) => (l.kind === 'ride' ? <LineBadge key={i} ride={l} size="sm" /> : null))}
+                <AnimatePresence initial={false}>
+                  {showMath && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                      <ol className="mt-1 rounded-[22px] bg-surface-2 p-4">
+                        {explainItinerary(selected, eventStart, settings.bufferMinutes).map((step, i) => (
+                          <li key={i} className="flex items-baseline gap-3 py-1 text-[13px]">
+                            <span className={cn('w-12 shrink-0 tabular', step.emphasis ? 'font-bold text-fg' : 'text-muted')}>{formatTime(step.time)}</span>
+                            <span className={cn(step.emphasis && 'font-semibold')}>
+                              {i > 0 && <span className="mr-1 text-subtle">−</span>}
+                              {step.label}
+                              {step.detail && <span className="block text-xs font-normal text-subtle">{step.detail}</span>}
                             </span>
-                            <span className="min-w-0 flex-1 truncate text-muted">
-                              {r.fromStop} <DepartureTime ride={r} className="ml-1 text-fg" />
-                            </span>
-                            <DelayChip delaySeconds={r.delaySeconds} />
-                            <VehicleFlags ride={r} />
-                            <span className="ml-auto text-xs text-muted tabular">rezerva {slack} min</span>
-                            {it.id === lastCall.id && <Chip className="bg-red-500/12 text-red-700 dark:text-red-300">poslední</Chip>}
-                            {recommended && it.id === recommended.id && !merged && <Chip className="bg-accent-soft text-accent">doporučený</Chip>}
                           </li>
-                        );
-                      })}
-                    </ul>
-                  </motion.div>
+                        ))}
+                      </ol>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Výběr spoje */}
+              <div>
+                <p className="eyebrow mb-2 text-subtle">Vyber spoj</p>
+                <ul className="space-y-1.5" role="radiogroup" aria-label="Spoje">
+                  {shown.map((it) => {
+                    const rides = rideLegs(it);
+                    const first = rides[0];
+                    const isSel = it.id === selected.id;
+                    const slack = Math.round((eventStart.getTime() - new Date(it.arriveAt).getTime()) / 60_000);
+                    const leaveIn = Math.max(0, Math.round((new Date(it.leaveAt).getTime() - now.getTime()) / 60_000));
+                    return (
+                      <li key={it.id}>
+                        <button
+                          type="button"
+                          role="radio"
+                          aria-checked={isSel}
+                          onClick={() => selectTrip(event.id, it.id)}
+                          className={cn('flex w-full items-center gap-3 rounded-[18px] px-3 py-2.5 text-left ring-1 ring-inset transition', isSel ? 'bg-accent-soft ring-accent/40' : 'ring-line hover:bg-surface-2')}
+                        >
+                          <span className="w-14 shrink-0">
+                            <span className="block font-display text-[24px] leading-none tabular">{formatTime(new Date(it.leaveAt))}</span>
+                            <span className="text-[11px] font-semibold text-subtle">za {leaveIn} min</span>
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center gap-1">
+                              {it.source === 'estimate' ? <span className="rounded-md bg-surface-2 px-1.5 text-[11px] font-bold text-muted">MHD · odhad</span> : rides.map((r, i) => <LineBadge key={i} ride={r} size="sm" />)}
+                              {first && it.source !== 'estimate' && <DelayChip delaySeconds={first.delaySeconds} />}
+                            </span>
+                            <span className="mt-0.5 block truncate text-[12.5px] text-muted">
+                              {first ? `${first.fromStop} ${formatTime(new Date(first.predictedDeparture))}` : 'pěšky'} → v budově {formatTime(new Date(it.arriveAt))}
+                            </span>
+                          </span>
+                          <span className="flex shrink-0 flex-col items-end gap-1">
+                            <span className={cn('text-[12px] font-bold tabular', slack <= 2 ? 'text-red-700 dark:text-red-300' : slack < 8 ? 'text-clay' : 'text-accent')}>{slack} min předem</span>
+                            {it.id === plan.lastCall?.id && <Chip className="bg-red-500/12 text-red-700 dark:text-red-300">poslední</Chip>}
+                            {it.id === plan.recommended?.id && it.id !== plan.lastCall?.id && <Chip className="bg-accent-soft text-accent">doporučený</Chip>}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {options.length > 5 && (
+                  <button type="button" onClick={() => setShowAll((v) => !v)} className="mt-2 w-full rounded-full py-1.5 text-[12.5px] font-semibold text-muted hover:bg-surface-2 hover:text-fg">
+                    {showAll ? 'Méně spojů' : `Další spoje (${options.length - 5})`}
+                  </button>
                 )}
-              </AnimatePresence>
+                {options.length <= 1 && selected.source === 'estimate' && (
+                  <p className="mt-2 rounded-[18px] bg-surface-2 p-3 text-[12.5px] text-muted">Bez dat PID je tohle jen odhad podle vzdálenosti. S živými daty tu uvidíš konkrétní spoje na výběr.</p>
+                )}
+              </div>
             </div>
           )}
 

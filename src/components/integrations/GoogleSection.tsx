@@ -89,35 +89,65 @@ function SetupGuide() {
   const g = useAppStore((s) => s.settings.google);
   const updateGoogleSettings = useAppStore((s) => s.updateGoogleSettings);
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app';
+  const link = (href: string, text: string) => (
+    <a className="font-semibold text-accent hover:underline" href={href} target="_blank" rel="noreferrer">
+      {text}
+    </a>
+  );
   return (
     <div className="rounded-[22px] bg-surface-2 p-4">
       <p className="font-display text-[22px] leading-tight">
         Jednorázové <em className="text-moss">nastavení</em>
       </p>
-      <p className="mt-1 text-[13px] text-muted">Google potřebuje vědět, že aplikace patří tobě. Zabere to asi 5 minut a dělá se jen jednou.</p>
+      <p className="mt-1 text-[13px] text-muted">Google potřebuje vědět, že aplikace patří tobě. Dělá se jen jednou.</p>
       <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-[13px] leading-relaxed">
+        <li>{link('https://console.cloud.google.com/projectcreate', 'Založ projekt')} v Google Cloud (třeba „Stihnu“).</li>
         <li>
-          Otevři{' '}
-          <a className="font-semibold text-accent hover:underline" href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noreferrer">
-            Google Cloud Console
-          </a>{' '}
-          a založ projekt (třeba „Stihnu“).
+          Zapni API: {link('https://console.cloud.google.com/apis/library/calendar-json.googleapis.com', 'Kalendář')}, {link('https://console.cloud.google.com/apis/library/tasks.googleapis.com', 'Úkoly')} a{' '}
+          {link('https://console.cloud.google.com/apis/library/drive.googleapis.com', 'Disk')} (u každého „Enable“).
         </li>
         <li>
-          V <strong>APIs &amp; Services → Library</strong> zapni <em>Google Calendar API</em>, <em>Google Tasks API</em> a <em>Google Drive API</em>.
+          {link('https://console.cloud.google.com/auth/overview', 'Google Auth Platform')} → <em>Get started</em>: název aplikace, tvůj e-mail, Audience <em>External</em>.
         </li>
         <li>
-          <strong>OAuth consent screen</strong>: typ External, stav <em>Testing</em>, do „Test users“ přidej svůj Gmail.
+          {link('https://console.cloud.google.com/auth/audience', 'Audience')} → <strong>Test users → Add users</strong> → tvůj Gmail. <span className="text-subtle">(Bez toho Google hlásí „Přístup zablokován“.)</span>
         </li>
         <li>
-          <strong>Credentials → Create credentials → OAuth client ID</strong> → Web application. Do „Authorized JavaScript origins“ dej <code className="rounded bg-surface px-1">{origin}</code>.
+          {link('https://console.cloud.google.com/auth/clients', 'Clients')} → <em>Create client</em> → Web application → Authorized JavaScript origins: <code className="rounded bg-surface px-1">{origin}</code>.
         </li>
-        <li>Zkopíruj Client ID sem (nebo ho nastav ve Vercelu jako VITE_GOOGLE_CLIENT_ID).</li>
+        <li>Zkopíruj Client ID sem:</li>
       </ol>
       <Field label="OAuth Client ID" className="mt-3">
         <TextInput value={g.clientId} onChange={(e) => updateGoogleSettings({ clientId: e.target.value.trim() })} placeholder="1234567890-abc….apps.googleusercontent.com" className="font-mono text-[13px]" />
       </Field>
-      <p className="mt-2 text-xs text-subtle">Volitelně: GOOGLE_CLIENT_SECRET ve Vercelu zapne trvalé přihlášení (synchronizace na pozadí bez opakovaného přihlašování).</p>
+    </div>
+  );
+}
+
+/** Nejčastější chyba: účet není mezi testery aplikace (Google ukáže „Přístup zablokován“, 403 access_denied). */
+function BlockedHelp() {
+  return (
+    <div className="rounded-[22px] bg-amber-500/10 p-4 ring-1 ring-inset ring-amber-500/30">
+      <p className="flex items-center gap-2 text-[14px] font-bold">
+        <CircleAlert className="size-4 text-amber-700 dark:text-amber-300" aria-hidden /> Google napsal „Přístup zablokován“ (Chyba 403: access_denied)?
+      </p>
+      <p className="mt-1 text-[13px] text-muted">Aplikace je v testovacím režimu a tvůj účet zatím není mezi testery. Oprava na minutu:</p>
+      <ol className="mt-2 list-decimal space-y-1 pl-5 text-[13px] leading-relaxed">
+        <li>
+          Otevři{' '}
+          <a className="font-semibold text-accent hover:underline" href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noreferrer">
+            Google Auth Platform → Audience
+          </a>{' '}
+          (vpravo nahoře musí být vybraný tvůj projekt).
+        </li>
+        <li>
+          V části <strong>Test users</strong> klikni na <strong>Add users</strong>, napiš Gmail, kterým se přihlašuješ, a ulož.
+        </li>
+        <li>Vrať se sem a klikni znovu na „Propojit s Googlem“.</li>
+      </ol>
+      <p className="mt-2 text-xs text-subtle">
+        Pokud ti po přihlášení Google ukáže „Aplikace nebyla ověřena“, klikni na <em>Pokročilé → Přejít do aplikace</em> – aplikace je tvoje vlastní.
+      </p>
     </div>
   );
 }
@@ -296,7 +326,7 @@ export function GoogleSection() {
                 </p>
               )}
             </div>
-            {needsSetup ? <SetupGuide /> : mode === 'demo' ? <DemoGooglePreview /> : null}
+            {needsSetup ? <SetupGuide /> : mode === 'demo' ? <DemoGooglePreview /> : <BlockedHelp />}
           </div>
         )}
 

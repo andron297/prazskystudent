@@ -265,9 +265,10 @@ export const DEMO_LINES: DemoLine[] = [
 ];
 
 export function transferMinutes(fromMode: TransitMode, toMode: TransitMode): number {
-  if (fromMode === 'metro' && toMode === 'metro') return 3;
-  if (fromMode === 'metro' || toMode === 'metro') return 4;
-  return 2;
+  // Přestupy v metru (Můstek, Muzeum, Florenc) jsou dlouhé chodby a eskalátory.
+  if (fromMode === 'metro' && toMode === 'metro') return 5;
+  if (fromMode === 'metro' || toMode === 'metro') return 5;
+  return 3;
 }
 
 export function linesServing(stopName: string): DemoLine[] {

@@ -78,6 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
   icsSources: [],
   icsRefreshHours: 6,
   bufferMinutes: 5,
+  prepMinutes: 3,
   comfortMinutes: 8,
   walkSpeed: 'normal',
   accessibleOnly: false,

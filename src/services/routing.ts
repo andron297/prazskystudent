@@ -140,7 +140,7 @@ export async function planWithGolemio(params: LivePlanParams): Promise<Itinerary
         stopCount: destIndex - originIndex,
       };
       itineraries.push({
-        id: `golemio:${dep.tripId}`,
+        id: `golemio:${dep.stopId}:${dep.tripId}`,
         legs: [
           { kind: 'walk', minutes: walkTo, from: params.originLabel, to: dep.stopName },
           ride,
@@ -373,7 +373,7 @@ export async function planWithGoogle(input: LivePlanParams): Promise<Itinerary[]
 /* Odhad bez dat                                                       */
 /* ------------------------------------------------------------------ */
 
-export function estimateItinerary(params: LivePlanParams): Itinerary {
+export function estimateItinerary(params: LivePlanParams, nearStop?: { name: string; walk: number } | null): Itinerary {
   const deadline = params.eventStart.getTime() - params.bufferMinutes * MIN;
   const meters = haversineMeters(params.origin, params.building.coords);
   if (meters < 1500) {
@@ -391,7 +391,9 @@ export function estimateItinerary(params: LivePlanParams): Itinerary {
       source: 'estimate',
     };
   }
-  const walkTo = 6;
+  const chosen = params.originStop ? { name: params.originStop.name, walk: walkingMinutes(params.origin, params.originStop.coords, params.walkSpeed) } : (nearStop ?? null);
+  const walkTo = chosen?.walk ?? 6;
+  const fromName = chosen?.name ?? 'nejbližší zastávka';
   const walkFrom = params.building.arrivalStops[0]?.walkMinutes ?? 5;
   const ride = Math.round((meters * 1.35) / 300);
   const wait = 4;
@@ -401,13 +403,13 @@ export function estimateItinerary(params: LivePlanParams): Itinerary {
   return {
     id: 'estimate:transit',
     legs: [
-      { kind: 'walk', minutes: walkTo + wait, from: params.originLabel, to: 'nejbližší zastávka' },
+      { kind: 'walk', minutes: walkTo, from: params.originLabel, to: fromName },
       {
         kind: 'ride',
         line: 'MHD',
         mode: 'bus',
         headsign: 'odhad bez jízdního řádu',
-        fromStop: 'nejbližší zastávka',
+        fromStop: fromName,
         toStop: params.building.arrivalStops[0]?.name ?? params.building.name,
         scheduledDeparture: new Date(depart).toISOString(),
         predictedDeparture: new Date(depart).toISOString(),
@@ -422,7 +424,7 @@ export function estimateItinerary(params: LivePlanParams): Itinerary {
     leaveAt: new Date(leaveAt).toISOString(),
     departAt: new Date(depart).toISOString(),
     arriveAt: new Date(deadline).toISOString(),
-    walkToStopMinutes: walkTo + wait,
+    walkToStopMinutes: walkTo,
     walkFromStopMinutes: walkFrom,
     transfers: 0,
     source: 'estimate',
@@ -459,5 +461,12 @@ export async function planLiveTransit(params: LivePlanParams): Promise<TransitRe
   } else {
     warnings.push('Chybí Golemio API klíč – zobrazuji jen odhad podle vzdálenosti.');
   }
-  return { itineraries: [estimateItinerary(params)], source: 'estimate', fetchedAt, warnings, originLabel: params.originLabel };
+  let near: { name: string; walk: number } | null = null;
+  try {
+    const found = nearbyStops(await loadStops(), params.origin, { walkSpeed: params.walkSpeed, maxMeters: 1200, limit: 3 }).find((s) => s.lines.some((l) => !l.night));
+    if (found) near = { name: found.name, walk: found.walkMinutes };
+  } catch {
+    near = null;
+  }
+  return { itineraries: [estimateItinerary(params, near)], source: 'estimate', fetchedAt, warnings, originLabel: params.originLabel };
 }

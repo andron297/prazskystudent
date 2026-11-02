@@ -19,6 +19,7 @@ export const SHARED_SETTING_KEYS = [
   'icsSources',
   'icsRefreshHours',
   'bufferMinutes',
+  'prepMinutes',
   'comfortMinutes',
   'walkSpeed',
   'accessibleOnly',

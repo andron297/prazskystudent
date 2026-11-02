@@ -1,30 +1,32 @@
 import { motion } from 'motion/react';
-import { ArrowDown, ChevronDown, MapPin } from 'lucide-react';
-import type { Building, ScheduleEvent } from '../../types';
-import { formatDuration, formatTime } from '../../lib/dates';
-import { firstRide, rideLegs } from '../../lib/transitPlanner';
+import { ArrowDown, ChevronDown, Flag, Footprints, MapPin } from 'lucide-react';
+import type { Building, RideLeg, ScheduleEvent } from '../../types';
+import { formatTime } from '../../lib/dates';
+import { rideLegs } from '../../lib/transitPlanner';
 import { TRANSIT_STYLES } from '../../lib/urgency';
 import type { TransitPlanState } from '../../hooks/useTransitPlan';
+import { useNow } from '../../hooks/useNow';
 import { useAppStore } from '../../store/appStore';
 import { cn } from '../ui/primitives';
 import { DelayChip, LineBadge } from './TransitBits';
 import { transitStatusOf } from './transitStatus';
+import { usePlatformLookup } from './usePlatformLookup';
 
 function BigCountdown({ seconds }: { seconds: number }) {
   const total = Math.max(0, Math.floor(seconds));
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  if (total < 45) return <span className="font-display text-[64px] leading-none sm:text-[76px]">Teď!</span>;
+  if (total < 45) return <span className="font-display text-[60px] leading-none sm:text-[72px]">Teď!</span>;
   return (
     <span className="inline-flex items-baseline font-display leading-none tabular">
       {h > 0 && (
         <>
-          <span className="text-[64px] sm:text-[76px]">{h}</span>
+          <span className="text-[60px] sm:text-[72px]">{h}</span>
           <span className="ml-1 mr-2.5 text-2xl italic opacity-75">h</span>
         </>
       )}
-      <span className="text-[64px] sm:text-[76px]">{h > 0 ? String(m).padStart(2, '0') : m}</span>
+      <span className="text-[60px] sm:text-[72px]">{h > 0 ? String(m).padStart(2, '0') : m}</span>
       <span className="ml-1 mr-2.5 text-2xl italic opacity-75">min</span>
       {h === 0 && (
         <>
@@ -36,7 +38,7 @@ function BigCountdown({ seconds }: { seconds: number }) {
   );
 }
 
-/** Skleněná karta na fotce: kdy vyrazit, čím a odkud. */
+/** Skleněná karta na fotce: kdy vyrazit, na jakou zastávku, čím a kam. */
 export function TransitGlance({
   event,
   building,
@@ -50,16 +52,32 @@ export function TransitGlance({
   onOrigin: () => void;
   onDetail: () => void;
 }) {
+  const now = useNow(1000);
   const stop = useAppStore((s) => s.settings.originStop[s.settings.mode]);
-  const status = transitStatusOf(event, building, transit);
+  const platformFor = usePlatformLookup();
+  const status = transitStatusOf(event, building, transit, now);
   const style = TRANSIT_STYLES[status];
   const plan = transit.plan;
-  const last = plan?.lastCall ?? null;
-  const ride = last ? firstRide(last) : undefined;
-  const rides = last ? rideLegs(last) : [];
-  const estimate = last?.source === 'estimate';
-  const depMinutes = plan?.secondsToDeparture != null ? Math.max(0, Math.ceil(plan.secondsToDeparture / 60)) : null;
-  const originLabel = stop?.name ?? (ride && !estimate ? ride.fromStop : transit.origin.label);
+  const chosen = transit.selected;
+  const rides = chosen ? rideLegs(chosen) : [];
+  const first = rides[0];
+  const last = rides[rides.length - 1];
+  const estimate = chosen?.source === 'estimate';
+  const isLast = Boolean(chosen && plan?.lastCall && chosen.id === plan.lastCall.id);
+  const secondsToLeave = chosen ? (new Date(chosen.leaveAt).getTime() - now.getTime()) / 1000 : 0;
+  const slack = chosen && event ? Math.round((new Date(event.start).getTime() - new Date(chosen.arriveAt).getTime()) / 60_000) : 0;
+  const platform = first ? (first.platform ?? platformFor(first)) : undefined;
+
+  const rideRow = (r: RideLeg, i: number) => (
+    <li key={`${r.line}-${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <LineBadge ride={r} size="sm" />
+      <span className="min-w-0 text-white/90">
+        směr <strong className="font-bold text-white">{r.headsign}</strong>
+      </span>
+      <span className="font-bold tabular">{formatTime(new Date(r.predictedDeparture))}</span>
+      <DelayChip delaySeconds={r.delaySeconds} className="bg-white/15 text-white dark:text-white" />
+    </li>
+  );
 
   return (
     <motion.section
@@ -75,7 +93,7 @@ export function TransitGlance({
             {style.pulse && <span className="absolute inline-flex size-full animate-ping-soft rounded-full bg-white" />}
             <span className="relative inline-flex size-2 rounded-full bg-white" />
           </span>
-          {status === 'idle' && transit.tooFar ? 'Naplánováno' : style.label}
+          {status === 'idle' && transit.tooFar ? 'Naplánováno' : status === 'critical' && !isLast ? 'Za chvíli vyraz' : style.label}
         </span>
         <button
           type="button"
@@ -89,36 +107,51 @@ export function TransitGlance({
         </button>
       </div>
 
-      {(status === 'calm' || status === 'prepare' || status === 'critical') && last && plan ? (
+      {(status === 'calm' || status === 'prepare' || status === 'critical') && chosen && plan ? (
         <div className="mt-4">
-          <p className="eyebrow text-white/70">Vyraz nejpozději za</p>
+          <p className="eyebrow text-white/70">{isLast ? 'Vyraz nejpozději za' : 'Vyraz za'}</p>
           <div className="mt-1.5" aria-live="polite">
-            <BigCountdown seconds={plan.secondsToLeave ?? 0} />
+            <BigCountdown seconds={secondsToLeave} />
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-[14px]">
-            {estimate ? (
-              <span className="rounded-lg bg-white/15 px-2 py-0.5 text-xs font-bold">MHD · odhad</span>
+
+          <ol className="mt-4 space-y-2 border-l border-white/25 pl-3.5 text-[13.5px]">
+            {first ? (
+              <>
+                <li className="flex items-center gap-2">
+                  <Footprints className="size-4 shrink-0 text-white/80" aria-hidden />
+                  <span>
+                    {estimate ? 'Na zastávku ' : 'Jdi na '}
+                    <strong className="font-bold">{first.fromStop}</strong>
+                    {platform ? <span className="text-white/80"> · nástupiště {platform}</span> : null}
+                    <span className="text-white/80"> · {chosen.walkToStopMinutes} min</span>
+                  </span>
+                </li>
+                {estimate ? (
+                  <li className="text-white/85">MHD (odhad – chybí jízdní řád)</li>
+                ) : (
+                  rides.map(rideRow)
+                )}
+                <li className="flex items-center gap-2">
+                  <Flag className="size-4 shrink-0 text-white/80" aria-hidden />
+                  <span>
+                    Vystup <strong className="font-bold">{last.toStop}</strong>
+                    <span className="text-white/80"> · {chosen.walkFromStopMinutes} min pěšky</span>
+                  </span>
+                </li>
+              </>
             ) : (
-              rides.map((r, i) => (
-                <span key={`${r.line}-${i}`} className="inline-flex items-center gap-1.5">
-                  {i > 0 && <span className="text-white/50">→</span>}
-                  <LineBadge ride={r} size="sm" />
-                </span>
-              ))
+              <li className="flex items-center gap-2">
+                <Footprints className="size-4 shrink-0" aria-hidden /> Pěšky {chosen.walkToStopMinutes} min
+              </li>
             )}
-            {ride && !estimate && (
-              <span className="min-w-0 text-white/90">
-                <strong className="font-bold text-white">{originLabel}</strong> · odjezd {depMinutes !== null && depMinutes <= 0 ? 'právě teď' : `za ${formatDuration(depMinutes ?? 0)}`}
-              </span>
-            )}
-            {ride && !estimate && <DelayChip delaySeconds={ride.delaySeconds} className="bg-white/15 text-white dark:text-white" />}
-          </div>
-          <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/15 pt-3 text-[12.5px] text-white/75">
+          </ol>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-white/15 pt-3 text-[12.5px] text-white/75">
             <span className="tabular">
-              odchod <strong className="text-white">{formatTime(new Date(last.leaveAt))}</strong> · v budově <strong className="text-white">{formatTime(new Date(last.arriveAt))}</strong>
+              odchod <strong className="text-white">{formatTime(new Date(chosen.leaveAt))}</strong> · v budově <strong className="text-white">{formatTime(new Date(chosen.arriveAt))}</strong> · {slack} min předem
             </span>
             <button type="button" onClick={onDetail} className="inline-flex items-center gap-1 font-semibold text-white hover:underline">
-              Celá cesta <ArrowDown className="size-3.5" aria-hidden />
+              Jiný spoj <ArrowDown className="size-3.5" aria-hidden />
             </button>
           </div>
         </div>
@@ -172,7 +205,6 @@ export function TransitGlance({
           <p className="mt-2 text-[14px] text-white/85">Žádná další výuka. Užij si to.</p>
         </div>
       )}
-
     </motion.section>
   );
 }
