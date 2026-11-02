@@ -17,7 +17,7 @@ export function buildingForEvent(event: ScheduleEvent, settings: Settings): { bu
 
 /** Událost, na kterou má smysl plánovat MHD (výuka, nebo osobní událost s budovou). */
 export function isTransitTarget(e: ScheduleEvent): boolean {
-  if (e.allDay || e.google?.readOnly) return false;
+  if (e.allDay || e.google?.readOnly || e.online) return false;
   if (e.kind === 'personal') return Boolean(e.buildingId);
   return true;
 }

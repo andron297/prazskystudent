@@ -64,7 +64,7 @@ function valueAfter(lines: string[], label: RegExp): string | undefined {
   return undefined;
 }
 
-function normalizeGrade(raw: string): { grade: string; percent?: number } | undefined {
+export function normalizeGrade(raw: string): { grade: string; percent?: number } | undefined {
   const m = /(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)/.exec(raw);
   if (!m) return undefined;
   const clean = (x: string) => x.replace(/[.,]0+$/, '').replace(/([.,]\d*?)0+$/, '$1');

@@ -35,6 +35,19 @@ const KIND_PATTERNS: { kind: EventKind; re: RegExp }[] = [
   { kind: 'consultation', re: /konzultac/ },
 ];
 
+const ONLINE_RE = /\bonline\b|\bJONLINE\b|ms teams|\bzoom\b|webex|distan[cč]n/i;
+
+export function isOnlineLocation(location?: string): boolean {
+  return Boolean(location && ONLINE_RE.test(location));
+}
+
+/** SIS (Rozvrh NG): UID „26aJKB202x01_…“ – p = přednáška, x = seminář/cvičení. */
+export function sisKindFromUid(uid?: string): EventKind | null {
+  const m = /^\d{2}[a-z]?[A-Z]{2,5}\d{2,6}[A-Z]?(p|x)\d/.exec(uid ?? '');
+  if (!m) return null;
+  return m[1] === 'p' ? 'lecture' : 'seminar';
+}
+
 export function detectEventKind(text: string): EventKind {
   const folded = foldDiacritics(text);
   for (const { kind, re } of KIND_PATTERNS) if (re.test(folded)) return kind;
@@ -43,7 +56,9 @@ export function detectEventKind(text: string): EventKind {
 
 const NAME_NOISE = [
   /\((?:prednaska|seminar|cviceni|p|s|x|c|lecture)\)/g,
-  /\b(?:prednaska|seminar|cviceni|lecture|tutorial)\b\s*[:–-]?/g,
+  // Druh výuky jen jako samostatný kus názvu („X – přednáška“, „Seminář: X“),
+  // ne uprostřed („Žurnalistická tvorba I – seminář psaní C“ je jiný předmět).
+  /(?:^|\s[–-]\s)(?:prednaska|seminar|cviceni|lecture|tutorial)\s*(?:[:–-]\s*|$)/g,
   /\b(?:paralelka|par\.)\s*\d+\w*/g,
 ];
 
@@ -97,12 +112,16 @@ export function findSubject(subjects: Subject[], code: string | undefined, name:
     const byCode = subjects.find((s) => s.code && s.code.toUpperCase() === code.toUpperCase());
     if (byCode) return byCode;
   }
+  // Předměty s různým kódem jsou různé předměty, i když se jmenují podobně
+  // („Žurnalistická tvorba I“ JKB064 vs. „… – seminář psaní C“ JKB076).
+  const compatible = (s: Subject) => !code || !s.code || s.code.toUpperCase() === code.toUpperCase();
   const key = normalizeKey(name);
   if (!key) return undefined;
-  const exact = subjects.find((s) => normalizeKey(s.name) === key);
+  const exact = subjects.find((s) => compatible(s) && normalizeKey(s.name) === key);
   if (exact) return exact;
   if (key.length >= 8) {
     return subjects.find((s) => {
+      if (!compatible(s)) return false;
       const k = normalizeKey(s.name);
       return k.length >= 8 && (k.includes(key) || key.includes(k));
     });
@@ -150,24 +169,28 @@ export function buildIcsImport(calendar: IcsCalendar, ctx: IcsImportContext): Ic
       matched.add(subject.id);
     }
 
-    const match = resolveBuilding(ev.location, ctx.buildings, ctx.aliases);
-    if (ev.location) {
+    const online = isOnlineLocation(ev.location);
+    const match = online ? { building: undefined, room: undefined } : resolveBuilding(ev.location, ctx.buildings, ctx.aliases);
+    if (ev.location && !online) {
       if (match.building) resolved.set(ev.location, { building: match.building.name, room: match.room });
       else unresolved.add(ev.location);
     }
 
+    const textKind = detectEventKind(`${ev.summary} ${ev.description ?? ''} ${ev.categories.join(' ')}`);
+    const { name: cleanTitle, teacher: teacherFromTitle } = splitTeacherTail(ev.summary);
     events.push({
       id: `ics_${hashString(`${ev.uid}|${ev.start.toISOString()}`).toString(36)}`,
       uid: ev.uid,
       subjectId: subject.id,
-      title: ev.summary,
-      kind: detectEventKind(`${ev.summary} ${ev.description ?? ''} ${ev.categories.join(' ')}`),
+      title: cleanTitle,
+      kind: textKind === 'exam' || textKind === 'consultation' ? textKind : (sisKindFromUid(ev.uid) ?? textKind),
       start: ev.start.toISOString(),
       end: ev.end.toISOString(),
-      location: ev.location,
+      location: online ? 'Online' : ev.location,
       room: match.room,
       buildingId: match.building?.id,
-      teacher: extractTeacher(ev),
+      teacher: extractTeacher(ev) ?? teacherFromTitle,
+      online: online || undefined,
       source: ctx.source,
     });
   }

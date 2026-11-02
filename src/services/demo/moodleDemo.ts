@@ -63,6 +63,11 @@ export class DemoMoodleClient implements MoodleClient {
         return this.actionEvents() as T;
       case 'core_course_get_contents':
         return this.contents(Number(params.courseid)) as T;
+      case 'mod_assign_get_submission_status':
+        // Ukázka: jeden úkol už odevzdaný a ohodnocený, ostatní zatím ne.
+        return (Number(params.assignid) === 9101
+          ? { lastattempt: { submission: { status: 'submitted' } }, feedback: { gradefordisplay: '18,00&nbsp;/&nbsp;20,00' } }
+          : { lastattempt: { submission: { status: 'new' } } }) as T;
       default:
         throw new ApiError(400, 'function_not_allowed', `Funkce ${wsfunction} není v sandboxu dostupná.`);
     }

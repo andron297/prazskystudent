@@ -94,14 +94,14 @@ export function MoodleConnect() {
           </a>
           ).
         </GuideStep>
-        <GuideStep n={2} icon={Settings2} title="Předvolby → Klíče zabezpečení">
-          Profil vpravo nahoře → <strong>Předvolby</strong> → <strong>Klíče zabezpečení</strong>.{' '}
+        <GuideStep n={2} icon={Settings2} title="Předvolby → Bezpečnostní klíče">
+          Profil vpravo nahoře → <strong>Předvolby</strong> → <strong>Bezpečnostní klíče</strong>.{' '}
           <a href={`${normalized}/user/managetoken.php`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-accent hover:underline">
             Otevřít přímo <ExternalLink className="size-3" />
           </a>
         </GuideStep>
-        <GuideStep n={3} icon={Copy} title="Zkopíruj klíč">
-          U služby <strong>Moodle mobile web service</strong> zkopíruj klíč (32 znaků). Vidíš jen <em>RSS klíč</em>? Klíč se objeví až po prvním přihlášení v oficiální aplikaci <strong>Moodle</strong> (Android/iOS).
+        <GuideStep n={3} icon={Copy} title="Reset → zkopíruj nový klíč">
+          Nový Moodle klíče v tabulce neukazuje. U služby <strong>Moodle mobile web service</strong> klikni na <strong>Reset</strong> a potvrď – Moodle nahoře <strong>jednou</strong> ukáže nový klíč (32 znaků) s tlačítkem Kopírovat. Aplikace Moodle v mobilu tě pak požádá o nové přihlášení, to je v pořádku. <em>RSS klíč</em> na to nefunguje.
         </GuideStep>
       </ol>
 

@@ -13,6 +13,7 @@ import { nextSubjectColor } from '../lib/colors';
 import { uid } from '../lib/id';
 import { defaultSubtasks, guessRequirementType } from '../lib/progress';
 import { extractSubjectCode, normalizeKey, stripHtml, truncate } from '../lib/text';
+import { applyActivityToRequirement, normalizeGrade } from '../lib/moodlePage';
 import type {
   MoodleActionEventsResponse,
   MoodleAssignmentsResponse,
@@ -21,6 +22,11 @@ import type {
   MoodleSection,
   MoodleSiteInfo,
 } from './moodle';
+
+interface MoodleSubmissionStatus {
+  lastattempt?: { submission?: { status?: string }; teamsubmission?: { status?: string } };
+  feedback?: { gradefordisplay?: string };
+}
 
 export type MoodleSyncStep = 'site' | 'courses' | 'assignments' | 'events' | 'contents' | 'done';
 
@@ -227,6 +233,36 @@ export async function syncMoodle(
       }
     }
   }
+  // Stav odevzdání a známky – odevzdané úkoly se odškrtnou samy.
+  onProgress({ step: 'assignments', label: 'Kontroluji odevzdání a známky' });
+  const nowMs = now.getTime();
+  const toCheck = (assignmentData.courses ?? [])
+    .flatMap((c) => (courseToSubject.has(c.id) ? (c.assignments ?? []) : []))
+    .filter((a) => !a.duedate || Math.abs(a.duedate * 1000 - nowMs) < 160 * 86_400_000)
+    .slice(0, 40);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(3, toCheck.length) }, async () => {
+      while (cursor < toCheck.length) {
+        const a = toCheck[cursor++];
+        try {
+          const st = await client.call<MoodleSubmissionStatus>('mod_assign_get_submission_status', { assignid: a.id });
+          const status = st.lastattempt?.submission?.status ?? st.lastattempt?.teamsubmission?.status;
+          const gradeText = st.feedback?.gradefordisplay ? stripHtml(st.feedback.gradefordisplay).replace(/\s+/g, ' ').trim() : undefined;
+          const externalId = `moodle:assign:${a.id}`;
+          const req = requirements.get(externalId);
+          if (!req) continue;
+          const g = gradeText ? normalizeGrade(gradeText) : undefined;
+          requirements.set(
+            externalId,
+            applyActivityToRequirement(req, { kind: 'moodle-assign', title: a.name, submitted: status === 'submitted', graded: Boolean(gradeText), grade: g?.grade ?? gradeText, gradePercent: g?.percent }),
+          );
+        } catch {
+          /* úkol bez přístupu ke stavu – nevadí */
+        }
+      }
+    }),
+  );
   onProgress({ step: 'assignments', label: 'Úkoly načteny', count: assignInstances.size });
 
   // Testy, kvízy a další události s termínem

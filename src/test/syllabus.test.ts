@@ -84,6 +84,9 @@ describe('sylaby ze SISu', () => {
     expect(splitTeacherTail('Platformy žurnalistiky v kyberprostoru - Jirků Jan, PhDr. Ph.D.')).toEqual({ name: 'Platformy žurnalistiky v kyberprostoru', teacher: 'Jirků Jan, PhDr. Ph.D.' });
     expect(splitTeacherTail('Dějiny 20. století - přednáška')).toEqual({ name: 'Dějiny 20. století - přednáška' });
     expect(extractSubjectName('JSB065 Analýza mediálních obsahů - Mgr. Tereza Vlčková', 'JSB065')).toBe('Analýza mediálních obsahů');
+    expect(extractSubjectName('Žurnalistická tvorba I - přednáška - Nováková Jana, doc. PhDr.')).toBe('Žurnalistická tvorba I');
+    expect(extractSubjectName('Žurnalistická tvorba I - seminář psaní C - Novák Petr, Mgr., Ph.D.')).toBe('Žurnalistická tvorba I - seminář psaní C');
+    expect(extractSubjectName('Seminář: Mediální etika')).toBe('Mediální etika');
   });
 });
 
