@@ -28,6 +28,7 @@ import { resolveClientId, scopesForSettings, signIn, signOut, getAccessToken, to
 import { backendFor, saveDemoBackend } from './google/session';
 import { errorMessage } from './http';
 import { syncMoodle } from './moodleSync';
+import { importAllSyllabi } from './syllabusSync';
 
 /* ------------------------------------------------------------------ */
 /* Stav pro UI                                                         */
@@ -362,6 +363,8 @@ export async function refreshIcsSource(source: IcsSource, options: { manual?: bo
         demo: mode === 'demo',
       });
       message = `${source.label ?? preview.calendarName ?? 'Kalendář'}: ${count} akcí`;
+      // Předmětům z rozvrhu rovnou doplnit sylaby a povinnosti z nich (na pozadí).
+      if (source.kind === 'sis') setTimeout(() => void importAllSyllabi(), 400);
     }
     if (options.manual) toast.success(message);
     return { ok: true, count, message };

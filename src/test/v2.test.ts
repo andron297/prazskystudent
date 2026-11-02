@@ -222,8 +222,10 @@ Jazyk výuky: čeština (cs)
 Garant: doc. PhDr. Jan Novák, Ph.D.
 Vyučující: Mgr. Petra Dvořáková, doc. PhDr. Jan Novák, Ph.D.
 Anotace -
-Poslední úprava: Mgr. Petra Dvořáková (12.09.2026)
 Kurz uvádí do základních pojmů a teorií mediálních studií.
+Poslední úprava: Mgr. Petra Dvořáková (12.09.2026)
+The course introduces basic concepts of media studies.
+Poslední úprava: Mgr. Petra Dvořáková (12.09.2026)
 Literatura -
 McQuail, D. (2010). Mass Communication Theory.
 Podmínky zakončení předmětu -
@@ -252,6 +254,52 @@ describe('import ze SISu', () => {
     expect(s.syllabus).toBe('1. Co jsou média\n2. Mediální instituce');
     expect(s.literature).toContain('McQuail');
     expect(s.teachers).toEqual(['Mgr. Petra Dvořáková', 'doc. PhDr. Jan Novák, Ph.D.']);
+  });
+
+  it('skutečná struktura stránky SISu (popisek a hodnota na samostatných řádcích)', () => {
+    const real = [
+      'Popis předmětu',
+      'Platformy žurnalistiky v kyberprostoru - JKB096',
+      'Anglický název:',
+      'Platforms of Journalism in Cyberspace',
+      'Semestr:',
+      'zimní',
+      'E-Kredity:',
+      '3',
+      'Rozsah, examinace:',
+      'zimní s.:1/1, Z [HT]',
+      'Jazyk výuky:',
+      'čeština',
+      'Garant:',
+      'PhDr. Mgr. Bc. Jan Jirků, Ph.D.',
+      'Mgr. Barbora Součková',
+      'Vyučující:',
+      'PhDr. Mgr. Bc. Jan Jirků, Ph.D.',
+      'Mgr. Barbora Součková',
+      'Rozvrh ZS Nástěnka',
+      'Anotace -',
+      '---češtinaangličtina',
+      'Cílem předmětu je poskytnout přehled o platformách.',
+      'Poslední úprava: Jirků Jan (26.11.2019)',
+      'The aim of the course is to provide an overview.',
+      'Poslední úprava: Jirků Jan (26.11.2019)',
+      'Podmínky zakončení předmětu',
+      'Kurz je zakončen zápočtem. Pro získání zápočtu je zapotřebí splnit seminární úkol.',
+      'Seminární úkol spočívá ve skupinové třicetiminutové multimediální prezentaci.',
+      'Poslední úprava: Jirků Jan (14.09.2026)',
+      'Literatura',
+      'DEUZE, Mark. Media Work. Cambridge: Polity, 2007.',
+    ].join('\n');
+    const r = parseSisPage(real, 'https://is.cuni.cz/studium/predmety/index.php?do=predmet&kod=JKB096', NOW);
+    expect(r.kind).toBe('syllabus');
+    expect(r.subject).toMatchObject({ code: 'JKB096', name: 'Platformy žurnalistiky v kyberprostoru' });
+    const s = r.subject!.syllabus;
+    expect(s).toMatchObject({ credits: 3, completion: 'Z', semester: 'zimní', language: 'čeština', guarantor: 'PhDr. Mgr. Bc. Jan Jirků, Ph.D.' });
+    expect(s.teachers).toEqual(['PhDr. Mgr. Bc. Jan Jirků, Ph.D.', 'Mgr. Barbora Součková']);
+    expect(s.annotation).toBe('Cílem předmětu je poskytnout přehled o platformách.');
+    expect(s.requirements).toContain('skupinové třicetiminutové multimediální prezentaci');
+    expect(s.requirements).not.toContain('Poslední úprava');
+    expect(s.literature).toContain('DEUZE');
   });
 
   it('termíny zkoušek', () => {

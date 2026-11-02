@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, BookOpen, CalendarDays, ExternalLink, GraduationCap, ListChecks, MapPin, Paperclip, Pencil, Plug, Plus, ScrollText, Trash } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarDays, ExternalLink, GraduationCap, ListChecks, MapPin, Paperclip, Pencil, Plug, Plus, RefreshCw, ScrollText, Trash } from 'lucide-react';
 import type { Subject, SubjectColor } from '../../types';
 import { requirementToCalendarItem } from '../../lib/calendarExport';
 import { SUBJECT_COLOR_CLASSES, SUBJECT_COLORS, nextSubjectColor } from '../../lib/colors';
@@ -14,6 +14,7 @@ import { useNow } from '../../hooks/useNow';
 import { useAppStore } from '../../store/appStore';
 import { buildingForEvent } from '../../store/selectors';
 import { confirmAction, toast, useUiStore } from '../../store/uiStore';
+import { importSyllabus, useSyllabusSync } from '../../services/syllabusSync';
 import { AddToCalendar } from '../common/AddToCalendar';
 import { Modal } from '../ui/overlays';
 import { Button, Card, Chip, cn, EmptyState, Field, ProgressBar, ProgressRing, TextInput } from '../ui/primitives';
@@ -394,12 +395,22 @@ export function SubjectEditor({ open, onClose, subject }: { open: boolean; onClo
 /* Sylabus ze SISu                                                     */
 /* ------------------------------------------------------------------ */
 
-const SYLLABUS_PARTS: { key: 'annotation' | 'requirements' | 'syllabus' | 'literature'; label: string }[] = [
+const SYLLABUS_PARTS: { key: 'annotation' | 'aim' | 'requirements' | 'syllabus' | 'literature'; label: string }[] = [
   { key: 'annotation', label: 'Anotace' },
+  { key: 'aim', label: 'Cíl předmětu' },
   { key: 'requirements', label: 'Podmínky zakončení' },
   { key: 'syllabus', label: 'Sylabus' },
   { key: 'literature', label: 'Literatura' },
 ];
+
+function SyllabusFetchButton({ subject, variant = 'primary' }: { subject: Subject; variant?: 'primary' | 'ghost' }) {
+  const busy = useSyllabusSync((s) => Boolean(s.busy[subject.id]));
+  return (
+    <Button size="sm" variant={variant} icon={RefreshCw} loading={busy} onClick={() => void importSyllabus(subject.id, { manual: true })}>
+      {busy ? 'Stahuji ze SISu…' : subject.syllabus ? 'Aktualizovat ze SISu' : 'Stáhnout ze SISu'}
+    </Button>
+  );
+}
 
 function SyllabusCard({ subject }: { subject: Subject }) {
   const [open, setOpen] = useState<string | null>('requirements');
@@ -407,16 +418,16 @@ function SyllabusCard({ subject }: { subject: Subject }) {
   if (!syllabus) {
     return (
       <Card title="Sylabus" eyebrow="Ze SISu" icon={ScrollText}>
-        <p className="text-[13px] text-muted">Otevři předmět v SISu a klikni na záložku „→ Stihnu“ – sylabus, podmínky i literatura se uloží sem.</p>
+        <p className="text-[13px] text-muted">
+          Stáhnu veřejnou stránku předmětu ze SISu{subject.code ? ` (${subject.code})` : ' (podle názvu)'} a z podmínek zakončení vytáhnu povinnosti, váhy a termíny.
+        </p>
         <div className="mt-3 flex flex-wrap gap-2">
+          <SyllabusFetchButton subject={subject} />
           {subject.code && (
-            <a href={sisSubjectUrl(subject.code)} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-[13px] font-bold text-accent-fg">
+            <a href={sisSubjectUrl(subject.code)} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-bold text-muted hover:text-ink">
               <ExternalLink className="size-3.5" aria-hidden /> Otevřít v SISu
             </a>
           )}
-          <Button size="sm" variant="ghost" onClick={() => navigateTo('propojeni', 'sis')}>
-            Jak na záložku
-          </Button>
         </div>
       </Card>
     );
@@ -440,7 +451,20 @@ function SyllabusCard({ subject }: { subject: Subject }) {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-[11px] text-subtle">Načteno {new Date(syllabus.importedAt).toLocaleDateString('cs-CZ')}</p>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[11px] text-subtle">
+          Načteno {new Date(syllabus.importedAt).toLocaleDateString('cs-CZ')}
+          {syllabus.url && (
+            <>
+              {' · '}
+              <a href={syllabus.url} target="_blank" rel="noreferrer" className="font-semibold underline-offset-2 hover:underline">
+                SIS
+              </a>
+            </>
+          )}
+        </p>
+        <SyllabusFetchButton subject={subject} variant="ghost" />
+      </div>
     </Card>
   );
 }

@@ -10,7 +10,7 @@ import type { AppMode, Building, LatLng, OriginStopPref, Settings, TransitResult
 import type { ParseMode, ParsedItem } from '../lib/scheduleTextParser';
 import { parseScheduleText } from '../lib/scheduleTextParser';
 import { aiParseText } from './aiParser';
-import { buildDemoIcs } from './demo/samples';
+import { buildDemoIcs, buildDemoSisPage } from './demo/samples';
 import { DemoMoodleClient } from './demo/moodleDemo';
 import { demoNetworkCovers, demoNetworkHasStop, planDemoItineraries } from './demo/transitSim';
 import { GolemioClient } from './golemio';
@@ -41,11 +41,20 @@ export interface ServerCapabilities {
 
 export const NO_SERVER: ServerCapabilities = { reachable: false, golemio: false, google: false, anthropic: false, googleClientId: null, googleServerFlow: false };
 
+/** Veřejná stránka předmětu ze SISu (text od „Popis předmětu“ po „Kontakty“). */
+export interface SisSubjectPage {
+  code: string;
+  url: string;
+  text: string;
+  candidates: string[];
+}
+
 export interface StudyApi {
   readonly mode: AppMode;
   planTransit(request: TransitRequest): Promise<TransitResult>;
   moodle(baseUrl: string, token: string): MoodleClient;
   fetchIcs(url: string): Promise<string>;
+  fetchSisSubject(query: { code?: string; name?: string }): Promise<SisSubjectPage>;
   aiParse(text: string, mode: ParseMode, academicYearStart: number, today: Date): Promise<{ items: ParsedItem[]; engine: 'ai' | 'local' }>;
   readonly canUseAi: boolean;
 }
@@ -119,6 +128,10 @@ export function createApi(settings: Settings, server: ServerCapabilities, now: (
         await sleep(650);
         return buildDemoIcs(now());
       },
+      async fetchSisSubject(query) {
+        await sleep(450);
+        return buildDemoSisPage(query, now());
+      },
       aiParse,
     };
   }
@@ -137,6 +150,10 @@ export function createApi(settings: Settings, server: ServerCapabilities, now: (
     },
     fetchIcs(url) {
       return requestText(`/api/ics?url=${encodeURIComponent(url)}`, { timeoutMs: 25_000 });
+    },
+    fetchSisSubject(query) {
+      const params = new URLSearchParams(query.code ? { kod: query.code } : { nazev: query.name ?? '' });
+      return requestJson<SisSubjectPage>(`/api/sis?${params}`, { timeoutMs: 30_000 });
     },
     aiParse,
   };

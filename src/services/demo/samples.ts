@@ -58,6 +58,76 @@ export function sampleSyllabus(now: Date): string {
   ].join('\n');
 }
 
+/** Podmínky zakončení ukázkových předmětů (termíny podle začátku výuky). */
+function demoConditions(code: string, teaching: Date): string[] {
+  const w = (week: number, day = 1) => d(addDays(teaching, (week - 1) * 7 + day));
+  switch (code) {
+    case 'JSB065':
+      return [
+        `Průběžný test (20 %) – ${w(7)} v 14:00`,
+        `Seminární práce (40 %) – odevzdání do ${w(11, 6)} přes Moodle`,
+        'Prezentace výzkumného designu v semináři (15 %)',
+        'Závěrečná písemná zkouška (25 %)',
+        'Docházka: max. 2 absence.',
+      ];
+    case 'JSB022':
+      return [
+        'Reflexe četby (30 %) – pět krátkých reflexí během semestru.',
+        `Esej (30 %) – odevzdání do ${w(8, 6)}.`,
+        'Písemná zkouška (40 %). Ke zkoušce je nutné získat alespoň 60 % bodů z průběžných částí.',
+        'Aktivní účast na seminářích (max. 3 absence).',
+      ];
+    case 'JPB140':
+      return ['Referát v semináři (25 %).', `Kolokvium ${w(9, 2)} (25 %).`, 'Zkouška (50 %).', 'Krátká písemná reflexe přečteného textu před každým seminářem.'];
+    case 'JSB110':
+      return ['Domácí úkoly (50 %) – čtyři úkoly odevzdávané přes Moodle.', `Zápočtový test ${w(13, 3)} v 10:00 (50 %).`, 'Docházka na cvičení je povinná (max. 2 absence).'];
+    default:
+      return [`Anotace odborného článku (30 %) – do ${w(5, 6)}.`, `Rešerše literatury (30 %) – do ${w(8, 6)}.`, `Závěrečná práce (40 %) – odevzdání do ${w(13, 6)}.`, 'Aktivní účast na seminářích.'];
+  }
+}
+
+/** Ukázková stránka předmětu ve SISu (stejná struktura jako skutečná veřejná stránka). */
+export function buildDemoSisPage(query: { code?: string; name?: string }, now: Date): { code: string; url: string; text: string; candidates: string[] } {
+  const key = (x: string) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const subject = DEMO_SUBJECTS.find((s) => (query.code && s.code === query.code.toUpperCase()) || (query.name && key(s.name) === key(query.name)));
+  if (!subject) throw new Error(`Předmět ${query.code ?? `„${query.name}“`} v ukázkovém SISu není – skutečná data ho najdou po přepnutí na živý režim.`);
+  const ay = academicYearStart(now);
+  const teaching = mondayOnOrAfter(new Date(ay, 8, 26));
+  const edited = `Poslední úprava: ${subject.teacher} (${d(addDays(teaching, -14))})`;
+  const text = [
+    'Popis předmětu',
+    `${subject.name} - ${subject.code}`,
+    'Anglický název:',
+    subject.name,
+    'Semestr:',
+    'zimní',
+    'E-Kredity:',
+    String(subject.credits),
+    'Rozsah, examinace:',
+    `zimní s.:2/1, ${subject.completion} [HT]`,
+    'Jazyk výuky:',
+    'čeština',
+    'Garant:',
+    subject.teacher,
+    'Vyučující:',
+    subject.teacher,
+    'Anotace -',
+    `Kurz ${subject.name.toLowerCase()} seznamuje studenty se základními pojmy, metodami a aktuální debatou v oboru.`,
+    edited,
+    'Podmínky zakončení předmětu',
+    ...demoConditions(subject.code, teaching),
+    edited,
+    'Sylabus -',
+    `1. týden (${dm(teaching)}): Úvod do předmětu`,
+    `6. týden (${dm(addDays(teaching, 35))}): Průběžné opakování`,
+    `12. týden (${dm(addDays(teaching, 77))}): Shrnutí a příprava na zkoušku`,
+    edited,
+    'Literatura',
+    'McQUAIL, Denis. Teorie masové komunikace. Praha: Portál, 2009.',
+  ].join('\n');
+  return { code: subject.code, url: `https://is.cuni.cz/studium/predmety/index.php?do=predmet&kod=${subject.code}`, text, candidates: [subject.code] };
+}
+
 function icsDate(date: Date, h: number, m: number): string {
   return `${date.getFullYear()}${pad2(date.getMonth() + 1)}${pad2(date.getDate())}T${pad2(h)}${pad2(m)}00`;
 }

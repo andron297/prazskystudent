@@ -26,39 +26,111 @@ export interface SisImportResult {
   exams: ExamTerm[];
 }
 
-const SECTION_ALIASES: { key: keyof SubjectSyllabus; re: RegExp }[] = [
-  { key: 'annotation', re: /^(anotace|annotation)\b/i },
-  { key: 'syllabus', re: /^(sylabus|syllabus)\b/i },
-  { key: 'requirements', re: /^(podmínky zakončení předmětu|požadavky ke zkoušce|požadavky k zápočtu|course completion requirements|requirements to the exam)\b/i },
-  { key: 'literature', re: /^(literatura|literature)\b/i },
+type SectionKey = 'annotation' | 'aim' | 'syllabus' | 'requirements' | 'literature';
+
+const SECTION_ALIASES: { key: SectionKey; re: RegExp }[] = [
+  { key: 'annotation', re: /^(anotace|annotation)$/i },
+  { key: 'aim', re: /^(cíl předmětu|aim of the course)$/i },
+  { key: 'syllabus', re: /^(sylabus|syllabus)$/i },
+  { key: 'requirements', re: /^(podmínky zakončení předmětu|požadavky ke zkoušce|požadavky k zápočtu|course completion requirements|requirements to the exam)$/i },
+  { key: 'literature', re: /^(literatura|literature)$/i },
 ];
 
 /** Nadpisy dalších sekcí (ukončují předchozí sekci). */
-const OTHER_SECTIONS = /^(cíl předmětu|aim of the course|metody výuky|teaching methods|vstupní požadavky|entry requirements|výsledky učení|learning outcomes|rozvrh|harmonogram|klíčová slova|keywords|registrační podmínky|registration requirements|garant|vyučující|zajišťuje|fakulta|platnost|semestr|e-kredity|rozsah, examinace|počet míst|minimální obsazenost|virtuální mobilita|stav předmětu|jazyk výuky|způsob výuky|poznámka|anglický název)\b/i;
+const OTHER_SECTIONS = /^(metody výuky|teaching methods|vstupní požadavky|entry requirements|výsledky učení|learning outcomes|klíčová slova|keywords|registrační podmínky|registration requirements|rozvrh|kontakty|deskriptory|další informace)$/i;
 
-function fieldValue(lines: string[], label: RegExp): string | undefined {
+/** Popisky polí v hlavičce stránky předmětu (popisek a hodnota bývají na samostatných řádcích). */
+const FIELD_LABELS = [
+  'anglický název',
+  'podoba výuky',
+  'zajišťuje',
+  'fakulta',
+  'platnost',
+  'počet semestrů výuky',
+  'semestr',
+  'e-kredity',
+  'způsob provedení zkoušky',
+  'rozsah, examinace',
+  'počet míst',
+  'maximální kapacita předmětu',
+  'minimální obsazenost',
+  '4eu+',
+  'virtuální mobilita / počet míst pro virtuální mobilitu',
+  'stav předmětu',
+  'jazyk výuky',
+  'forma uskutečňování',
+  'úroveň',
+  'možnost opakovaného zápisu',
+  'poznámka',
+  'garant',
+  'garanti',
+  'vyučující',
+  'třída',
+  'neslučitelnost',
+  'prerekvizity',
+  'korekvizity',
+  'ekvivalence',
+  'záměnnost',
+  'je neslučitelnost pro',
+  'je prerekvizitou pro',
+  'je korekvizitou pro',
+  'je záměnnost pro',
+];
+
+function labelOf(line: string): { label: string; value: string } | null {
+  const m = /^([^:]{2,60}):\s*(.*)$/.exec(line);
+  if (!m) return null;
+  const label = m[1].trim().toLowerCase();
+  return FIELD_LABELS.includes(label) ? { label, value: m[2].trim() } : null;
+}
+
+/** Hodnoty polí: „Garant: Jan Novák“ i „Garant:“ + jména na dalších řádcích. */
+function collectFields(lines: string[]): Map<string, string[]> {
+  const fields = new Map<string, string[]>();
+  let current: string | null = null;
   for (const line of lines) {
-    const m = new RegExp(`^${label.source}\\s*:?\\s*(.+)$`, 'i').exec(line);
-    if (m && m[1].trim()) return m[1].trim();
+    const heading = line.replace(/\s*[-–]\s*$/, '');
+    if (SECTION_ALIASES.some((s) => s.re.test(heading)) || OTHER_SECTIONS.test(heading) || /^rozvrh\b/i.test(line)) {
+      current = null;
+      continue;
+    }
+    const field = labelOf(line);
+    if (field) {
+      current = field.label;
+      fields.set(current, field.value ? [field.value] : []);
+      continue;
+    }
+    if (current) {
+      const list = fields.get(current)!;
+      if (list.length < 8) list.push(line);
+    }
   }
-  return undefined;
+  return fields;
 }
 
 function cleanSection(lines: string[]): string | undefined {
-  const text = lines
-    .filter((l) => !/^poslední úprava:|^last update:/i.test(l))
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  const text = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
   return text.length > 0 ? text : undefined;
 }
 
 export function detectSisPage(text: string, url?: string): SisPageKind {
   if (url && /do=predmet|predmety\/index\.php/i.test(url)) return 'syllabus';
-  if (/(anotace|sylabus|annotation|syllabus)\s*-?\s*$/im.test(text) && /e-kredity|garant/i.test(text)) return 'syllabus';
+  if (/^(anotace|sylabus|annotation|syllabus)\s*-?\s*$/im.test(text) && /e-kredity|garant/i.test(text)) return 'syllabus';
   if (/termín(?:y)? zkouš|přihlašování na zkoušky|exam(?:ination)? dates|zápis na termín/i.test(text)) return 'exams';
   if (/\b\d{1,2}\.\d{1,2}\.\d{4}\s+\d{1,2}:\d{2}\b/.test(text) && SUBJECT_CODE_RE.test(text)) return 'exams';
   return 'unknown';
+}
+
+/** Vyučující: každý na řádku, nebo v jednom řádku oddělení čárkou (tituly za jménem zůstanou u jména). */
+function splitPeople(values: string[]): string[] {
+  const out: string[] = [];
+  for (const v of values) {
+    for (const part of v.split(/,(?!\s*(?:Ph\.\s?D|CSc|DrSc|Th\.\s?D|MBA|M\.\s?A|LL\.\s?M|DiS|MSc|M\.\s?Sc|BA|MA|Dr\.\s?h\.\s?c)\b)\s*/)) {
+      const t = part.trim();
+      if (t) out.push(t);
+    }
+  }
+  return out;
 }
 
 export function parseSisSyllabus(text: string, url?: string, now = new Date()): SisImportResult['subject'] {
@@ -79,42 +151,47 @@ export function parseSisSyllabus(text: string, url?: string, now = new Date()): 
     }
   }
 
+  const fields = collectFields(lines);
+  const first = (label: string) => fields.get(label)?.[0];
   const syllabus: SubjectSyllabus = { importedAt: now.toISOString(), url };
-  syllabus.guarantor = fieldValue(lines, /garant(?:\s*\(.*?\))?/);
-  const teachers = fieldValue(lines, /vyučující/);
-  if (teachers) {
-    // Čárka odděluje vyučující, ale ne tituly za jménem („Jan Novák, Ph.D.“).
-    syllabus.teachers = teachers
-      .split(/,(?!\s*(?:Ph\.\s?D|CSc|DrSc|Th\.\s?D|MBA|M\.\s?A|LL\.\s?M|DiS|MSc|M\.\s?Sc|BA|MA|Dr\.\s?h\.\s?c)\b)\s*/)
-      .map((t) => t.trim())
-      .filter(Boolean);
-  }
-  const credits = fieldValue(lines, /e-kredity/);
+  const guarantors = splitPeople(fields.get('garant') ?? fields.get('garanti') ?? []);
+  if (guarantors.length) syllabus.guarantor = guarantors[0];
+  const teachers = splitPeople(fields.get('vyučující') ?? []);
+  if (teachers.length) syllabus.teachers = teachers;
+  const credits = first('e-kredity');
   if (credits && /\d+/.test(credits)) syllabus.credits = Number(/\d+/.exec(credits)![0]);
-  const scope = fieldValue(lines, /rozsah, examinace/);
+  const scope = first('rozsah, examinace');
   if (scope) {
-    const completion = /\b(Zk|Z\+Zk|KZ|Z|Kv)\b(?:\s*\[[^\]]+\])?/.exec(scope);
-    syllabus.completion = completion ? completion[0].replace(/\s*\[.*$/, '') : scope;
+    const completion = /\b(Z\+Zk|Zk|KZ|Kv|Z)\b/.exec(scope);
+    syllabus.completion = completion ? completion[1] : scope;
   }
-  syllabus.semester = fieldValue(lines, /semestr/);
-  syllabus.language = fieldValue(lines, /jazyk výuky/);
+  syllabus.semester = first('semestr');
+  syllabus.language = first('jazyk výuky');
 
-  // Sekce: nadpis „Anotace -“ a text až po další nadpis.
-  let current: keyof SubjectSyllabus | null = null;
-  const buckets: Partial<Record<keyof SubjectSyllabus, string[]>> = {};
+  // Sekce: nadpis („Anotace“ / „Anotace -“) a text do „Poslední úprava“ (anglická verze za ní se přeskočí).
+  let current: SectionKey | null = null;
+  let closed = false;
+  const buckets: Partial<Record<SectionKey, string[]>> = {};
   for (const line of lines) {
     const heading = line.replace(/\s*[-–]\s*$/, '');
-    const section = SECTION_ALIASES.find((s) => s.re.test(heading) && heading.length < 60);
-    if (section && (line.endsWith('-') || line.endsWith('–') || heading.length === line.length)) {
+    const section = SECTION_ALIASES.find((s) => s.re.test(heading));
+    if (section) {
       current = section.key;
+      closed = Boolean(buckets[current]?.length);
       buckets[current] = buckets[current] ?? [];
       continue;
     }
-    if (OTHER_SECTIONS.test(heading) && heading.length < 60) {
+    if (OTHER_SECTIONS.test(heading) || labelOf(line)) {
       current = null;
       continue;
     }
-    if (current) buckets[current]!.push(line);
+    if (!current || closed) continue;
+    if (/^poslední úprava:|^last update:/i.test(line)) {
+      closed = true;
+      continue;
+    }
+    if (/^-{2,}\s*(čeština|angličtina|czech|english)/i.test(line)) continue;
+    buckets[current]!.push(line);
   }
   for (const s of SECTION_ALIASES) {
     const value = cleanSection(buckets[s.key] ?? []);

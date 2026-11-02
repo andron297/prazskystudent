@@ -24,6 +24,7 @@ import {
   RotateCcw,
   ScrollText,
   ServerCog,
+  Sparkles,
   Sun,
   TramFront,
   Trash,
@@ -40,6 +41,7 @@ import { sisBookmarklet } from '../../lib/sisImport';
 import { navigateTo } from '../../hooks/useAppShell';
 import { testGolemioKey } from '../../services/api';
 import { refreshIcsSource, runMoodleTokenSync, useSyncStore } from '../../services/syncCenter';
+import { importAllSyllabi, useSyllabusSync } from '../../services/syllabusSync';
 import { pickPersisted, useAppStore } from '../../store/appStore';
 import { appNow, useClockStore } from '../../store/clockStore';
 import { confirmAction, toast, useUiStore } from '../../store/uiStore';
@@ -235,6 +237,37 @@ function MoodleSection() {
 /* SIS                                                                 */
 /* ------------------------------------------------------------------ */
 
+function SyllabiBlock() {
+  const subjects = useAppStore((s) => s.subjects);
+  const mode = useAppStore((s) => s.settings.mode);
+  const ownKey = useAppStore((s) => Boolean(s.settings.anthropicApiKey.trim()));
+  const serverAi = useUiStore((s) => s.server.anthropic);
+  const running = useSyllabusSync((s) => s.running);
+  const progress = useSyllabusSync((s) => s.progress);
+  const relevant = subjects.filter((s) => (mode === 'live' ? !s.demo : s.demo));
+  const withSyllabus = relevant.filter((s) => s.syllabus).length;
+  const complete = relevant.length > 0 && withSyllabus === relevant.length;
+  return (
+    <div className="rounded-[22px] bg-surface-2 p-4">
+      <p className="flex items-center gap-2 text-[14px] font-bold">
+        <Sparkles className="size-4 text-moss" aria-hidden /> Sylaby a povinnosti – samy
+      </p>
+      <p className="mt-1 text-[13px] text-muted">
+        Po načtení rozvrhu stáhnu ke každému předmětu jeho veřejný sylabus ze SISu a z podmínek zakončení vytáhnu povinnosti, váhy a termíny.{' '}
+        {ownKey || serverAi ? 'Čte je AI (Claude).' : 'Teď je čtu pravidly; s AI (klíč Anthropic v sekci Aplikace) to bude chytřejší.'}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <Button size="sm" variant="primary" icon={RefreshCw} loading={running} disabled={relevant.length === 0} onClick={() => void importAllSyllabi({ manual: true, all: complete })}>
+          {running && progress ? `Stahuji ${progress.done + 1}/${progress.total}…` : complete ? 'Aktualizovat sylaby' : 'Stáhnout sylaby'}
+        </Button>
+        <span className="text-[12.5px] text-muted">
+          {relevant.length ? `${withSyllabus}/${relevant.length} předmětů má sylabus` : 'Nejdřív načti rozvrh – předměty se vezmou z něj.'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function SisSection() {
   const allSources = useAppStore((s) => s.settings.icsSources);
   const sources = allSources.filter((x) => x.kind !== 'moodle');
@@ -288,11 +321,13 @@ function SisSection() {
           </div>
         </div>
 
+        <SyllabiBlock />
+
         <div className="rounded-[22px] bg-surface-2 p-4">
           <p className="flex items-center gap-2 text-[14px] font-bold">
-            <BookMarked className="size-4 text-moss" aria-hidden /> Sylaby a termíny zkoušek jedním klikem
+            <BookMarked className="size-4 text-moss" aria-hidden /> Termíny zkoušek a stránky z Moodlu jedním klikem
           </p>
-          <p className="mt-1 text-[13px] text-muted">Přetáhni tlačítko do lišty záložek. Pak v SISu na stránce předmětu nebo zkoušek klikni na záložku – Stihnu si stránku přečte (tvým přihlášením, nic se nikam jinam neposílá).</p>
+          <p className="mt-1 text-[13px] text-muted">Přetáhni tlačítko do lišty záložek. Pak klikni na záložku v SISu (termíny zkoušek, stránka předmětu) nebo v Moodlu (úkol, kurz) – Stihnu si stránku přečte tvým přihlášením: odevzdané úkoly odškrtne, známky a termíny doplní. Nic se neposílá jinam.</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <a
               ref={linkRef}

@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react';
-import { BookOpen, CalendarPlus, CircleAlert, ClipboardPaste, GraduationCap, ScrollText, Sparkles } from 'lucide-react';
-import { formatDate, formatTime, formatWeekdayShort } from '../../lib/dates';
+import { BookOpen, CalendarPlus, CircleAlert, CircleCheck, ClipboardPaste, GraduationCap, ListChecks, ScrollText, Sparkles } from 'lucide-react';
+import type { Subject } from '../../types';
+import { formatDate, formatDeadline, formatTime, formatWeekdayShort } from '../../lib/dates';
+import { applyActivityToRequirement, detectMoodlePage, guessSubjectForCourse, matchRequirement, parseMoodleActivity, type MoodleActivityPage } from '../../lib/moodlePage';
+import { defaultSubtasks, guessRequirementType } from '../../lib/progress';
 import { parseSisPage, sisSubjectUrl } from '../../lib/sisImport';
+import { syllabusText } from '../../lib/syllabusExtract';
+import { addRequirementsFromText, requirementsCountText } from '../../services/syllabusSync';
 import { navigateTo } from '../../hooks/useAppShell';
 import { useAppStore } from '../../store/appStore';
 import { appNow } from '../../store/clockStore';
@@ -21,6 +26,9 @@ export function ImportView() {
   const [target, setTarget] = useState<string>('auto');
 
   const parsed = useMemo(() => (payload ? parseSisPage(payload.text, payload.url, appNow()) : null), [payload]);
+  const moodleKind = payload ? detectMoodlePage(payload.text, payload.url) : null;
+  const activity = useMemo(() => (payload && moodleKind && moodleKind !== 'moodle-course' ? parseMoodleActivity(payload.text, payload.url, payload.title) : null), [payload, moodleKind]);
+  const fromMoodle = Boolean(moodleKind) || /moodle|dl\d?\.cuni\.cz/i.test(payload?.url ?? '');
   const match = parsed?.subject?.code ? subjects.find((s) => s.code?.toUpperCase() === parsed.subject!.code!.toUpperCase()) : undefined;
 
   const load = () => {
@@ -41,6 +49,10 @@ export function ImportView() {
     toast.success('Sylabus uložen k předmětu');
     setSisImport(null);
     navigateTo('predmety', id);
+    const text = syllabusText(parsed.subject.syllabus);
+    void addRequirementsFromText(id, text, `sis:${parsed.subject.code ?? id}`).then(({ requirements, engine }) => {
+      if (requirements.length) toast.success(`Ze sylabu: ${requirementsCountText(requirements.length)}${engine === 'ai' ? ' (AI)' : ''}`);
+    });
   };
 
   const addExams = () => {
@@ -56,15 +68,15 @@ export function ImportView() {
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <header>
-        <p className="eyebrow text-subtle">Import ze SISu</p>
+        <p className="eyebrow text-subtle">Import ze SISu a Moodlu</p>
         <SerifTitle as="h1" className="mt-1 text-[44px] sm:text-[56px]">
-          Co mi <em>SIS</em> poslal
+          Co mi <em>{fromMoodle ? 'Moodle' : 'SIS'}</em> poslal
         </SerifTitle>
       </header>
 
       {!payload && (
         <Card title="Vložit text stránky" eyebrow="Bez záložky" icon={ClipboardPaste}>
-          <p className="mb-3 text-[13.5px] text-muted">V SISu otevři stránku předmětu (sylabus) nebo termíny zkoušek, označ vše (Ctrl+A), zkopíruj a vlož sem.</p>
+          <p className="mb-3 text-[13.5px] text-muted">V SISu otevři stránku předmětu nebo termíny zkoušek (v Moodlu stránku úkolu, testu či kurzu), označ vše (Ctrl+A), zkopíruj a vlož sem.</p>
           <div className="space-y-3">
             <Field label="Adresa stránky (nepovinné)">
               <TextInput value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://is.cuni.cz/studium/predmety/…" inputMode="url" />
@@ -161,19 +173,165 @@ export function ImportView() {
             </Card>
           )}
 
-          {parsed.kind === 'unknown' && parsed.exams.length === 0 && (
-            <Card>
-              <p className="flex items-start gap-2 text-[14px]">
-                <CircleAlert className="mt-0.5 size-4 shrink-0 text-clay" aria-hidden />
-                Tuhle stránku neznám. Pošli mi stránku předmětu (sylabus) nebo termínů zkoušek – nebo zkus parser harmonogramu.
-              </p>
-              <Button className="mt-3" variant="secondary" icon={ScrollText} onClick={() => useUiStore.getState().openConnect('parser')}>
-                Otevřít parser textu
-              </Button>
-            </Card>
+          {activity && <MoodleActivityCard page={activity} subjects={subjects} onDone={() => setSisImport(null)} />}
+
+          {!activity && parsed.kind === 'unknown' && parsed.exams.length === 0 && (
+            <SmartExtractCard text={payload.text} course={payload.title} subjects={subjects} known={moodleKind === 'moodle-course'} onDone={() => setSisImport(null)} />
           )}
         </>
       )}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Moodle: úkol nebo test                                              */
+/* ------------------------------------------------------------------ */
+
+function MoodleActivityCard({ page, subjects, onDone }: { page: MoodleActivityPage; subjects: Subject[]; onDone: () => void }) {
+  const requirements = useAppStore((s) => s.requirements);
+  const upsertRequirement = useAppStore((s) => s.upsertRequirement);
+  const addRequirements = useAppStore((s) => s.addRequirements);
+  const matched = useMemo(() => matchRequirement(page, requirements, subjects), [page, requirements, subjects]);
+  const guessedSubject = guessSubjectForCourse(page.course, subjects);
+  const [target, setTarget] = useState<string>(matched ? matched.id : 'new');
+  const [subjectId, setSubjectId] = useState<string>(guessedSubject?.id ?? subjects[0]?.id ?? '');
+
+  const save = () => {
+    const now = appNow();
+    if (target !== 'new') {
+      const req = requirements.find((r) => r.id === target);
+      if (!req) return;
+      upsertRequirement(applyActivityToRequirement(req, page));
+      toast.success(page.submitted || page.graded ? `„${req.title}“ odškrtnuto${page.grade ? ` · známka ${page.grade}` : ''}` : `„${req.title}“ aktualizováno`);
+    } else {
+      if (!subjectId) return;
+      const type = guessRequirementType(page.title, page.kind === 'moodle-quiz' ? 'quiz' : 'assign');
+      const base = {
+        id: `req_moodle_page_${page.cmid ?? Date.now()}`,
+        subjectId,
+        title: page.title,
+        type,
+        weight: 0,
+        done: false,
+        subtasks: defaultSubtasks(type, 'moodle'),
+        source: 'moodle' as const,
+        externalId: page.cmid ? `moodle-page:${page.cmid}` : undefined,
+        createdAt: now.toISOString(),
+      };
+      addRequirements([applyActivityToRequirement(base, page)]);
+      toast.success(`Povinnost „${page.title}“ přidána`);
+    }
+    onDone();
+    navigateTo('predmety', target !== 'new' ? requirements.find((r) => r.id === target)?.subjectId : subjectId);
+  };
+
+  const sorted = [...requirements].sort((a, b) => (a.id === matched?.id ? -1 : b.id === matched?.id ? 1 : a.title.localeCompare(b.title, 'cs')));
+  return (
+    <Card title={page.title} eyebrow={page.kind === 'moodle-quiz' ? `Test · ${page.course ?? 'Moodle'}` : `Úkol · ${page.course ?? 'Moodle'}`} icon={ListChecks}>
+      <div className="flex flex-wrap gap-1.5">
+        {page.submitted ? (
+          <Chip icon={CircleCheck} className="bg-accent-soft text-accent">
+            {page.status ?? 'Odevzdáno'}
+          </Chip>
+        ) : (
+          <Chip className="bg-clay/15 text-clay">{page.status ?? 'Zatím neodevzdáno'}</Chip>
+        )}
+        {page.grade && <Chip className="bg-accent-soft text-accent">Známka {page.grade}{page.gradePercent !== undefined ? ` (${page.gradePercent} %)` : ''}</Chip>}
+        {page.due && <Chip>Termín {formatDeadline(page.due, appNow())}</Chip>}
+      </div>
+      <p className="mt-3 text-[13px] text-muted">
+        {page.submitted || page.graded ? 'Povinnost označím jako hotovou' : 'Uložím termín a odkaz'}
+        {page.grade ? ' a zapíšu známku' : ''}.
+      </p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <Field label="Povinnost v aplikaci">
+          <Select value={target} onChange={(e) => setTarget(e.target.value)}>
+            <option value="new">Nová povinnost…</option>
+            {sorted.map((r) => {
+              const s = subjects.find((x) => x.id === r.subjectId);
+              return (
+                <option key={r.id} value={r.id}>
+                  {r.id === matched?.id ? '✓ ' : ''}
+                  {r.title}
+                  {s ? ` · ${s.code ?? s.name}` : ''}
+                </option>
+              );
+            })}
+          </Select>
+        </Field>
+        {target === 'new' && (
+          <Field label="Předmět">
+            <Select value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
+              {subjects.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.code ? `${s.code} · ` : ''}
+                  {s.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+      </div>
+      <Button variant="primary" icon={CircleCheck} className="mt-4" onClick={save} disabled={target === 'new' && !subjectId}>
+        Uložit stav
+      </Button>
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Jiná stránka (kurz v Moodlu, cokoli s termíny)                       */
+/* ------------------------------------------------------------------ */
+
+function SmartExtractCard({ text, course, subjects, known, onDone }: { text: string; course: string; subjects: Subject[]; known: boolean; onDone: () => void }) {
+  const guessed = guessSubjectForCourse(course.split(/\s+\|\s+/)[0]?.replace(/^Kurz:\s*/i, ''), subjects);
+  const [subjectId, setSubjectId] = useState<string>(guessed?.id ?? subjects[0]?.id ?? '');
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    if (!subjectId) return;
+    setBusy(true);
+    try {
+      const { requirements, engine } = await addRequirementsFromText(subjectId, text.slice(0, 30_000), `page:${subjectId}`);
+      if (requirements.length) {
+        toast.success(`${requirementsCountText(requirements.length)} přidáno${engine === 'ai' ? ' (AI)' : ''}`);
+        onDone();
+        navigateTo('predmety', subjectId);
+      } else toast.info('V textu jsem nenašel žádné nové úkoly ani termíny.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Čtení se nepodařilo.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card title={known ? 'Stránka kurzu' : 'Neznámá stránka'} eyebrow="Úkoly a termíny z textu" icon={Sparkles}>
+      <p className="flex items-start gap-2 text-[14px]">
+        {!known && <CircleAlert className="mt-0.5 size-4 shrink-0 text-clay" aria-hidden />}
+        {known ? 'Projdu text kurzu a vytáhnu z něj úkoly, váhy a termíny k vybranému předmětu.' : 'Tuhle stránku přesně neznám, ale zkusím z ní vytáhnout úkoly a termíny.'}
+      </p>
+      {subjects.length > 0 ? (
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <Field label="K předmětu" className="min-w-56 flex-1">
+            <Select value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
+              {subjects.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.code ? `${s.code} · ` : ''}
+                  {s.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Button variant="primary" icon={Sparkles} loading={busy} onClick={() => void run()}>
+            Vytáhnout úkoly a termíny
+          </Button>
+        </div>
+      ) : (
+        <p className="mt-2 text-[13px] text-muted">Nejdřív si přidej předměty (rozvrh ze SISu).</p>
+      )}
+      <Button className="mt-3" variant="ghost" icon={ScrollText} onClick={() => useUiStore.getState().openConnect('parser')}>
+        Harmonogram nebo jiný text do kalendáře
+      </Button>
+    </Card>
   );
 }

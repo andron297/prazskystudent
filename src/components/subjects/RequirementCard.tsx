@@ -108,7 +108,9 @@ export function RequirementCard({
                 {style.label} · {formatDeadline(deadline, now)}
               </Chip>
             )}
+            {r.grade && <Chip className="bg-accent-soft text-accent">Známka {r.grade}</Chip>}
             {r.source === 'moodle' && <Chip className="bg-orange-500/10 text-orange-700 dark:text-orange-300">Moodle</Chip>}
+            {r.source === 'sis' && <Chip>ze sylabu</Chip>}
             {linked.length > 0 && (
               <Chip icon={Paperclip}>
                 {linked.length}

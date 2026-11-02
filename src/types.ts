@@ -86,6 +86,7 @@ export type SubjectColor =
 /** Sylabus a údaje o předmětu (import ze SISu přes záložku nebo vložený text). */
 export interface SubjectSyllabus {
   annotation?: string;
+  aim?: string;
   syllabus?: string;
   requirements?: string;
   literature?: string;
@@ -181,6 +182,9 @@ export interface Requirement {
   /** Stabilní identifikátor z externího zdroje, např. `moodle:assign:123`. */
   externalId?: string;
   url?: string;
+  /** Známka z Moodlu, např. „50 / 50“. */
+  grade?: string;
+  gradePercent?: number;
   createdAt: ISODateTime;
   updatedAt?: ISODateTime;
   demo?: boolean;

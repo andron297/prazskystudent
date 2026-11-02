@@ -47,8 +47,20 @@ const NAME_NOISE = [
   /\b(?:paralelka|par\.)\s*\d+\w*/g,
 ];
 
-/** Název předmětu ze SUMMARY bez kódu a typu výuky. */
-export function extractSubjectName(summary: string, code?: string): string {
+const ACADEMIC_TITLE = /(?:^|[\s,])(?:Mgr|MgA|PhDr|Ph\.\s?D|Bc|BcA|Ing|RNDr|JUDr|MUDr|PaedDr|ThDr|doc|prof|Dr|M\.A|MSc|MBA|DiS|CSc|DrSc)\.?(?=[\s,]|$)/;
+
+/** „Předmět - Novák Jan, Mgr.“ → název a vyučující (SIS někdy dává jméno do SUMMARY). */
+export function splitTeacherTail(summary: string): { name: string; teacher?: string } {
+  const parts = summary.split(/\s+[-–]\s+/);
+  if (parts.length < 2) return { name: summary };
+  const tail = parts[parts.length - 1].trim();
+  if (!ACADEMIC_TITLE.test(tail)) return { name: summary };
+  return { name: parts.slice(0, -1).join(' - '), teacher: tail };
+}
+
+/** Název předmětu ze SUMMARY bez kódu, typu výuky a jména vyučujícího. */
+export function extractSubjectName(rawSummary: string, code?: string): string {
+  const summary = splitTeacherTail(rawSummary).name;
   const folded = foldDiacritics(summary);
   const mask = new Array<boolean>(summary.length).fill(false);
   const cover = (start: number, end: number) => {
@@ -128,7 +140,7 @@ export function buildIcsImport(calendar: IcsCalendar, ctx: IcsImportContext): Ic
         code,
         name,
         color: nextSubjectColor(known.map((s) => s.color)),
-        teacher: extractTeacher(ev),
+        teacher: extractTeacher(ev) ?? splitTeacherTail(ev.summary).teacher,
         source: ctx.source,
         createdAt: ctx.now.toISOString(),
       };

@@ -7,6 +7,7 @@ import { handleIcs } from './ics.js';
 import { json } from './http.js';
 import { handleMoodle } from './moodle.js';
 import { handleRoutes } from './routes.js';
+import { handleSis } from './sis.js';
 
 const ROUTES: Record<string, (request: Request) => Promise<Response>> = {
   '/api/golemio': handleGolemio,
@@ -16,6 +17,7 @@ const ROUTES: Record<string, (request: Request) => Promise<Response>> = {
   '/api/ai-parse': handleAiParse,
   '/api/health': handleHealth,
   '/api/google': handleGoogle,
+  '/api/sis': handleSis,
 };
 
 export async function routeApiRequest(request: Request): Promise<Response> {

@@ -39,14 +39,16 @@ function systemPrompt(mode: 'harmonogram' | 'syllabus', ayStart: number, today: 
     'Z textu, který vložil student české vysoké školy, vytáhni všechny termíny.',
     mode === 'harmonogram'
       ? 'Text je harmonogram akademického roku fakulty (zápis, výuka, zkouškové, volné dny, mezní termíny).'
-      : 'Text je sylabus nebo podmínky zakončení předmětu. Kromě termínů vrať i každou hodnocenou složku (test, seminární práce, prezentace, zkouška) – i když nemá datum.',
+      : 'Text je sylabus, podmínky zakončení předmětu nebo stránka kurzu v Moodlu. Kromě termínů vrať i každou hodnocenou složku (test, seminární práce, prezentace, esej, docházka, zkouška) – i když nemá datum. Stejnou složku vrať jen jednou (s vahou i termínem, pokud jsou uvedené kdekoli v textu).',
     `Dnes je ${today}. Akademický rok je ${ayStart}/${ayStart + 1}: září až prosinec patří do roku ${ayStart}, leden až srpen do roku ${ayStart + 1}, pokud text neříká jinak. Rozsahy vždy běží dopředu v čase.`,
     'Pravidla pro pole:',
     '- start/end: ISO datum YYYY-MM-DD, s časem YYYY-MM-DDTHH:MM. Konec rozsahu je včetně.',
     '- category: semester | teaching (výuka) | exam-period (zkouškové) | enrollment (zápis, škrtání) | holiday (prázdniny, děkanský/rektorský den, svátek) | deadline (mezní termín, odevzdání) | assessment (test, zápočet, zkouška, prezentace) | event.',
     '- is_deadline: true pro „do <datum>“, „nejpozději“, „mezní termín“ a termíny odevzdání.',
     '- target: "requirement" pro hodnocené složky předmětu ze sylabu, jinak "milestone". requirement_type vyplň jen u requirement.',
-    '- source_line: původní řádek textu.',
+    '- title: krátký český název (2–6 slov), např. „Seminární práce“, „Průběžný test“, „Skupinová prezentace“ – nikdy celá věta.',
+    '- weight_percent: jen podíl složky na výsledné známce. Hranice jako „alespoň 60 %“, „vyšší než 50 %“ nebo „max. 20 % absencí“ nejsou váhy (null).',
+    '- source_line: původní věta nebo řádek textu (u složek i s podmínkami, např. rozsah práce).',
     'Nevymýšlej položky, které v textu nejsou. Témata jednotlivých přednášek vynech, pokud nejde o test nebo odevzdání.',
   ].join('\n');
 }

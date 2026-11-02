@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CalendarPlus, ClipboardPaste, Sparkles, Wand, WandSparkles } from 'lucide-react';
+import { CalendarPlus, ClipboardPaste, FileUp, Sparkles, Wand, WandSparkles } from 'lucide-react';
 import type { Milestone, MilestoneCategory, Requirement, RequirementType } from '../../types';
 import { milestoneToCalendarItem, requirementToCalendarItem, downloadIcs, type CalendarItem } from '../../lib/calendarExport';
 import { academicYearStart, endOfDay, formatDayMonth, formatTime, fromDateKey, isDateKey, toDate } from '../../lib/dates';
 import { insertGoogleEvents } from '../../lib/googleCalendar';
 import { uid } from '../../lib/id';
+import { pdfToText } from '../../lib/pdfText';
 import { defaultSubtasks, guessRequirementType, REQUIREMENT_TYPE_LABELS } from '../../lib/progress';
 import { CATEGORY_LABELS, parseScheduleText, type ParseMode, type ParsedItem } from '../../lib/scheduleTextParser';
 import { createApi } from '../../services/api';
@@ -42,6 +43,8 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
   const [engine, setEngine] = useState<'local' | 'ai'>('local');
   const [aiBusy, setAiBusy] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const now = appNow();
 
   const teachingStart = useMemo(() => {
@@ -72,10 +75,10 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
   const selected = items.filter((i) => i.selected);
   const update = (id: string, patch: Partial<ParsedItem>) => setItems((list) => list.map((i) => (i.id === id ? { ...i, ...patch } : i)));
 
-  const runAi = async () => {
+  const runAi = async (input = text) => {
     setAiBusy(true);
     try {
-      const res = await api.aiParse(text, mode, stats?.academicYearStart ?? academicYearStart(now), now);
+      const res = await api.aiParse(input, mode, stats?.academicYearStart ?? academicYearStart(now), now);
       setItems(res.items);
       setEngine(res.engine);
       toast.success(res.engine === 'ai' ? `AI rozpoznalo ${res.items.length} položek.` : 'AI není nastavené – použit lokální parser.');
@@ -84,6 +87,30 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
       setEngine('local');
     } finally {
       setAiBusy(false);
+    }
+  };
+
+  const loadFile = async (file: File) => {
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error('Soubor je moc velký (max. 25 MB).');
+      return;
+    }
+    setPdfBusy(true);
+    try {
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+      const content = isPdf ? await pdfToText(file) : await file.text();
+      if (content.replace(/\s/g, '').length < 20) {
+        toast.error('V PDF není čitelný text (nejspíš je to sken). Zkopíruj text ručně.');
+        return;
+      }
+      setText(content);
+      setEngine('local');
+      toast.success(`Načteno z ${isPdf ? 'PDF' : 'souboru'}: ${content.split('\n').length} řádků${api.canUseAi ? ' – čte ho AI…' : ''}`);
+      if (api.canUseAi) void runAi(content);
+    } catch (e) {
+      toast.error(`PDF se nepodařilo přečíst: ${errorMessage(e)}`);
+    } finally {
+      setPdfBusy(false);
     }
   };
 
@@ -167,9 +194,25 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
             { value: 'syllabus', label: 'Sylabus předmětu' },
           ]}
         />
-        <Button size="sm" variant="ghost" icon={ClipboardPaste} onClick={() => { setEngine('local'); setText(mode === 'harmonogram' ? sampleHarmonogram(now) : sampleSyllabus(now)); }}>
-          Vložit ukázku
-        </Button>
+        <div className="flex flex-wrap gap-1.5">
+          <Button size="sm" variant="soft" icon={FileUp} loading={pdfBusy} onClick={() => fileRef.current?.click()}>
+            Nahrát PDF
+          </Button>
+          <Button size="sm" variant="ghost" icon={ClipboardPaste} onClick={() => { setEngine('local'); setText(mode === 'harmonogram' ? sampleHarmonogram(now) : sampleSyllabus(now)); }}>
+            Vložit ukázku
+          </Button>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/pdf,.pdf,text/plain,.txt"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) void loadFile(file);
+          }}
+        />
       </div>
 
       {mode === 'syllabus' && (
@@ -187,7 +230,7 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
 
       <Field
         label={mode === 'harmonogram' ? 'Text harmonogramu z webu fakulty' : 'Text sylabu / podmínek zakončení ze SISu'}
-        hint="Zkopíruj celou tabulku nebo odstavec – rozpoznám 5. 10. 2026, 5.–9. 10., 5. října, „do 18. 10.“, časy i váhy v %."
+        hint="Nahraj PDF, nebo zkopíruj celou tabulku či odstavec – rozpoznám 5. 10. 2026, 5.–9. 10., 5. října, „do 18. 10.“, časy i váhy v %."
       >
         <TextArea
           value={text}

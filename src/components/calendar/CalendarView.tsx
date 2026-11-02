@@ -530,8 +530,8 @@ export function CalendarView() {
             <Button variant="glass" icon={Plus} onClick={() => openEditor({ type: 'task' })}>
               Úkol
             </Button>
-            <Button variant="glass" icon={ScrollText} onClick={() => openConnect('parser')}>
-              Harmonogram
+            <Button variant="glass" icon={ScrollText} onClick={() => openConnect('parser')} title="Harmonogram akademického roku – vlož text nebo nahraj PDF">
+              Harmonogram (PDF)
             </Button>
             <Button
               variant="glass"

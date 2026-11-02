@@ -85,8 +85,8 @@ function precacheManifestPlugin(): Plugin {
       const files = Object.keys(bundle)
         .filter((file) => /\.(js|mjs|css|woff2)$/.test(file))
         .filter((file) => !/(cyrillic|greek|vietnamese|symbols)/.test(file))
-        // Mapa (~1,6 MB) se uloží až při prvním otevření Dopravy.
-        .filter((file) => !/(maplibre|TransitMapView)/.test(file))
+        // Mapa (~1,6 MB) se uloží až při prvním otevření Dopravy, pdf.js (~1,8 MB) při prvním nahrání PDF.
+        .filter((file) => !/(maplibre|TransitMapView|\/pdf[.-])/.test(file))
         .map((file) => `/${file}`)
         .concat(['/data/stops-praha.json', '/images/forest-1200.webp', '/images/mist-1200.webp', '/images/riverside-1200.webp'])
         .sort();
