@@ -10,8 +10,12 @@ na jednom klidném místě: **rozvrh ze SISu, úkoly z Moodlu, vlastní úkoly a
 | --- | --- | --- |
 | ![Doprava](docs/screenshots/map.png) | ![Mobil](docs/screenshots/mobile.png) | ![Tmavý režim](docs/screenshots/dashboard-dark.png) |
 
-> Po spuštění je aplikace v **Sandboxu**: realistická ukázková data FSV UK, simulovaná doprava, Moodle **i Google**.
-> Do **Live** režimu se přepíná jedním kliknutím.
+> Při prvním otevření tě provede **průvodce nastavením** – krok za krokem, každý krok jde přeskočit.
+> Počasí a doprava PID (trasy, přestupy, živá zpoždění) fungují **hned, bez klíčů a přihlašování**.
+> Kdo si chce aplikaci jen prohlédnout, zvolí **Ukázku** (vymyšlená data, poznáš ji podle pruhovaného pásu).
+
+**Open source (MIT).** Kód je veřejný, aby si každý mohl ověřit, co aplikace s daty dělá – a aby mohla používat
+komunitní služby jako [Transitous](https://transitous.org).
 
 ---
 
@@ -94,7 +98,7 @@ npm run stops
    | `VITE_GOOGLE_CLIENT_ID` | OAuth Client ID pro Google (Kalendář, Úkoly, Disk) – pak ho není potřeba vkládat v aplikaci |
    | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` | trvalé přihlášení: server drží refresh token v šifrované HttpOnly cookie a synchronizace běží i na pozadí |
    | `GOOGLE_TOKEN_SECRET` | volitelný vlastní klíč pro šifrování cookie (jinak se odvodí z client secret) |
-   | `GOLEMIO_API_KEY` | PID Golemio – odjezdy, zpoždění ([api.golemio.cz](https://api.golemio.cz/api-keys)) |
+   | `GOLEMIO_API_KEY` | nepovinné – PID Golemio přidá klimatizaci a bezbariérovost vozů ([api.golemio.cz](https://api.golemio.cz/api-keys)); trasy a zpoždění fungují i bez něj přes Transitous |
    | `GOOGLE_MAPS_API_KEY` | Google Routes API – trasy s přestupy |
    | `ANTHROPIC_API_KEY` | AI zpřesnění parseru harmonogramu a sylabů |
    | `PROXY_ALLOWED_HOSTS` | allowlist domén pro Moodle/iCal proxy, např. `*.cuni.cz,calendar.google.com` |
@@ -137,13 +141,16 @@ Odkaz (`…/calendar/export_execute.php?userid=…&authtoken=…`) se stahuje p�
   aplikace přijímá zprávy jen z domén `*.cuni.cz`). Alternativa: zkopírovat text stránky do *Import ze SISu*.
 - Aplikace sama SIS nestahuje a neobchází jeho přihlášení ani ochrany.
 
-## Sandbox vs. Live
+## Ukázka vs. moje data
 
-| | Sandbox | Live |
+V aplikaci se režimy jmenují **Ukázka** (dříve Sandbox) a **Moje data** (dříve Live). Přepnutím na vlastní data se ukázka
+smaže; nahrání vlastního rozvrhu přepne samo. Vlastní data se s ukázkovými nikdy nemíchají.
+
+| | Ukázka | Moje data |
 | --- | --- | --- |
 | Čas | simulovaný, start ve 13:05 (posouvání v hlavičce) | reálný |
 | Poloha | Kolej Kajetánka a další místa | GPS, záložní místo |
-| Doprava | simulace PID (tramvaje 22 a 2, metro A/B/C + obecné odjezdy pro všechny zastávky) | Golemio + volitelně Google Routes |
+| Doprava | simulace PID (tramvaje 22 a 2, metro A/B/C + obecné odjezdy pro všechny zastávky) | Transitous (jízdní řády PID + živá zpoždění), volitelně Golemio |
 | Google | simulovaný účet se svátky, brigádou a úkoly | tvůj účet |
 | Moodle, SIS | ukázkové exporty ve formátu skutečných služeb | serverové proxy |
 | Počasí | Open-Meteo (simulace bez sítě) | Open-Meteo |
@@ -174,12 +181,19 @@ public/              manifest, service worker, ikony, fotky, data/stops-praha.js
 Podrobně v [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Zdroje dat a poděkování
+Trasy a odjezdy: [Transitous](https://transitous.org) ([zdroje dat](https://transitous.org/sources/)) – komunitní plánovač
+nad jízdními řády PID; Stihnu ho používá podle jeho pravidel (open source, nekomerčně, s cache a identifikací v User-Agent).
 Zastávky: [PID – data.pid.cz](https://data.pid.cz) · mapové podklady: [OpenFreeMap](https://openfreemap.org), © přispěvatelé
 [OpenStreetMap](https://www.openstreetmap.org/copyright) · počasí: [Open-Meteo](https://open-meteo.com) (CC BY 4.0) ·
 fotografie: [Unsplash](https://unsplash.com) · písma: Instrument Serif, Manrope (SIL OFL).
 
 ## Známá omezení
 - Google funkce potřebují vlastní OAuth Client ID (aplikace v režimu *Testing* je jen pro přidané testovací uživatele).
-- Bez `GOOGLE_CLIENT_SECRET` platí přihlášení Google asi hodinu; potom stačí kliknout na „Přihlásit znovu“.
-- Bez Google Routes klíče hledá Live režim jen přímé spoje z Golemia; jinak zobrazí odhad podle vzdálenosti.
+- Bez `GOOGLE_CLIENT_SECRET` platí přihlášení Google asi hodinu; potom stačí kliknout na „Potvrdit“ v Propojení.
+  Aplikace v režimu *Testing* v Google Cloud ruší přihlášení po 7 dnech – pro trvalé propojení ji přepni na *In production*.
+- Transitous je komunitní služba bez záruky; když neodpovídá, plánovač použije Golemio (s klíčem) nebo odhad podle vzdálenosti.
+  Při větším počtu uživatelů (stovky dotazů denně) je slušné se ozvat v jejich Matrix kanálu.
 - Rozpoznání stránek SISu stojí na jejich textu – při změně vzhledu SISu může být potřeba parser doladit.
+
+## Licence
+[MIT](LICENSE) · bezpečnost: [SECURITY.md](SECURITY.md)

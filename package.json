@@ -1,7 +1,8 @@
 {
   "name": "stihnu",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.4.0",
+  "license": "MIT",
   "type": "module",
   "description": "Stihnu – studium, MHD a Google v jedné PWA pro studenty v Praze (SIS, Moodle, Google Kalendář/Úkoly/Disk, mapa zastávek PID, počasí).",
   "scripts": {
