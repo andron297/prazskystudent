@@ -32,7 +32,8 @@ import { KIND_LABEL, transitStatusOf } from './transitStatus';
 import { usePlatformLookup } from './usePlatformLookup';
 
 const SOURCE_LABEL: Record<string, string> = {
-  demo: 'Simulace PID',
+  demo: 'Simulace PID (ukázka)',
+  transitous: 'Jízdní řád PID + živá zpoždění',
   golemio: 'PID Golemio · živě',
   google: 'Google Routes + Golemio',
   estimate: 'Odhad podle vzdálenosti',
@@ -49,39 +50,6 @@ const STEP_ICON: Record<RouteStep['kind'], typeof Footprints> = {
   arrive: CircleCheck,
 };
 
-/** Vložení klíče Golemio přímo v kartě cesty (bez hledání v nastavení). */
-function GolemioKeyInline({ onSaved }: { onSaved: () => void }) {
-  const updateSettings = useAppStore((s) => s.updateSettings);
-  const [value, setValue] = useState('');
-  return (
-    <div className="mt-3 rounded-[18px] bg-accent-soft p-3 ring-1 ring-inset ring-accent/25">
-      <p className="text-[13px] font-semibold">Pro konkrétní spoje a zpoždění vlož klíč PID Golemio (stačí jednou):</p>
-      <form
-        className="mt-2 flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!value.trim()) return;
-          updateSettings({ golemioApiKey: value.trim() });
-          setValue('');
-          onSaved();
-        }}
-      >
-        <input
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="eyJhbGciOi…"
-          className="h-9 min-w-0 flex-1 rounded-full border border-line-strong bg-surface px-3 font-mono text-[12px] outline-none focus:ring-2 focus:ring-accent"
-          aria-label="Golemio API klíč"
-          autoComplete="off"
-        />
-        <Button size="sm" type="submit" variant="primary" disabled={!value.trim()}>
-          Uložit
-        </Button>
-      </form>
-      <p className="mt-1.5 text-[11.5px] text-muted">Klíč zůstane jen v tomto prohlížeči (a s Google Diskem i v dalších zařízeních).</p>
-    </div>
-  );
-}
 
 function ChoiceChips({ label, value, options, onChange, suffix }: { label: string; value: number; options: number[]; onChange: (v: number) => void; suffix: string }) {
   return (
@@ -125,7 +93,6 @@ export function TransitPanel({
   const setLocationAlias = useAppStore((s) => s.setLocationAlias);
   const stop = useAppStore((s) => s.settings.originStop[s.settings.mode]);
   const selectTrip = useUiStore((s) => s.selectTrip);
-  const server = useUiStore((s) => s.server);
   const platformFor = usePlatformLookup();
   const [showMath, setShowMath] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -176,7 +143,6 @@ export function TransitPanel({
           </div>
         </header>
 
-        {building && settings.mode === 'live' && !settings.golemioApiKey && !server.golemio && <GolemioKeyInline onSaved={refresh} />}
 
         {building && (
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 rounded-[18px] bg-surface-2/70 px-3 py-2.5">
@@ -374,9 +340,17 @@ export function TransitPanel({
               </span>
             </button>
             <span className="inline-flex items-center gap-1.5">
-              <Radio className={cn('size-3.5', result?.source === 'golemio' || result?.source === 'google' ? 'text-emerald-500' : '')} aria-hidden />
+              <Radio className={cn('size-3.5', result?.source === 'golemio' || result?.source === 'google' || result?.source === 'transitous' ? 'text-emerald-500' : '')} aria-hidden />
               {SOURCE_LABEL[result?.source ?? 'none']}
               {updatedAgo !== null ? ` · před ${updatedAgo} s` : ''}
+              {result?.source === 'transitous' && (
+                <>
+                  {' · '}
+                  <a href="https://transitous.org/sources/" target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">
+                    trasy: Transitous
+                  </a>
+                </>
+              )}
             </span>
             {result?.warnings.length && status !== 'no-data' ? <span className="w-full text-[11.5px] text-clay">{result.warnings[0]}</span> : null}
           </footer>

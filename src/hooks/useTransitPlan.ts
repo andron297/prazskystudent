@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Building, Itinerary, ScheduleEvent, TransitResult } from '../types';
 import { haversineMeters } from '../lib/geo';
 import { applyMargins, dedupeByTrip, DEFAULT_MARGINS, pickItinerary, planJourney, type TransitPlan } from '../lib/transitPlanner';
@@ -34,6 +34,12 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [manual, setManual] = useState(0);
+  const lastManual = useRef(0);
+  const consumeManual = () => {
+    const fresh = manual !== lastManual.current;
+    lastManual.current = manual;
+    return fresh;
+  };
 
   const api = useMemo(
     () => createApi(settings, server, appNow),
@@ -59,7 +65,7 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
     let cancelled = false;
     setLoading(true);
     api
-      .planTransit({ origin: origin.coords, originLabel: origin.label, building, eventStart: new Date(event.start), now: appNow(), originStop })
+      .planTransit({ origin: origin.coords, originLabel: origin.label, building, eventStart: new Date(event.start), now: appNow(), originStop, fresh: consumeManual() })
       .then((r) => {
         if (cancelled) return;
         setResult(r);

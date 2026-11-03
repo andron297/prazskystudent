@@ -252,7 +252,16 @@ function Departures({ stop }: { stop: StopGroup }) {
           </li>
         );
       })}
-      <li className="pt-2 text-right text-[10.5px] text-subtle">{board.source === 'golemio' ? 'Živě z PID Golemio' : 'Simulace (Sandbox)'}</li>
+      <li className="pt-2 text-right text-[10.5px] text-subtle">{board.source === 'golemio' ? 'Živě z PID Golemio' : board.source === 'transitous' ? (
+                  <>
+                    Jízdní řád PID se zpožděním ·{' '}
+                    <a href="https://transitous.org/sources/" target="_blank" rel="noreferrer" className="underline-offset-2 hover:underline">
+                      Transitous
+                    </a>
+                  </>
+                ) : (
+                  'Simulace (ukázka)'
+                )}</li>
     </ul>
   );
 }

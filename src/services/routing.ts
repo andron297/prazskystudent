@@ -13,6 +13,7 @@ import { nearbyStops } from '../lib/stops';
 import { loadStops } from './stops';
 import type { GolemioClient, GolemioDeparture, TripStopTime } from './golemio';
 import { planGolemioJourneys } from './golemioPlanner';
+import { fromTransitous, transitousPlan } from './transitous';
 
 const MIN = 60_000;
 
@@ -29,6 +30,9 @@ export interface LivePlanParams {
   useGoogle: boolean;
   /** Zastávka zvolená studentem – jede se jen z ní. */
   originStop?: { name: string; coords: LatLng } | null;
+  accessibleOnly?: boolean;
+  /** Ruční obnovení – nepoužít starší výsledek z cache. */
+  fresh?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -463,9 +467,46 @@ export function estimateItinerary(params: LivePlanParams, nearStop?: { name: str
 /* Orchestrace                                                         */
 /* ------------------------------------------------------------------ */
 
+/** Trasy z Transitous (bez klíče): přestupy, chůze po skutečných ulicích, živá zpoždění PID. */
+export async function planWithTransitous(params: LivePlanParams): Promise<Itinerary[]> {
+  const origin = params.originStop?.coords ?? params.origin;
+  const raw = await transitousPlan({
+    origin,
+    destination: params.building.coords,
+    arriveBy: params.eventStart,
+    now: params.now,
+    wheelchair: params.accessibleOnly,
+    fresh: params.fresh,
+  });
+  const its: Itinerary[] = [];
+  for (const r of raw) {
+    const it = fromTransitous(r, params.originLabel, params.building.name);
+    if (!it) continue;
+    if (params.originStop && it.legs[0].kind === 'walk') {
+      // Jede se ze zvolené zastávky – přidat chůzi z aktuální polohy k ní.
+      const extra = walkingMinutes(params.origin, params.originStop.coords, params.walkSpeed);
+      const first = { ...it.legs[0], minutes: it.legs[0].minutes + extra, from: params.originLabel };
+      its.push({ ...it, legs: [first, ...it.legs.slice(1)], leaveAt: new Date(new Date(it.leaveAt).getTime() - extra * MIN).toISOString(), walkToStopMinutes: first.minutes });
+    } else {
+      its.push(it);
+    }
+  }
+  return its;
+}
+
 export async function planLiveTransit(params: LivePlanParams): Promise<TransitResult> {
   const warnings: string[] = [];
   const fetchedAt = new Date().toISOString();
+  // 1) Transitous – funguje bez klíče; s Golemio klíčem doplníme klimatizaci a přesnější zpoždění.
+  try {
+    const its = await planWithTransitous(params);
+    if (its.length > 0) {
+      const enriched = params.golemio ? await enrichWithGolemio(its, params.golemio).catch(() => its) : its;
+      return { itineraries: enriched, source: 'transitous', fetchedAt, warnings, originLabel: params.originLabel };
+    }
+  } catch (error) {
+    warnings.push(`Plánovač tras: ${errorMessage(error)}`);
+  }
   if (params.useGoogle) {
     try {
       const its = await planWithGoogle(params);
@@ -487,7 +528,7 @@ export async function planLiveTransit(params: LivePlanParams): Promise<TransitRe
       warnings.push(`Golemio: ${errorMessage(error)}`);
     }
   } else {
-    warnings.push('Chybí Golemio API klíč – zobrazuji jen odhad podle vzdálenosti.');
+    warnings.push('Plánovač tras teď neodpovídá – zobrazuji odhad podle vzdálenosti.');
   }
   let near: { name: string; walk: number } | null = null;
   try {

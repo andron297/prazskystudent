@@ -26,6 +26,8 @@ export interface TransitRequest {
   now: Date;
   /** Zvolená výchozí zastávka (jinak automaticky nejbližší). */
   originStop?: OriginStopPref | null;
+  /** Ruční obnovení (bez cache). */
+  fresh?: boolean;
 }
 
 export interface ServerCapabilities {
@@ -74,6 +76,8 @@ function baseParams(request: TransitRequest, settings: Settings): LivePlanParams
     googleKey: settings.googleMapsApiKey,
     useGoogle: false,
     originStop: request.originStop ?? null,
+    accessibleOnly: settings.accessibleOnly,
+    fresh: request.fresh,
   };
 }
 

@@ -8,6 +8,7 @@ import { hashString, seededRandom } from '../lib/id';
 import { decodeStops, type RawStopsFile, type StopGroup } from '../lib/stops';
 import { demoNetworkHasStop, simulateDepartureBoard } from './demo/transitSim';
 import { GolemioClient } from './golemio';
+import { modeFromTransitous, transitousDepartures } from './transitous';
 import type { ServerCapabilities } from './api';
 
 let loading: Promise<StopGroup[]> | null = null;
@@ -65,7 +66,7 @@ export interface StopDeparture {
 
 export interface DepartureBoard {
   departures: StopDeparture[];
-  source: 'golemio' | 'demo';
+  source: 'golemio' | 'demo' | 'transitous';
   warning?: string;
 }
 
@@ -162,7 +163,31 @@ export async function departuresFor(stop: StopGroup, settings: Settings, server:
     return { departures, source: 'demo' };
   }
   if (!settings.golemioApiKey.trim() && !server.golemio) {
-    return { departures: [], source: 'golemio', warning: 'Pro živé odjezdy zadej Golemio API klíč (zdarma) v Propojení → Doprava.' };
+    // Bez klíče: odjezdy z Transitous (jízdní řád PID + živá zpoždění, kde jsou).
+    const night = new Set(stop.lines.filter((l) => l.night).map((l) => l.name));
+    const codeById = new Map(stop.platforms.map((p) => [p.gtfsId, p.code]));
+    const list = await transitousDepartures(stop.platforms.map((p) => p.gtfsId), now, Math.max(4, Math.ceil((limit * 1.6) / Math.max(1, stop.platforms.length))));
+    return {
+      source: 'transitous',
+      departures: list.slice(0, limit).map((d) => {
+        const predicted = new Date(d.departure);
+        const scheduled = new Date(d.scheduledDeparture);
+        const plainId = d.stopId?.replace(/^cz-PID_/, '');
+        return {
+          id: `${d.tripId ?? d.line}-${d.stopId}-${d.scheduledDeparture}`,
+          line: d.line,
+          mode: modeFromTransitous(d.mode),
+          headsign: d.headsign,
+          platform: d.track || (plainId ? codeById.get(plainId) : undefined) || undefined,
+          scheduled,
+          predicted,
+          delaySeconds: d.realTime ? Math.round((predicted.getTime() - scheduled.getTime()) / 1000) : null,
+          airConditioned: null,
+          accessible: null,
+          night: night.has(d.line),
+        };
+      }),
+    };
   }
   const client = new GolemioClient(settings.golemioApiKey);
   const list = await client.departureBoards({ names: [stop.name], minutesAfter: 90, limit: 40 });
