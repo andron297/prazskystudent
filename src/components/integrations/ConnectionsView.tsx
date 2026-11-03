@@ -4,16 +4,12 @@ import {
   BookMarked,
   CalendarDays,
   ChevronDown,
-  CircleCheck,
-  CircleDot,
-  CloudSun,
   Database,
   Download,
   ExternalLink,
   FlaskConical,
   GraduationCap,
   KeyRound,
-  Link2,
   LoaderCircle,
   MapPin,
   Monitor,
@@ -38,6 +34,7 @@ import { LOCATION_PRESETS } from '../../lib/buildings';
 import { uid } from '../../lib/id';
 import { isMoodleCalendarUrl } from '../../lib/moodleIcs';
 import { sisBookmarklet } from '../../lib/sisImport';
+import { ConnectionsHub } from '../setup/ConnectionsHub';
 import { navigateTo } from '../../hooks/useAppShell';
 import { testGolemioKey } from '../../services/api';
 import { refreshIcsSource, runMoodleTokenSync, useSyncStore } from '../../services/syncCenter';
@@ -55,22 +52,6 @@ import { MoodleConnect } from './MoodleConnect';
 /* Pomocné prvky                                                       */
 /* ------------------------------------------------------------------ */
 
-function Tile({ icon: Icon, label, status, ok, href }: { icon: typeof CalendarDays; label: string; status: string; ok: boolean; href: string }) {
-  return (
-    <a href={href} className="card group flex min-w-0 flex-col gap-3 rounded-[24px] p-4 transition hover:-translate-y-0.5">
-      <span className="flex items-center justify-between">
-        <span className={cn('grid size-10 place-items-center rounded-full', ok ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-subtle')}>
-          <Icon className="size-[18px]" aria-hidden />
-        </span>
-        {ok ? <CircleCheck className="size-4 text-accent" aria-label="Propojeno" /> : <CircleDot className="size-4 text-subtle" aria-label="Nepropojeno" />}
-      </span>
-      <span>
-        <span className="block font-display text-[22px] leading-none">{label}</span>
-        <span className="mt-1 block truncate text-xs text-muted">{status}</span>
-      </span>
-    </a>
-  );
-}
 
 function Collapsible({ title, children, defaultOpen = false, icon: Icon }: { title: ReactNode; children: ReactNode; defaultOpen?: boolean; icon?: typeof CalendarDays }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -587,9 +568,6 @@ function WeatherSection() {
 function AppSection() {
   const settings = useAppStore((s) => s.settings);
   const updateSettings = useAppStore((s) => s.updateSettings);
-  const setMode = useAppStore((s) => s.setMode);
-  const resetDemo = useAppStore((s) => s.resetDemo);
-  const clearDemoData = useAppStore((s) => s.clearDemoData);
   const clearAllData = useAppStore((s) => s.clearAllData);
   const importBackup = useAppStore((s) => s.importBackup);
   const server = useUiStore((s) => s.server);
@@ -623,16 +601,21 @@ function AppSection() {
     <Card id="aplikace" className="scroll-mt-24" eyebrow="Vzhled, režim, data" title={<>Aplikace</>}>
       <div className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Režim">
+          <Field label="Data" hint="Ukázka = vymyšlené předměty na vyzkoušení. Moje data = jen to tvoje.">
             <Segmented
               value={settings.mode}
               onChange={(m) => {
-                setMode(m);
-                toast.info(m === 'demo' ? 'Sandbox: simulovaná data.' : 'Live: skutečná data.');
+                if (m === 'demo') {
+                  useAppStore.getState().startDemo();
+                  toast.info('Ukázka: vymyšlené předměty a simulovaná doprava.');
+                } else {
+                  const removed = useAppStore.getState().startOwnData();
+                  toast.success(removed ? 'Moje data – ukázku jsem uklidil.' : 'Moje data.');
+                }
               }}
               options={[
-                { value: 'demo', label: 'Sandbox', icon: FlaskConical },
-                { value: 'live', label: 'Live', icon: Zap },
+                { value: 'live', label: 'Moje data', icon: Zap },
+                { value: 'demo', label: 'Ukázka', icon: FlaskConical },
               ]}
             />
           </Field>
@@ -695,22 +678,21 @@ function AppSection() {
             variant="ghost"
             icon={RotateCcw}
             onClick={async () => {
-              if (await confirmAction({ title: 'Obnovit ukázku?', message: 'Sandbox se vrátí do výchozího stavu.', confirmLabel: 'Obnovit' })) {
-                resetDemo(appNow());
-                setMode('demo');
-                toast.success('Ukázková data obnovena.');
+              if (await confirmAction({ title: 'Zobrazit ukázku?', message: 'Přidám vymyšlené předměty na vyzkoušení. Tvoje data zůstanou; ukázka zmizí, jakmile se vrátíš k vlastním datům.', confirmLabel: 'Zobrazit ukázku' })) {
+                useAppStore.getState().startDemo();
+                toast.success('Ukázka je zpátky.');
               }
             }}
           >
-            Obnovit ukázku
+            Zobrazit ukázku
           </Button>
           <Button
             variant="ghost"
             icon={Trash}
             onClick={async () => {
               if (await confirmAction({ title: 'Smazat ukázková data?', message: 'Tvoje vlastní data zůstanou.', confirmLabel: 'Smazat ukázku', tone: 'danger' })) {
-                clearDemoData();
-                toast.info('Ukázková data smazána.');
+                const removed = useAppStore.getState().purgeSampleData();
+                toast.info(removed ? 'Ukázková data smazána.' : 'Žádná ukázková data tu nejsou.');
               }
             }}
           >
@@ -750,9 +732,6 @@ function AppSection() {
 export function ConnectionsView({ section }: { section?: string }) {
   const settings = useAppStore((s) => s.settings);
   const gs = useAppStore((s) => s.googleSync[s.settings.mode]);
-  const server = useUiStore((s) => s.server);
-  const sis = settings.icsSources.filter((s) => s.kind !== 'moodle');
-  const moodleIcs = settings.icsSources.filter((s) => s.kind === 'moodle');
 
   useEffect(() => {
     if (!section) return;
@@ -770,18 +749,15 @@ export function ConnectionsView({ section }: { section?: string }) {
           <SerifTitle as="h1" className="mt-2 text-[48px] text-white sm:text-[64px] [&_em]:text-[#e7d6b5]">
             Všechno <em>na jednom</em> místě
           </SerifTitle>
-          <p className="mt-3 max-w-lg text-[15px] text-white/85">Google, Moodle, SIS a PID. Jednou propojíš – pak se o to stará Stihnu.</p>
+          <p className="mt-3 max-w-lg text-[15px] text-white/85">Počasí a doprava fungují samy. Rozvrh, Moodle a Google propojíš v průvodci za pár minut – pak se o to stará Stihnu.</p>
         </div>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Tile icon={CalendarDays} label="Google" ok={Boolean(settings.google.enabled && gs.connectedAt)} status={gs.connectedAt ? (gs.account?.email ?? 'propojeno') : 'Kalendář · Úkoly · Disk'} href="#/propojeni/google" />
-        <Tile icon={GraduationCap} label="Moodle" ok={moodleIcs.length > 0 || Boolean(settings.moodle)} status={moodleIcs.length ? 'přes kalendář' : settings.moodle ? 'přes token' : 'nepropojeno'} href="#/propojeni/moodle" />
-        <Tile icon={Link2} label="SIS" ok={sis.length > 0} status={sis.length ? `${sis.length} ${sis.length === 1 ? 'kalendář' : 'kalendáře'}` : 'rozvrh a sylaby'} href="#/propojeni/sis" />
-        <Tile icon={TramFront} label="Doprava" ok={settings.mode === 'demo' || Boolean(settings.golemioApiKey) || server.golemio} status={settings.mode === 'demo' ? 'simulace PID' : settings.golemioApiKey || server.golemio ? 'živá data' : 'chybí klíč'} href="#/propojeni/doprava" />
-        <Tile icon={CloudSun} label="Počasí" ok={settings.weather.enabled} status={settings.weather.enabled ? 'Open-Meteo' : 'vypnuto'} href="#/propojeni/pocasi" />
-      </div>
+      <ConnectionsHub />
 
+      <h2 className="px-1 pt-4 font-display text-[28px]">
+        Podrobné <em className="text-moss">nastavení</em>
+      </h2>
       <GoogleSection />
       <div className="grid gap-5 xl:grid-cols-2">
         <MoodleSection />

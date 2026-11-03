@@ -360,7 +360,6 @@ export function WelcomeCard() {
   const mode = useAppStore((s) => s.settings.mode);
   const dismissed = useAppStore((s) => s.meta.welcomeDismissed);
   const dismiss = useAppStore((s) => s.dismissWelcome);
-  const setMode = useAppStore((s) => s.setMode);
   if (mode !== 'demo' || dismissed) return null;
   return (
     <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="card flex flex-col gap-4 rounded-[26px] p-5 sm:flex-row sm:items-center">
@@ -382,12 +381,11 @@ export function WelcomeCard() {
           variant="primary"
           icon={Zap}
           onClick={() => {
-            setMode('live');
             dismiss();
-            navigateTo('propojeni');
+            useUiStore.getState().openSetup('start');
           }}
         >
-          Začít naostro
+          Nastavit svoje data
         </Button>
       </div>
     </motion.section>

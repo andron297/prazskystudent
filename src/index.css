@@ -380,3 +380,18 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Ukázkový režim – na první pohled jiný než vlastní data */
+.demo-ribbon {
+  background: repeating-linear-gradient(135deg, #f6e7c8 0 14px, #f0d9ad 14px 28px);
+}
+[data-theme='dark'] .demo-ribbon {
+  background: repeating-linear-gradient(135deg, #3b2f1c 0 14px, #32281a 14px 28px);
+}
+.demo-frame {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 70;
+  box-shadow: inset 0 0 0 3px rgb(199 166 118 / 0.8);
+}

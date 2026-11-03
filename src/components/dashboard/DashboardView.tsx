@@ -8,6 +8,8 @@ import { commuteWindows, weatherAdvice, weatherLabel } from '../../lib/weather';
 import { useNow } from '../../hooks/useNow';
 import { useOrigin } from '../../hooks/useOrigin';
 import { useTransitPlan } from '../../hooks/useTransitPlan';
+import { useLeaveReminder } from '../../hooks/useLeaveReminder';
+import { DepartureRest, FocusRest } from '../rest/RestSpots';
 import { useWeather } from '../../services/weather';
 import { useAppStore } from '../../store/appStore';
 import { buildingForEvent, isTransitTarget, upcomingEvents } from '../../store/selectors';
@@ -54,6 +56,7 @@ export function DashboardView() {
   const { building, room } = within ? buildingForEvent(within, settings) : { building: undefined, room: undefined };
   const subject = within?.subjectId ? subjects.find((s) => s.id === within.subjectId) : undefined;
   const transit = useTransitPlan(within, building ?? null);
+  useLeaveReminder(within, transit.selected, now);
 
   // Počasí a rada na cestu
   const origin = useOrigin();
@@ -134,6 +137,8 @@ export function DashboardView() {
 
       <WelcomeCard />
 
+      {within && transit.selected && <DepartureRest event={within} itinerary={transit.selected} now={now} rain={Boolean(advice?.umbrella)} />}
+
       <StatsBand
         stats={[
           { value: String(openToday + todayClasses.filter((e) => new Date(e.end) > now).length), label: 'Dnes na tobě', hint: `${todayClasses.length} ${todayClasses.length === 1 ? 'hodina' : todayClasses.length < 5 && todayClasses.length > 0 ? 'hodiny' : 'hodin'} výuky · ${openToday} úkolů` },
@@ -147,8 +152,9 @@ export function DashboardView() {
         <div className="min-w-0 lg:col-span-7">
           <TodayTimeline day={timelineDay} label={timelineLabel} targetId={within?.id} onSelect={(e) => setTargetId(e.id)} />
         </div>
-        <div className="min-w-0 lg:col-span-5">
+        <div className="min-w-0 space-y-4 lg:col-span-5">
           <TasksCard />
+          <FocusRest task={tasks.find((t) => !t.done) ?? null} />
         </div>
         <div className="min-w-0 lg:col-span-5">
           <WeatherCard forecast={forecast} advice={advice} now={now} dayLabel={plan.day === 'tomorrow' ? 'Zítra do školy' : plan.day === 'today' ? 'Dnes do školy' : 'Dnes'} />

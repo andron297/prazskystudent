@@ -22,6 +22,8 @@ export const SHARED_SETTING_KEYS = [
   'prepMinutes',
   'comfortMinutes',
   'minMarginMinutes',
+  'music',
+  'notifyLeave',
   'walkSpeed',
   'accessibleOnly',
   'preferAirConditioned',

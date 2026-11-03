@@ -20,6 +20,8 @@ export async function importSisIcsFile(file: Blob): Promise<SisFileResult> {
   if (file.size > 5 * 1024 * 1024) throw new Error('Soubor je moc velký – rozvrh ze SISu mívá do 1 MB.');
   const text = await file.text();
   if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error('Tohle není soubor iCalendar (.ics). V SISu ho stáhneš v Rozvrhu NG přes Export → iCalendar.');
+  // Vlastní rozvrh = vlastní data: z ukázky rovnou přepnout a ukázku uklidit.
+  if (useAppStore.getState().settings.mode === 'demo') useAppStore.getState().startOwnData();
   const app = useAppStore.getState();
   const now = appNow();
   const preview = buildIcsImport(parseIcs(text), {
@@ -35,8 +37,7 @@ export async function importSisIcsFile(file: Blob): Promise<SisFileResult> {
     subjects: preview.newSubjects,
     events: preview.events,
     // Nový export nahrazuje celý dosavadní rozvrh ze SISu (i ukázková data).
-    replaceSources: hasDemo && app.settings.mode === 'live' ? ['sis', 'demo'] : ['sis'],
-    demo: app.settings.mode === 'demo',
+    replaceSources: hasDemo ? ['sis', 'demo'] : ['sis'],
   });
   setTimeout(() => void importAllSyllabi(), 400);
   return {

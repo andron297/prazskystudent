@@ -392,6 +392,10 @@ export interface Settings {
   /** Ruční mapování textu lokace → budova. */
   locationAliases: Record<string, string>;
   google: GoogleSyncSettings;
+  /** Hudba na učení a na cestu (odkaz na playlist Spotify – bez přihlášení). */
+  music?: { url: string; title?: string } | null;
+  /** Upozornění v telefonu/prohlížeči, kdy vyrazit. */
+  notifyLeave?: boolean;
   weather: WeatherSettings;
   /** Jméno pro pozdrav (jinak z Moodlu / Googlu). */
   displayName: string;
@@ -512,7 +516,7 @@ export interface RideLeg {
 
 export type JourneyLeg = WalkLeg | RideLeg;
 
-export type ItinerarySource = 'demo' | 'golemio' | 'google' | 'estimate';
+export type ItinerarySource = 'demo' | 'golemio' | 'google' | 'estimate' | 'transitous';
 
 export interface Itinerary {
   id: string;

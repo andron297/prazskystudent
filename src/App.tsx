@@ -9,7 +9,8 @@ import { useSisBridge } from './services/sisBridge';
 import { useBackgroundSync } from './services/syncCenter';
 import { useAppStore } from './store/appStore';
 import { useClockStore } from './store/clockStore';
-import { useUiStore } from './store/uiStore';
+import { toast, useUiStore } from './store/uiStore';
+import { SetupWizard } from './components/setup/SetupWizard';
 
 // Méně používané sekce se načítají až při otevření (menší první načtení PWA).
 const TransitMapView = lazy(() => import('./components/map/TransitMapView').then((m) => ({ default: m.TransitMapView })));
@@ -54,6 +55,11 @@ export default function App() {
 
   useEffect(() => {
     void useUiStore.getState().refreshServer();
+    // Poprvé (nebo dokud průvodce nikdo nedokončil): provést nastavením krok za krokem.
+    if (!useAppStore.getState().meta.setupDone) {
+      const t = setTimeout(() => useUiStore.getState().openSetup('start'), 700);
+      return () => clearTimeout(t);
+    }
   }, []);
 
   // Sandbox: posun ukázkových dat na dnešek a simulované hodiny; Live: reálný čas.
@@ -65,7 +71,11 @@ export default function App() {
       else clock.switchToRealTime();
     } else {
       clock.switchToRealTime();
+      // Vlastní data nikdy nemíchat s ukázkou (i po starších verzích aplikace).
+      const removed = useAppStore.getState().purgeSampleData();
+      if (removed > 0) toast.info('Ukázková data jsem uklidil – teď vidíš jen to svoje.');
     }
+    document.documentElement.dataset.mode = mode;
   }, [mode]);
 
   const fullBleed = view === 'doprava';
@@ -96,6 +106,7 @@ export default function App() {
           <ItemEditor />
         </Suspense>
       )}
+      <SetupWizard />
       <ConfirmHost />
       <Toaster />
     </MotionConfig>

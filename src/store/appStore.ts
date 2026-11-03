@@ -112,6 +112,10 @@ export interface AppData {
 export interface AppMeta {
   demoSeedDate?: string;
   welcomeDismissed: boolean;
+  /** Průvodce propojením dokončen (nebo zavřen). */
+  setupDone?: boolean;
+  /** Služby, které student v průvodci přeskočil. */
+  setupSkipped?: string[];
   settingsUpdatedAt?: string;
   deviceId: string;
 }
@@ -221,6 +225,13 @@ export interface AppState extends AppData {
   rebaseDemo: (today: Date) => void;
   resetDemo: (now: Date) => void;
   clearDemoData: () => void;
+  /** Přepne na vlastní data: ukázku smaže, vlastní importy a úkoly ponechá. Vrátí počet smazaných položek. */
+  startOwnData: () => number;
+  /** Přepne na ukázku (doplní ukázková data, pokud chybí). */
+  startDemo: () => void;
+  /** Smaže ukázková data (bezpečné volat kdykoli v režimu „Moje data“). */
+  purgeSampleData: () => number;
+  setSetup: (patch: { done?: boolean; skipped?: string[] }) => void;
   clearAllData: () => void;
   importBackup: (data: Partial<AppData> & { settings?: Partial<Settings> }) => void;
   dismissWelcome: () => void;
@@ -690,6 +701,64 @@ export const useAppStore = create<AppState>()(
             meta: { ...s.meta, demoSeedDate: undefined },
           };
         }),
+      purgeSampleData: () => {
+        const s = get();
+        // Ukázka = položky ze seedu (id „demo-…“, zdroj „demo“) a vše, co k ukázkovým předmětům patří,
+        // plus výsledky simulovaných služeb (Moodle, Google) z ukázkového režimu.
+        const sampleSubjects = new Set(s.subjects.filter((x) => x.id.startsWith('demo-') || x.source === 'demo').map((x) => x.id));
+        const simulated = (x: { demo?: boolean; source?: string }) => Boolean(x.demo) && (x.source === 'moodle' || x.source === 'google' || x.source === 'demo');
+        const isSample = (x: { id: string; demo?: boolean; source?: string; subjectId?: string }) =>
+          x.id.startsWith('demo-') || x.source === 'demo' || (x.subjectId !== undefined && sampleSubjects.has(x.subjectId)) || simulated(x);
+        const keep = <T extends { id: string; demo?: boolean; source?: string; subjectId?: string }>(items: T[]) =>
+          items.filter((x) => !isSample(x)).map((x) => (x.demo ? { ...x, demo: undefined } : x));
+        const removed =
+          s.subjects.filter((x) => sampleSubjects.has(x.id)).length +
+          s.events.filter(isSample).length +
+          s.requirements.filter(isSample).length +
+          s.materials.filter(isSample).length +
+          s.tasks.filter(isSample).length;
+        if (removed === 0 && !s.subjects.some((x) => x.demo) && !s.milestones.some((m) => m.source === 'demo')) return 0;
+        for (const m of s.materials) if (isSample(m) && m.blobKey) void deleteBlob(m.blobKey);
+        set((st) => ({
+          subjects: st.subjects.filter((x) => !sampleSubjects.has(x.id)).map((x) => (x.demo ? { ...x, demo: undefined } : x)),
+          events: keep(st.events),
+          requirements: keep(st.requirements),
+          materials: keep(st.materials),
+          milestones: st.milestones.filter((m) => m.source !== 'demo' && !(m.subjectId && sampleSubjects.has(m.subjectId))),
+          tasks: keep(st.tasks),
+          meta: { ...st.meta, demoSeedDate: undefined },
+          settings: {
+            ...st.settings,
+            moodle: st.settings.moodle?.token?.startsWith('demo') ? null : st.settings.moodle,
+            icsSources: st.settings.icsSources.filter((x) => !x.url.includes('demo')),
+          },
+        }));
+        return removed;
+      },
+      startOwnData: () => {
+        const removed = get().purgeSampleData();
+        set((s) => ({ settings: { ...s.settings, mode: 'live', demoClock: false }, googleSync: { ...s.googleSync, demo: emptySyncState() } }));
+        return removed;
+      },
+      startDemo: () => {
+        const s = get();
+        if (!s.subjects.some((x) => x.id.startsWith('demo-'))) {
+          const seed = createDemoSeed(new Date());
+          const flag = <T extends object>(items: T[]) => items.map((i) => ({ ...i, demo: true }));
+          set((st) => ({
+            subjects: [...st.subjects, ...flag(seed.subjects)],
+            events: [...st.events, ...flag(seed.events)].sort((a, b) => a.start.localeCompare(b.start)),
+            requirements: [...st.requirements, ...flag(seed.requirements)],
+            materials: [...st.materials, ...flag(seed.materials)],
+            milestones: [...st.milestones, ...seed.milestones],
+            tasks: [...st.tasks, ...flag(seed.tasks)],
+            meta: { ...st.meta, demoSeedDate: seed.seedDate },
+          }));
+        }
+        set((st) => ({ settings: { ...st.settings, mode: 'demo' } }));
+      },
+      setSetup: (patch) =>
+        set((s) => ({ meta: { ...s.meta, setupDone: patch.done ?? s.meta.setupDone, setupSkipped: patch.skipped ?? s.meta.setupSkipped } })),
       clearAllData: () => {
         for (const m of get().materials) if (m.blobKey) void deleteBlob(m.blobKey);
         set((s) => ({

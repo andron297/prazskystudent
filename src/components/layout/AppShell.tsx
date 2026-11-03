@@ -6,8 +6,10 @@ import {
   CloudAlert,
   Clock,
   FastForward,
+  ArrowRight,
   FlaskConical,
   House,
+  ShieldCheck,
   LoaderCircle,
   Monitor,
   Moon,
@@ -18,7 +20,6 @@ import {
   Sun,
   Timer,
   TramFront,
-  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import type { ThemePref } from '../../types';
@@ -28,7 +29,7 @@ import { useNow } from '../../hooks/useNow';
 import { runGoogleSync, useSyncStore } from '../../services/syncCenter';
 import { useAppStore } from '../../store/appStore';
 import { useClockStore } from '../../store/clockStore';
-import { toast, useUiStore } from '../../store/uiStore';
+import { useUiStore } from '../../store/uiStore';
 import { Menu } from '../ui/overlays';
 import { cn, IconButton } from '../ui/primitives';
 
@@ -71,25 +72,45 @@ function ThemeToggle() {
 
 function ModeSwitch() {
   const mode = useAppStore((s) => s.settings.mode);
-  const setMode = useAppStore((s) => s.setMode);
-  const toggle = () => {
-    const nextMode = mode === 'demo' ? 'live' : 'demo';
-    setMode(nextMode);
-    toast.info(nextMode === 'demo' ? 'Sandbox: simulovaná doprava, Moodle i Google.' : 'Live: skutečný čas, GPS, Golemio, Moodle a Google.');
-  };
+  const openSetup = useUiStore((s) => s.openSetup);
+  const demo = mode === 'demo';
   return (
     <button
       type="button"
-      onClick={toggle}
+      onClick={() => (demo ? openSetup('start') : navigateTo('propojeni'))}
       className={cn(
         'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-bold ring-1 ring-inset transition-colors',
-        mode === 'demo' ? 'bg-sand/20 text-clay ring-sand/40' : 'bg-accent-soft text-accent ring-accent/25',
+        demo ? 'bg-sand/25 text-clay ring-sand/50 hover:bg-sand/35' : 'bg-accent-soft text-accent ring-accent/25 hover:bg-accent/15',
       )}
-      title="Přepnout Sandbox / Live"
+      title={demo ? 'Prohlížíš ukázku – klikni a nastav si svoje data' : 'Tvoje data – přehled propojení'}
     >
-      {mode === 'demo' ? <FlaskConical className="size-3.5" aria-hidden /> : <Zap className="size-3.5" aria-hidden />}
-      {mode === 'demo' ? 'Sandbox' : 'Live'}
+      {demo ? <FlaskConical className="size-3.5" aria-hidden /> : <ShieldCheck className="size-3.5" aria-hidden />}
+      {demo ? 'Ukázka' : 'Moje data'}
     </button>
+  );
+}
+
+/** Výrazný pruh: ukázková data nejsou tvoje. */
+export function DemoRibbon() {
+  const mode = useAppStore((s) => s.settings.mode);
+  const openSetup = useUiStore((s) => s.openSetup);
+  if (mode !== 'demo') return null;
+  return (
+    <div className="demo-ribbon relative z-40 border-b border-sand/50">
+      <div className="mx-auto flex max-w-[1320px] flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2 sm:px-6 lg:px-8">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#7a5a2e] px-2.5 py-0.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#fbf3e3]">
+          <FlaskConical className="size-3.5" aria-hidden /> Ukázka
+        </span>
+        <span className="text-[13px] font-semibold text-[#5c4322] dark:text-[#f0dcb8]">Předměty, rozvrh i úkoly jsou vymyšlené – jen na vyzkoušení.</span>
+        <button
+          type="button"
+          onClick={() => openSetup('start')}
+          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-full bg-[#2b5a40] px-3.5 text-[12.5px] font-bold text-white shadow-sm transition hover:brightness-110"
+        >
+          Nastavit svoje data <ArrowRight className="size-3.5" aria-hidden />
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -172,11 +193,13 @@ export function SyncChip({ compact = false }: { compact?: boolean }) {
 
 export function AppShell({ view, children, fullBleed = false }: { view: View; children: ReactNode; fullBleed?: boolean }) {
   const openEditor = useUiStore((s) => s.openEditor);
+  const demo = useAppStore((s) => s.settings.mode === 'demo');
 
   return (
     <div className={fullBleed ? 'flex h-dvh flex-col overflow-hidden' : 'min-h-dvh'}>
       {/* Horní lišta */}
       <header className={cn('glass-strong z-30 shrink-0 border-b border-line pt-[env(safe-area-inset-top)]', fullBleed ? 'relative' : 'sticky top-0')}>
+        <DemoRibbon />
         <div className={cn('mx-auto flex h-14 items-center gap-3 px-4 sm:px-6 lg:h-16 lg:px-8', !fullBleed && 'max-w-[1320px]')}>
           <a href="#/dnes" className="flex shrink-0 items-center gap-2.5">
             <BrandMark className="size-8 lg:size-9" />
@@ -239,6 +262,7 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
         <BottomItem item={NAV[2]} active={view === 'predmety'} />
         <BottomItem item={NAV[3]} active={view === 'kalendar'} />
       </nav>
+      {demo && <div className="demo-frame" aria-hidden />}
     </div>
   );
 }

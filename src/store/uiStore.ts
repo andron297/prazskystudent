@@ -36,6 +36,11 @@ interface UiState {
   toasts: Toast[];
   pushToast: (message: string, tone?: ToastTone) => void;
   dismissToast: (id: string) => void;
+  /** Průvodce propojením (krok, na kterém se otevře). */
+  setupOpen: boolean;
+  setupStep: string | null;
+  openSetup: (step?: string) => void;
+  closeSetup: () => void;
   connectOpen: boolean;
   connectTab: ConnectTab;
   parserSubjectId?: string;
@@ -68,6 +73,10 @@ export const useUiStore = create<UiState>()((set, get) => ({
     setTimeout(() => get().dismissToast(id), tone === 'error' ? 6500 : 3800);
   },
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  setupOpen: false,
+  setupStep: null,
+  openSetup: (step) => set({ setupOpen: true, setupStep: step ?? null }),
+  closeSetup: () => set({ setupOpen: false }),
   connectOpen: false,
   connectTab: 'moodle',
   openConnect: (tab = 'moodle', parserSubjectId) => set({ connectOpen: true, connectTab: tab, parserSubjectId }),
