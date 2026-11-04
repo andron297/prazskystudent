@@ -1,4 +1,4 @@
-/** Klient pro volitelné AI vylepšení parseru (`/api/ai-parse`, Claude). */
+/** Klient pro volitelné AI vylepšení parseru (`/api/ai-parse` – Claude, ChatGPT nebo Gemini). */
 import type { MilestoneCategory, RequirementType } from '../types';
 import { toDateKey } from '../lib/dates';
 import { uid } from '../lib/id';
@@ -34,7 +34,7 @@ export async function aiParseText(
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      ...(options.anthropicKey ? { 'x-anthropic-key': options.anthropicKey } : {}),
+      ...(options.anthropicKey?.trim() ? { 'x-ai-key': options.anthropicKey.trim() } : {}),
     },
     body: JSON.stringify({ text, mode, academicYearStart: options.academicYearStart, today: toDateKey(options.today) }),
     timeoutMs: 75_000,

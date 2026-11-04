@@ -35,6 +35,7 @@ import { uid } from '../../lib/id';
 import { isMoodleCalendarUrl } from '../../lib/moodleIcs';
 import { sisBookmarklet } from '../../lib/sisImport';
 import { ConnectionsHub } from '../setup/ConnectionsHub';
+import { AI_NAMES, providerForKey } from '../../lib/aiProvider';
 import { navigateTo } from '../../hooks/useAppShell';
 import { testGolemioKey } from '../../services/api';
 import { refreshIcsSource, runMoodleTokenSync, useSyncStore } from '../../services/syncCenter';
@@ -280,7 +281,7 @@ function SisFileUpload() {
 function SyllabiBlock() {
   const subjects = useAppStore((s) => s.subjects);
   const mode = useAppStore((s) => s.settings.mode);
-  const ownKey = useAppStore((s) => Boolean(s.settings.anthropicApiKey.trim()));
+  const ownKey = useAppStore((s) => Boolean(providerForKey(s.settings.anthropicApiKey)));
   const serverAi = useUiStore((s) => s.server.anthropic);
   const running = useSyllabusSync((s) => s.running);
   const progress = useSyllabusSync((s) => s.progress);
@@ -294,7 +295,7 @@ function SyllabiBlock() {
       </p>
       <p className="mt-1 text-[13px] text-muted">
         Po načtení rozvrhu stáhnu ke každému předmětu jeho veřejný sylabus ze SISu a z podmínek zakončení vytáhnu povinnosti, váhy a termíny.{' '}
-        {ownKey || serverAi ? 'Čte je AI (Claude).' : 'Teď je čtu pravidly; s AI (klíč Anthropic v sekci Aplikace) to bude chytřejší.'}
+        {ownKey || serverAi ? 'Čte je AI.' : 'Teď je čtu pravidly; s AI (vlastní klíč od Claude, ChatGPT nebo Gemini) to bude chytřejší.'}
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <Button size="sm" variant="primary" icon={RefreshCw} loading={running} disabled={relevant.length === 0} onClick={() => void importAllSyllabi({ manual: true, all: complete })}>
@@ -665,7 +666,7 @@ function AppSection() {
             })}
           </div>
         </div>
-        <SecretField label="Anthropic API klíč (volitelné)" value={settings.anthropicApiKey} onChange={(anthropicApiKey) => updateSettings({ anthropicApiKey })} placeholder="sk-ant-…" hint="Přesnější čtení harmonogramů a sylabů pomocí Claude." />
+        <SecretField label="Vlastní AI klíč (volitelné)" value={settings.anthropicApiKey} onChange={(anthropicApiKey) => updateSettings({ anthropicApiKey })} placeholder="Claude sk-ant-…, ChatGPT sk-… nebo Gemini AIza…" hint={providerForKey(settings.anthropicApiKey) ? `Používáš ${AI_NAMES[providerForKey(settings.anthropicApiKey)!]}.` : 'Claude, ChatGPT i Gemini – poznám podle klíče.'} />
         <div className="flex flex-wrap gap-2">
           <Button icon={Download} onClick={exportBackup}>
             Záloha
@@ -717,7 +718,7 @@ function AppSection() {
           {!serverChecked
             ? 'Zjišťuji serverové funkce…'
             : server.reachable
-              ? `Server běží · ${[server.golemio && 'Golemio', server.google && 'Google Maps', server.googleClientId && 'Google přihlášení', server.anthropic && 'Claude'].filter(Boolean).join(', ') || 'bez serverových klíčů'}`
+              ? `Server běží · ${[server.golemio && 'Golemio', server.google && 'Google Maps', server.googleClientId && 'Google přihlášení', server.anthropic && 'AI'].filter(Boolean).join(', ') || 'bez serverových klíčů'}`
               : 'Server nedostupný – Live režim potřebuje nasazení na Vercel.'}
         </p>
       </div>

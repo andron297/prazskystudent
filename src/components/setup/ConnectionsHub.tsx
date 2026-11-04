@@ -51,7 +51,7 @@ const STATE_LABEL: Record<ServiceStatus['state'], string> = {
   unavailable: 'Zatím nejde',
 };
 
-const WIZARD_STEP: Partial<Record<ServiceId, string>> = { location: 'location', sis: 'sis', moodle: 'moodle', google: 'google', music: 'extras', notifications: 'extras' };
+const WIZARD_STEP: Partial<Record<ServiceId, string>> = { location: 'location', sis: 'sis', moodle: 'moodle', google: 'google', music: 'extras', notifications: 'extras', ai: 'ai' };
 
 export function ConnectionsHub() {
   const { services, done, total, attention } = useConnections();
@@ -71,6 +71,7 @@ export function ConnectionsHub() {
         },
       };
     if (s.state === 'unavailable') return s.id === 'notifications' ? null : { label: 'Pro správce', run: () => document.getElementById('spravce')?.scrollIntoView({ behavior: 'smooth' }) };
+    if (s.id === 'ai') return { label: s.state === 'connected' ? 'Změnit' : 'Vložit klíč', run: () => openSetup('ai') };
     const step = WIZARD_STEP[s.id];
     if (!step) return null;
     if (s.id === 'google' && s.state === 'connected') return { label: 'Spravovat', run: () => document.getElementById('google')?.scrollIntoView({ behavior: 'smooth' }) };
@@ -253,16 +254,16 @@ function OwnerCard() {
     },
     {
       ok: server.anthropic,
-      title: 'Chytré čtení sylabů (AI)',
-      why: 'Claude čte sylaby, stránky Moodlu i PDF harmonogramy přesněji než pravidla.',
-      vars: ['ANTHROPIC_API_KEY'],
+      title: 'AI pro všechny (nepovinné)',
+      why: 'Každý si může vložit vlastní klíč v aplikaci. Tady nastavíš AI, kterou dostanou všichni bez vlastního klíče (platíš ji ty).',
+      vars: ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GEMINI_API_KEY'],
       how: (
         <>
-          Klíč vytvoříš v{' '}
-          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
-            Anthropic Console
+          Stačí jedna z nich. Klíč pro Claude, ChatGPT nebo Gemini (Gemini má i bezplatnou úroveň v{' '}
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
+            Google AI Studiu
           </a>
-          .
+          ).
         </>
       ),
     },

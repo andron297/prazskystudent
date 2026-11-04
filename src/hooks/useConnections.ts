@@ -4,6 +4,7 @@
  * i průvodce – texty jsou záměrně obyčejnou češtinou.
  */
 import { useMemo } from 'react';
+import { AI_NAMES, providerForKey } from '../lib/aiProvider';
 import { findPreset } from '../lib/buildings';
 import { formatRelative } from '../lib/dates';
 import { useAppStore } from '../store/appStore';
@@ -45,7 +46,7 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
   const googleEnabled = useAppStore((s) => s.settings.google.enabled);
   const music = useAppStore((s) => s.settings.music);
   const notify = useAppStore((s) => s.settings.notifyLeave);
-  const ownAiKey = useAppStore((s) => Boolean(s.settings.anthropicApiKey.trim()));
+  const ownAiKey = useAppStore((s) => providerForKey(s.settings.anthropicApiKey));
   const skipped = useAppStore((s) => s.meta.setupSkipped);
   const events = useAppStore((s) => s.events);
   const subjects = useAppStore((s) => s.subjects);
@@ -137,8 +138,12 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
       {
         id: 'ai',
         title: 'Chytré čtení (AI)',
-        state: server.anthropic || ownAiKey ? 'auto' : 'unavailable',
-        detail: server.anthropic || ownAiKey ? 'Sylaby, Moodle i PDF čte Claude.' : 'Bez AI čtu sylaby pravidly. Zapnout ho může správce aplikace.',
+        state: ownAiKey ? 'connected' : server.anthropic ? 'auto' : 'todo',
+        detail: ownAiKey
+          ? `Sylaby, Moodle i PDF čte ${AI_NAMES[ownAiKey]} (tvůj klíč).`
+          : server.anthropic
+            ? 'Sylaby, Moodle i PDF čte AI aplikace.'
+            : 'Bez AI čtu sylaby pravidly. Vlož klíč od Claude, ChatGPT nebo Gemini.',
         optional: true,
       },
     ];

@@ -34,6 +34,7 @@ import { LOCATION_PRESETS } from '../../lib/buildings';
 import { uid } from '../../lib/id';
 import { isMoodleCalendarUrl } from '../../lib/moodleIcs';
 import { MUSIC_PICKS, isSpotifyUrl } from '../../lib/music';
+import { AI_KEY_PAGES, AI_NAMES, providerForKey } from '../../lib/aiProvider';
 import { useConnections, type ServiceId, type ServiceStatus } from '../../hooks/useConnections';
 import { importSisIcsFile } from '../../services/icsFileImport';
 import { connectGoogle, refreshIcsSource } from '../../services/syncCenter';
@@ -41,9 +42,9 @@ import { useAppStore } from '../../store/appStore';
 import { toast, useUiStore } from '../../store/uiStore';
 import { cn } from '../ui/primitives';
 
-type StepId = 'start' | 'auto' | 'location' | 'sis' | 'moodle' | 'google' | 'extras' | 'done';
-const STEPS: StepId[] = ['start', 'auto', 'location', 'sis', 'moodle', 'google', 'extras', 'done'];
-const SKIP_ID: Partial<Record<StepId, ServiceId[]>> = { location: ['location'], sis: ['sis'], moodle: ['moodle'], google: ['google'], extras: ['music', 'notifications'] };
+type StepId = 'start' | 'auto' | 'location' | 'sis' | 'moodle' | 'google' | 'extras' | 'ai' | 'done';
+const STEPS: StepId[] = ['start', 'auto', 'location', 'sis', 'moodle', 'google', 'extras', 'ai', 'done'];
+const SKIP_ID: Partial<Record<StepId, ServiceId[]>> = { location: ['location'], sis: ['sis'], moodle: ['moodle'], google: ['google'], extras: ['music', 'notifications'], ai: ['ai'] };
 
 export function SetupWizard() {
   const open = useUiStore((s) => s.setupOpen);
@@ -131,6 +132,7 @@ export function SetupWizard() {
               {step === 'moodle' && <MoodleStep onDone={() => unskip(['moodle'])} />}
               {step === 'google' && <GoogleStep onDone={() => unskip(['google'])} />}
               {step === 'extras' && <ExtrasStep onDone={(ids) => unskip(ids)} />}
+              {step === 'ai' && <AiStep onDone={() => unskip(['ai'])} />}
               {step === 'done' && <DoneStep onClose={() => finish(true)} onGo={(s) => go(s)} />}
             </motion.div>
           </AnimatePresence>
@@ -642,9 +644,65 @@ function ExtrasStep({ onDone }: { onDone: (ids: ServiceId[]) => void }) {
   );
 }
 
+function AiStep({ onDone }: { onDone: () => void }) {
+  const current = useAppStore((s) => s.settings.anthropicApiKey);
+  const updateSettings = useAppStore((s) => s.updateSettings);
+  const serverAi = useUiStore((s) => s.server.anthropic);
+  const [key, setKey] = useState('');
+  const detected = providerForKey(key);
+  const saved = providerForKey(current);
+  const save = () => {
+    if (!detected) {
+      toast.error('Tenhle klíč nepoznávám. Claude začíná sk-ant-, ChatGPT sk-, Gemini AIza.');
+      return;
+    }
+    updateSettings({ anthropicApiKey: key.trim() });
+    setKey('');
+    onDone();
+    toast.success(`Uloženo – sylaby teď čte ${AI_NAMES[detected]}.`);
+  };
+  return (
+    <div>
+      <StepHead icon={Sparkles} kicker="Nepovinné" title={<>Chytré čtení <em className="text-moss">s AI</em></>}>
+        AI přečte sylaby, stránky z Moodlu i PDF harmonogram a vytáhne z nich úkoly, váhy a termíny přesněji. Můžeš použít svoji AI – Claude, ChatGPT nebo Gemini.
+      </StepHead>
+      {serverAi && !saved && <Success>AI už ti zapnul správce aplikace – nemusíš nic dělat.</Success>}
+      {saved && <Success>Používáš {AI_NAMES[saved]} (tvůj klíč).</Success>}
+      <NumberedSteps
+        items={[
+          <>
+            Vytvoř si klíč:{' '}
+            <ExternalStep href={AI_KEY_PAGES.gemini}>Gemini (má i verzi zdarma)</ExternalStep>, <ExternalStep href={AI_KEY_PAGES.openai}>ChatGPT</ExternalStep> nebo{' '}
+            <ExternalStep href={AI_KEY_PAGES.anthropic}>Claude</ExternalStep>.
+          </>,
+          <>Klíč zkopíruj a vlož sem. Poznám sám, od které AI je.</>,
+        ]}
+      />
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <input
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+          type="password"
+          autoComplete="off"
+          placeholder="Vlož klíč (sk-ant-…, sk-… nebo AIza…)"
+          className="h-14 flex-1 rounded-[18px] bg-surface px-4 font-mono text-[14px] ring-1 ring-inset ring-line-strong outline-none focus:ring-2 focus:ring-accent"
+          aria-label="Klíč k AI"
+        />
+        <BigButton icon={Check} onClick={save}>
+          {detected ? `Uložit (${AI_NAMES[detected]})` : 'Uložit'}
+        </BigButton>
+      </div>
+      <p className="mt-4 flex items-start gap-2 text-[13.5px] text-muted">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+        Klíč zůstává jen v tvém prohlížeči a posílá se jen při čtení textu. AI platíš u svého poskytovatele (Gemini má bezplatnou úroveň).
+      </p>
+    </div>
+  );
+}
+
 function DoneStep({ onClose, onGo }: { onClose: () => void; onGo: (s: StepId) => void }) {
   const { services } = useConnections();
-  const stepFor: Partial<Record<ServiceId, StepId>> = { location: 'location', sis: 'sis', moodle: 'moodle', google: 'google', music: 'extras', notifications: 'extras' };
+  const stepFor: Partial<Record<ServiceId, StepId>> = { location: 'location', sis: 'sis', moodle: 'moodle', google: 'google', music: 'extras', notifications: 'extras', ai: 'ai' };
   return (
     <div>
       <StepHead icon={PartyPopper} kicker="Hotovo" title={<>Máš <em className="text-moss">nastaveno</em></>}>

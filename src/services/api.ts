@@ -10,6 +10,7 @@ import type { AppMode, Building, LatLng, OriginStopPref, Settings, TransitResult
 import type { ParseMode, ParsedItem } from '../lib/scheduleTextParser';
 import { parseScheduleText } from '../lib/scheduleTextParser';
 import { aiParseText } from './aiParser';
+import { providerForKey } from '../lib/aiProvider';
 import { buildDemoIcs, buildDemoSisPage } from './demo/samples';
 import { DemoMoodleClient } from './demo/moodleDemo';
 import { demoNetworkCovers, demoNetworkHasStop, planDemoItineraries } from './demo/transitSim';
@@ -82,7 +83,7 @@ function baseParams(request: TransitRequest, settings: Settings): LivePlanParams
 }
 
 export function createApi(settings: Settings, server: ServerCapabilities, now: () => Date): StudyApi {
-  const canUseAi = Boolean(settings.anthropicApiKey.trim()) || server.anthropic;
+  const canUseAi = Boolean(providerForKey(settings.anthropicApiKey)) || server.anthropic;
 
   const aiParse = async (text: string, mode: ParseMode, academicYearStart: number, today: Date) => {
     if (canUseAi) {

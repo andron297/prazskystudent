@@ -251,7 +251,7 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
             ? `${engine === 'ai' ? 'AI' : 'Lokální parser'}: ${items.length} položek z ${stats.stats.lines} řádků · akademický rok ${stats.academicYearStart}/${stats.academicYearStart + 1}${stats.detectedYear ? '' : ' (odhad)'}`
             : 'Výsledky se objeví hned při vložení textu.'}
         </span>
-        <Button size="sm" variant="soft" icon={WandSparkles} onClick={() => void runAi()} loading={aiBusy} disabled={!text.trim()} title={api.canUseAi ? 'Zpřesnit pomocí Claude (Anthropic API)' : 'AI není nastavené – přidej Anthropic klíč v Nastavení'}>
+        <Button size="sm" variant="soft" icon={WandSparkles} onClick={() => void runAi()} loading={aiBusy} disabled={!text.trim()} title={api.canUseAi ? 'Zpřesnit pomocí AI' : 'AI není nastavené – vlož klíč od Claude, ChatGPT nebo Gemini v Propojení'}>
           {api.canUseAi ? 'Zpřesnit pomocí AI' : 'AI (nenastaveno)'}
         </Button>
       </div>
