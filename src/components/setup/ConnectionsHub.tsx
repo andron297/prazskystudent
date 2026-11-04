@@ -296,7 +296,7 @@ function OwnerCard() {
       {open && (
         <div className="mt-4 space-y-3">
           <p className="text-[13.5px] text-muted">
-            Jednou nastavíš ve Vercelu (projekt → <strong>Settings → Environment Variables</strong>), pak <strong>Redeploy</strong>. Klíče zůstávají na serveru, do prohlížeče ani do kódu se nedostanou.{' '}
+            <strong className="text-fg">Stačí jednou a platí pro všechny uživatele</strong> – běžní uživatelé tuhle kartu nepotřebují. Jednou nastavíš ve Vercelu (projekt → <strong>Settings → Environment Variables</strong>), pak <strong>Redeploy</strong>. Klíče zůstávají na serveru, do prohlížeče ani do kódu se nedostanou.{' '}
             <a href="https://vercel.com/dashboard" target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-semibold text-accent hover:underline">
               Otevřít Vercel <ExternalLink className="size-3" aria-hidden />
             </a>
