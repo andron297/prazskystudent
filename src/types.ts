@@ -363,6 +363,26 @@ export interface WeatherSettings {
   feel: 'cold' | 'normal' | 'warm';
 }
 
+export type AccentTheme = 'les' | 'vltava' | 'terakota' | 'svitani' | 'levandule' | 'grafit' | 'vlastni';
+
+/** Vzhled aplikace – barvy, fotky, pozadí, úvodní animace. */
+export interface AppearanceSettings {
+  accent: AccentTheme;
+  /** Vlastní barva (hex) pro motiv 'vlastni'. */
+  customAccent?: string;
+  /** Fotka v hlavičce: 'auto' = podle denní doby, jinak ID fotky z galerie nebo 'upload'. */
+  heroPhoto: string;
+  /** Pozadí aplikace: papír, fotka z galerie, nebo vlastní fotka. */
+  background: 'paper' | 'photo' | 'upload';
+  backgroundPhoto?: string;
+  /** Jak moc je pozadí ztlumené (0–1). */
+  backgroundDim?: number;
+  /** Úvodní animace při otevření. */
+  intro: boolean;
+  /** Písmo nadpisů. */
+  headingFont: 'serif' | 'sans';
+}
+
 /** Odpočet do důležitého okamžiku (zkouškové, odjezd domů, narozeniny…). */
 export interface Countdown {
   id: string;
@@ -428,6 +448,7 @@ export interface Settings {
   shownMilestones?: string[];
   /** Vlastní odpočty (na hlavní stránce). */
   countdowns?: Countdown[];
+  appearance?: AppearanceSettings;
 }
 
 /* ------------------------------------------------------------------ */

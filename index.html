@@ -20,6 +20,9 @@
     <script src="/theme-init.js"></script>
   </head>
   <body>
+    <div id="boot-splash" style="position:fixed;inset:0;z-index:300;display:grid;place-items:center;background:radial-gradient(120% 90% at 50% 30%,#2f5f44 0%,#1d3a2a 45%,#0f1f16 100%)">
+      <svg viewBox="0 0 64 64" width="104" height="104" aria-hidden="true"><defs><linearGradient id="bs-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3f7a55"/><stop offset="1" stop-color="#1b3626"/></linearGradient></defs><rect width="64" height="64" rx="20" fill="url(#bs-g)"/></svg>
+    </div>
     <div id="root"></div>
     <noscript>Stihnu potřebuje zapnutý JavaScript.</noscript>
     <script type="module" src="/src/main.tsx"></script>

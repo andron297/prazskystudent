@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Droplets } from 'lucide-react';
 import type { ScheduleEvent } from '../../types';
-import { addDays, capitalize, formatDateLong, formatTime, isSameDay } from '../../lib/dates';
+import { capitalize, formatDateLong, formatTime } from '../../lib/dates';
+import { nameDayText, publicHoliday } from '../../lib/czechDays';
+import { navigateTo } from '../../hooks/useAppShell';
 import { commuteWindows, weatherAdvice, weatherLabel } from '../../lib/weather';
 import { useNow } from '../../hooks/useNow';
 import { useOrigin } from '../../hooks/useOrigin';
@@ -16,11 +18,11 @@ import { useAppStore } from '../../store/appStore';
 import { buildingForEvent, isTransitTarget, upcomingEvents } from '../../store/selectors';
 import { OriginSheet } from '../transit/OriginSheet';
 import { TransitGlance } from '../transit/TransitGlance';
-import { TransitPanel } from '../transit/TransitPanel';
 import { KIND_LABEL } from '../transit/transitStatus';
 import { WeatherCard } from '../weather/WeatherCard';
 import { WeatherIcon } from '../weather/WeatherBits';
-import { MilestonesCard, SubjectsGlance, TasksCard, TodayTimeline, TourOffer, WelcomeCard } from './DashboardCards';
+import { TourOffer, WelcomeCard } from './DashboardCards';
+import { CountdownsCard } from './Countdowns';
 import { DayBrief } from './DayBrief';
 import { MenzaCard } from './MenzaCard';
 
@@ -46,7 +48,7 @@ export function DashboardView() {
   const settings = useAppStore((s) => s.settings);
   const tasks = useAppStore((s) => s.tasks);
   const account = useAppStore((s) => s.googleSync[s.settings.mode].account);
-  const [targetId, setTargetId] = useState<string | null>(null);
+  const [targetId] = useState<string | null>(null);
   const [originOpen, setOriginOpen] = useState(false);
 
   // Cíl cesty: vybraná výuka, jinak nejbližší.
@@ -55,7 +57,7 @@ export function DashboardView() {
   const chosen = targetId ? events.find((e) => e.id === targetId && new Date(e.start).getTime() > now.getTime()) : undefined;
   const target: ScheduleEvent | null = chosen ?? next ?? null;
   const within = target && new Date(target.start).getTime() - now.getTime() < 18 * 3_600_000 ? target : null;
-  const { building, room } = within ? buildingForEvent(within, settings) : { building: undefined, room: undefined };
+  const { building } = within ? buildingForEvent(within, settings) : { building: undefined };
   const subject = within?.subjectId ? subjects.find((s) => s.id === within.subjectId) : undefined;
   const transit = useTransitPlan(within, building ?? null);
   useLeaveReminder(within, transit.selected, now);
@@ -87,18 +89,15 @@ export function DashboardView() {
   );
   const advice = useMemo(() => (forecast ? weatherAdvice(forecast, plan, new Date(minuteKey * 60_000), settings.weather.feel) : null), [forecast, plan, minuteKey, settings.weather.feel]);
 
-  // Den pro časovou osu: dnes, a když je dnes hotovo, zítřek.
-  const todayHasMore = events.some((e) => isSameDay(new Date(e.start), now) && new Date(e.end) > now);
-  const timelineDay = todayHasMore || now.getHours() < 12 ? now : addDays(now, 1);
-  const timelineLabel = isSameDay(timelineDay, now) ? 'Dnes' : 'Zítra';
-
   const [g1, g2] = greeting(now.getHours());
   const name = settings.displayName.trim() || undefined;
   const wetSoon = Boolean(advice?.umbrella);
   const photo = heroPhoto(now.getHours(), wetSoon && forecast?.current.code !== undefined && forecast.current.code >= 51);
   const rainCommute = advice?.commutes.find((c) => c.wet);
 
-  const scrollToDetail = () => document.getElementById('cesta')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const goToTransit = () => navigateTo('doprava');
+  const nameDay = nameDayText(now);
+  const holiday = publicHoliday(now);
 
   return (
     <div className="space-y-4 sm:space-y-5">
@@ -115,8 +114,20 @@ export function DashboardView() {
         <div className="photo-scrim absolute inset-0 -z-10" />
         <div className="grid gap-6 p-5 sm:p-8 lg:grid-cols-[1.15fr_1fr] lg:items-end lg:gap-10 lg:p-10">
           <div className="min-w-0 pt-6 lg:pt-16">
-            <p className="eyebrow text-white/75">{capitalize(formatDateLong(now))}</p>
-            <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-2 font-display text-[54px] leading-[0.92] tracking-tight sm:text-[76px] lg:text-[88px]">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="font-display text-[40px] leading-none tabular text-white sm:text-[46px]" aria-label={`Je ${formatTime(now)}`}>
+                {formatTime(now)}
+              </span>
+              <span className="eyebrow text-white/80">{capitalize(formatDateLong(now))}</span>
+            </div>
+            {(nameDay || holiday) && (
+              <p className="mt-1.5 text-[13px] font-semibold text-white/75">
+                {holiday ? <span className="text-[#e7d6b5]">{holiday}</span> : null}
+                {holiday && nameDay ? ' · ' : ''}
+                {nameDay}
+              </p>
+            )}
+            <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 font-display text-[54px] leading-[0.92] tracking-tight sm:text-[76px] lg:text-[88px]">
               {g1} <em className="text-[#e7d6b5]">{g2}</em>
               {name ? <span className="block text-[0.55em] text-white/90">{name}</span> : null}
             </motion.h1>
@@ -125,7 +136,7 @@ export function DashboardView() {
                 ? `${KIND_LABEL[within.kind]}${building?.locative ? ` ${building.locative}` : ''} v ${formatTime(new Date(within.start))}${subject ? ` · ${subject.name}` : ''}`
                 : account?.name
                   ? 'Dnes už žádná výuka.'
-                  : 'Dnes už žádná výuka – čas na sebe.'}
+                  : 'Dnes už žádná výuka – čas na vás.'}
             </p>
             {forecast && (
               <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -143,7 +154,7 @@ export function DashboardView() {
               </div>
             )}
           </div>
-          <TransitGlance event={within} building={building ?? null} transit={transit} onOrigin={() => setOriginOpen(true)} onDetail={scrollToDetail} />
+          <TransitGlance event={within} building={building ?? null} transit={transit} onOrigin={() => setOriginOpen(true)} onDetail={goToTransit} />
         </div>
       </section>
 
@@ -155,31 +166,17 @@ export function DashboardView() {
       <DayBrief now={now} target={within} itinerary={transit.selected ?? null} />
 
       <div className="grid gap-4 sm:gap-5 lg:grid-cols-12">
-        <motion.div className="min-w-0 lg:col-span-7" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}>
-          <TodayTimeline day={timelineDay} label={timelineLabel} targetId={within?.id} onSelect={(e) => setTargetId(e.id)} />
-        </motion.div>
-        <motion.div className="min-w-0 space-y-4 lg:col-span-5" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.10, ease: [0.22, 1, 0.36, 1] }}>
-          <TasksCard />
-          <FocusRest task={tasks.find((t) => !t.done) ?? null} />
-        </motion.div>
-        <motion.div className="min-w-0 space-y-4 sm:space-y-5 lg:col-span-5" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}>
+        <div className="min-w-0 lg:col-span-5">
           <WeatherCard forecast={forecast} advice={advice} now={now} dayLabel={plan.day === 'tomorrow' ? 'Zítra do školy' : plan.day === 'today' ? 'Dnes do školy' : 'Dnes'} />
+        </div>
+        <div className="min-w-0 lg:col-span-7">
           <MenzaCard now={now} building={building ?? mainBuilding} fallback={origin.coords} />
-        </motion.div>
-        <motion.div className="min-w-0 lg:col-span-7" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.20, ease: [0.22, 1, 0.36, 1] }}>
-          {within ? (
-            <TransitPanel event={within} building={building ?? null} room={room} subject={subject} transit={transit} onOrigin={() => setOriginOpen(true)} />
-          ) : (
-            <SubjectsGlance />
-          )}
-        </motion.div>
-        {within && (
-          <motion.div className="min-w-0 lg:col-span-7" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}>
-            <SubjectsGlance />
-          </motion.div>
-        )}
-        <div className={within ? 'min-w-0 lg:col-span-5' : 'min-w-0 lg:col-span-12'}>
-          <MilestonesCard />
+        </div>
+        <div className="min-w-0 lg:col-span-7">
+          <CountdownsCard />
+        </div>
+        <div className="min-w-0 lg:col-span-5">
+          <FocusRest task={tasks.find((t) => !t.done) ?? null} />
         </div>
       </div>
 

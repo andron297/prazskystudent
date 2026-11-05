@@ -12,6 +12,8 @@ import { useClockStore } from './store/clockStore';
 import { toast, useUiStore } from './store/uiStore';
 import { SetupWizard } from './components/setup/SetupWizard';
 import { initAccount, useAccount } from './services/account';
+import { IntroSplash } from './components/intro/IntroSplash';
+import { CountdownEditor } from './components/dashboard/Countdowns';
 import { startSubjectAssist } from './services/subjectAssist';
 import { startLeaveBadge } from './services/leaveBadge';
 
@@ -115,66 +117,68 @@ export default function App() {
   // Vlastní data jen s účtem: dokud není přihlášený a odemčený, místo aplikace přihlášení.
   const gated = accountStatus !== 'off' && accountStatus !== 'ready' && (mode !== 'demo' || view === 'ucet' || accountStatus === 'showRecovery' || accountStatus === 'resetPassword') && !legal;
 
-  if (gated) {
-    return (
-      <MotionConfig reducedMotion="user">
-        <Suspense fallback={null}>
-          <AccountGate status={accountStatus} />
-        </Suspense>
-        <ConfirmHost />
-        <Toaster />
-      </MotionConfig>
-    );
-  }
-
   return (
     <MotionConfig reducedMotion="user">
-      <AppShell view={view} fullBleed={fullBleed}>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div key={`${view}/${param ?? ''}`} className={fullBleed ? 'h-full' : undefined} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
-            <Suspense fallback={<ViewFallback />}>
-              {view === 'dnes' && <DashboardView />}
-              {view === 'doprava' && <TransitMapView />}
-              {view === 'predmety' && <SubjectsView subjectId={param} />}
-              {view === 'plan' && <PlanView tab={param} />}
-              {view === 'propojeni' && <ConnectionsView section={param} />}
-              {view === 'import' && <ImportView />}
-              {view === 'ucet' && <AccountView />}
-              {view === 'podminky' && <TermsView />}
-              {view === 'soukromi' && <PrivacyView />}
-              {view === 'pruvodce' && <GuideView />}
+      <IntroSplash />
+      {gated ? (
+        <>
+          <Suspense fallback={null}>
+            <AccountGate status={accountStatus} />
+          </Suspense>
+          <ConfirmHost />
+          <Toaster />
+        </>
+      ) : (
+        <>
+          <AppShell view={view} fullBleed={fullBleed}>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div key={`${view}/${param ?? ''}`} className={fullBleed ? 'h-full' : undefined} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
+                <Suspense fallback={<ViewFallback />}>
+                  {view === 'dnes' && <DashboardView />}
+                  {view === 'doprava' && <TransitMapView />}
+                  {view === 'predmety' && <SubjectsView subjectId={param} />}
+                  {view === 'plan' && <PlanView tab={param} />}
+                  {view === 'propojeni' && <ConnectionsView section={param} />}
+                  {view === 'import' && <ImportView />}
+                  {view === 'ucet' && <AccountView />}
+                  {view === 'podminky' && <TermsView />}
+                  {view === 'soukromi' && <PrivacyView />}
+                  {view === 'pruvodce' && <GuideView />}
+                </Suspense>
+              </motion.div>
+            </AnimatePresence>
+          </AppShell>
+          {connectMounted && (
+            <Suspense fallback={null}>
+              <ConnectStudyModal />
             </Suspense>
-          </motion.div>
-        </AnimatePresence>
-      </AppShell>
-      {connectMounted && (
-        <Suspense fallback={null}>
-          <ConnectStudyModal />
-        </Suspense>
+          )}
+          {editorMounted && (
+            <Suspense fallback={null}>
+              <ItemEditor />
+            </Suspense>
+          )}
+          {navigation && (
+            <Suspense fallback={null}>
+              <LiveNavigation />
+            </Suspense>
+          )}
+          {askStudyProfile && (
+            <Suspense fallback={null}>
+              <StudyProfileDialog open onClose={() => useUiStore.setState({ askStudyProfile: false })} />
+            </Suspense>
+          )}
+          {tour && (
+            <Suspense fallback={null}>
+              <QuickTour />
+            </Suspense>
+          )}
+          <CountdownEditor />
+          <SetupWizard />
+          <ConfirmHost />
+          <Toaster />
+        </>
       )}
-      {editorMounted && (
-        <Suspense fallback={null}>
-          <ItemEditor />
-        </Suspense>
-      )}
-      {navigation && (
-        <Suspense fallback={null}>
-          <LiveNavigation />
-        </Suspense>
-      )}
-      {askStudyProfile && (
-        <Suspense fallback={null}>
-          <StudyProfileDialog open onClose={() => useUiStore.setState({ askStudyProfile: false })} />
-        </Suspense>
-      )}
-      {tour && (
-        <Suspense fallback={null}>
-          <QuickTour />
-        </Suspense>
-      )}
-      <SetupWizard />
-      <ConfirmHost />
-      <Toaster />
     </MotionConfig>
   );
 }
