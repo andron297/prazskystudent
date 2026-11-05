@@ -1,7 +1,7 @@
 {
   "name": "Stihnu – studium & MHD",
   "short_name": "Stihnu",
-  "description": "Rozvrh ze SISu, úkoly z Moodlu, Google Kalendář a Úkoly, mapa zastávek MHD, počasí na cestu a odpočet do posledního spoje.",
+  "description": "Rozvrh ze SISu, úkoly z Moodlu, Google Kalendář a Úkoly, navigace na zastávku, jídelníček menzy, počasí na cestu a odpočet do posledního spoje.",
   "lang": "cs",
   "dir": "ltr",
   "start_url": "/#/dnes",
@@ -39,24 +39,50 @@
   ],
   "shortcuts": [
     {
-      "name": "Dnes",
+      "name": "Kdy vyrazit",
       "short_name": "Dnes",
-      "url": "/#/dnes"
+      "description": "Další výuka, spoj a odpočet do odchodu",
+      "url": "/#/dnes",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
-      "name": "Mapa zastávek",
+      "name": "Úkoly a termíny",
+      "short_name": "Úkoly",
+      "description": "Všechny úkoly na jednom místě",
+      "url": "/#/ukoly",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Mapa zastávek a odjezdy",
       "short_name": "Doprava",
-      "url": "/#/doprava"
+      "url": "/#/doprava",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
-      "name": "Kalendář",
+      "name": "Kalendář a harmonogram",
       "short_name": "Kalendář",
-      "url": "/#/kalendar"
-    },
-    {
-      "name": "Propojení",
-      "short_name": "Propojení",
-      "url": "/#/propojeni"
+      "url": "/#/kalendar",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

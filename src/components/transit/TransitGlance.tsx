@@ -87,6 +87,7 @@ export function TransitGlance({
     <motion.section
       layout
       className="glass-photo-strong relative w-full overflow-hidden rounded-[28px] p-5 sm:p-6"
+      data-tour="glance"
       aria-label="Kdy vyrazit"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}

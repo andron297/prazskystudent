@@ -17,8 +17,13 @@ export function materialVisual(m: Material): MaterialVisual {
   if (m.kind === 'note') return { icon: NotebookPen, text: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/12', label: 'Poznámka' };
   if (m.kind === 'link' || m.kind === 'moodle-link') {
     const url = m.url ?? '';
-    if (url.includes('docs.google.com')) return { icon: FileText, text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/12', label: 'Google Docs' };
-    if (url.includes('drive.google.com')) return { icon: FolderOpen, text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/12', label: 'Google Drive' };
+    const mime = m.mimeType ?? '';
+    if (mime === 'application/vnd.google-apps.folder' || /drive\.google\.com\/drive\/(u\/\d+\/)?folders\//.test(url)) return { icon: FolderOpen, text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/12', label: 'Složka na Disku' };
+    if (mime === 'application/vnd.google-apps.spreadsheet' || url.includes('docs.google.com/spreadsheets')) return { icon: FileSpreadsheet, text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/12', label: 'Tabulka Google' };
+    if (mime === 'application/vnd.google-apps.presentation' || url.includes('docs.google.com/presentation')) return { icon: Presentation, text: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/12', label: 'Prezentace Google' };
+    if (url.includes('docs.google.com')) return { icon: FileText, text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/12', label: 'Dokument Google' };
+    if (mime === 'application/pdf') return { icon: FileText, text: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/12', label: 'PDF na Disku' };
+    if (url.includes('drive.google.com')) return { icon: File, text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/12', label: 'Soubor na Disku' };
     if (/youtube\.com|youtu\.be/.test(url)) return { icon: FilePlay, text: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/12', label: 'Video' };
     return { icon: Link2, text: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-500/12', label: 'Odkaz' };
   }

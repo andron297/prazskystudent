@@ -13,6 +13,7 @@ import { toast, useUiStore } from './store/uiStore';
 import { SetupWizard } from './components/setup/SetupWizard';
 import { initAccount, useAccount } from './services/account';
 import { startSubjectAssist } from './services/subjectAssist';
+import { startLeaveBadge } from './services/leaveBadge';
 
 // Méně používané sekce se načítají až při otevření (menší první načtení PWA).
 const TransitMapView = lazy(() => import('./components/map/TransitMapView').then((m) => ({ default: m.TransitMapView })));
@@ -28,6 +29,8 @@ const TermsView = lazy(() => import('./components/legal/LegalViews').then((m) =>
 const TasksView = lazy(() => import('./components/tasks/TasksView').then((m) => ({ default: m.TasksView })));
 const AccountGate = lazy(() => import('./components/account/AccountScreens').then((m) => ({ default: m.AccountGate })));
 const LiveNavigation = lazy(() => import('./components/navigation/LiveNavigation').then((m) => ({ default: m.LiveNavigation })));
+const GuideView = lazy(() => import('./components/tour/GuideView').then((m) => ({ default: m.GuideView })));
+const QuickTour = lazy(() => import('./components/tour/QuickTour').then((m) => ({ default: m.QuickTour })));
 
 function ViewFallback() {
   return (
@@ -49,6 +52,7 @@ export default function App() {
   const connectOpen = useUiStore((s) => s.connectOpen);
   const editor = useUiStore((s) => s.editor);
   const navigation = useUiStore((s) => s.navigation);
+  const tour = useUiStore((s) => s.tour);
   const [connectMounted, setConnectMounted] = useState(false);
   const [editorMounted, setEditorMounted] = useState(false);
   useThemeEffect(theme);
@@ -64,6 +68,7 @@ export default function App() {
 
   const accountStatus = useAccount((s) => s.status);
   useEffect(() => startSubjectAssist(), []);
+  useEffect(() => startLeaveBadge(), []);
   useEffect(() => {
     void useUiStore
       .getState()
@@ -137,6 +142,7 @@ export default function App() {
               {view === 'ucet' && <AccountView />}
               {view === 'podminky' && <TermsView />}
               {view === 'soukromi' && <PrivacyView />}
+              {view === 'pruvodce' && <GuideView />}
             </Suspense>
           </motion.div>
         </AnimatePresence>
@@ -154,6 +160,11 @@ export default function App() {
       {navigation && (
         <Suspense fallback={null}>
           <LiveNavigation />
+        </Suspense>
+      )}
+      {tour && (
+        <Suspense fallback={null}>
+          <QuickTour />
         </Suspense>
       )}
       <SetupWizard />

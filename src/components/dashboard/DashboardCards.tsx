@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { ArrowRight, CalendarDays, Check, Flag, FlaskConical, GraduationCap, ListTodo, MapPin, Zap } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, Flag, FlaskConical, GraduationCap, ListTodo, MapPin, Play, Zap } from 'lucide-react';
 import type { Milestone, ScheduleEvent, Subject } from '../../types';
 import { SUBJECT_COLOR_CLASSES } from '../../lib/colors';
 import { formatDayMonth, formatDeadline, formatTime, isSameDay, plural, toDate, toDateKey } from '../../lib/dates';
@@ -178,6 +178,7 @@ export function TasksCard() {
         </>
       }
       eyebrow={doneToday ? `${doneToday} hotovo dnes` : `${list.length} otevřených`}
+      data-tour="tasks"
       className="h-full"
       action={
         <Button size="sm" variant="ghost" onClick={() => navigateTo('ukoly')}>
@@ -358,6 +359,9 @@ export function WelcomeCard() {
         <Button size="sm" variant="secondary" icon={Check} onClick={dismiss}>
           Rozumím
         </Button>
+        <Button size="sm" variant="secondary" icon={Play} onClick={() => useUiStore.getState().startTour()}>
+          Prohlídka
+        </Button>
         <Button
           size="sm"
           variant="primary"
@@ -368,6 +372,32 @@ export function WelcomeCard() {
           }}
         >
           Nastavit svoje data
+        </Button>
+      </div>
+    </motion.section>
+  );
+}
+
+/** Jednorázová nabídka krátké prohlídky (po nastavení vlastních dat). */
+export function TourOffer() {
+  const show = useAppStore((s) => s.settings.mode === 'live' && s.meta.setupDone && !s.meta.tourSeen);
+  const markTourSeen = useAppStore((s) => s.markTourSeen);
+  if (!show) return null;
+  return (
+    <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="card flex flex-col gap-3 rounded-[26px] p-5 sm:flex-row sm:items-center">
+      <div className="grid size-11 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
+        <Play className="size-5" aria-hidden />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-display text-[22px] leading-tight">Ukázat, co kde najdeš?</p>
+        <p className="mt-0.5 text-[13.5px] text-muted">Krátká prohlídka zabere minutu. Kdykoli ji spustíš i z Průvodce (ikona otazníku nahoře).</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="secondary" onClick={markTourSeen}>
+          Teď ne
+        </Button>
+        <Button size="sm" variant="primary" icon={Play} onClick={() => useUiStore.getState().startTour()}>
+          Ukázat
         </Button>
       </div>
     </motion.section>

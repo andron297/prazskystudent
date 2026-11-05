@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import {
   BookOpen,
+  CircleHelp,
   CalendarDays,
   CloudAlert,
   Clock,
@@ -158,7 +159,7 @@ function AccountButton() {
   }
   const initials = (user.name ?? user.email).split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('');
   return (
-    <a href="#/ucet" className="relative inline-flex size-8 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-[12px] font-bold text-accent ring-2 ring-accent/30" title={`Účet: ${user.email}`} aria-label="Účet">
+    <a href="#/ucet" data-tour="account" className="relative inline-flex size-8 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-[12px] font-bold text-accent ring-2 ring-accent/30" title={`Účet: ${user.email}`} aria-label="Účet">
       {user.avatar ? <img src={user.avatar} alt="" className="size-full object-cover" referrerPolicy="no-referrer" /> : initials}
       {syncing && <span className="absolute -bottom-0.5 -right-0.5 size-2.5 animate-pulse rounded-full bg-accent ring-2 ring-[var(--surface)]" aria-hidden />}
     </a>
@@ -246,7 +247,8 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
   const openEditor = useUiStore((s) => s.openEditor);
   const demo = useAppStore((s) => s.settings.mode === 'demo');
   const urgent = useUrgentCount();
-  const fabHidden = useHideOnScroll();
+  const touring = useUiStore((s) => s.tour);
+  const fabHidden = useHideOnScroll() && !touring;
 
   return (
     <div className={fullBleed ? 'flex h-dvh flex-col overflow-hidden' : 'min-h-dvh'}>
@@ -260,13 +262,14 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
               Stih<em className="text-moss">nu</em>
             </span>
           </a>
-          <nav className="mx-auto hidden items-center gap-1 rounded-full bg-surface-2/70 p-1 ring-1 ring-inset ring-line lg:flex" aria-label="Hlavní navigace">
+          <nav className="mx-auto hidden items-center gap-1 rounded-full bg-surface-2/70 p-1 ring-1 ring-inset ring-line lg:flex" aria-label="Hlavní navigace" data-tour="nav">
             {NAV.map((item) => {
               const active = item.view === view;
               return (
                 <a
                   key={item.view}
                   href={`#/${item.view}`}
+                  data-tour={item.view === 'propojeni' ? 'connections' : undefined}
                   aria-current={active ? 'page' : undefined}
                   className={cn('relative flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13.5px] font-semibold transition-colors', active ? 'text-accent-fg' : 'text-muted hover:text-fg')}
                 >
@@ -289,11 +292,15 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
             <button
               type="button"
               onClick={() => openEditor({ type: 'quick' })}
+              data-tour="add"
               className="hidden h-9 items-center gap-1.5 rounded-full bg-accent pl-3 pr-4 text-[13px] font-bold text-accent-fg shadow-[0_8px_20px_-10px_var(--accent)] transition hover:brightness-110 lg:inline-flex"
             >
               <Plus className="size-4" aria-hidden /> Přidat
             </button>
-            <a href="#/propojeni" className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-fg lg:hidden" aria-label="Propojení a nastavení">
+            <a href="#/pruvodce" className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-fg" aria-label="Průvodce aplikací" title="Průvodce aplikací">
+              <CircleHelp className="size-[18px]" aria-hidden />
+            </a>
+            <a href="#/propojeni" data-tour="connections" className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-fg lg:hidden" aria-label="Propojení a nastavení">
               <Settings2 className="size-[18px]" aria-hidden />
             </a>
           </div>
@@ -312,6 +319,7 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
         <motion.button
           type="button"
           onClick={() => openEditor({ type: 'quick' })}
+          data-tour="add"
           whileTap={{ scale: 0.92 }}
           animate={{ y: fabHidden ? 110 : 0, opacity: fabHidden ? 0 : 1 }}
           transition={{ type: 'spring', stiffness: 420, damping: 34 }}
@@ -324,7 +332,7 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
       )}
 
       {/* Spodní navigace (mobil) */}
-      <nav className="glass-strong fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 items-center rounded-full border border-line px-1 py-1 shadow-[0_18px_40px_-20px_rgb(0_0_0/0.45)] lg:hidden" aria-label="Hlavní navigace">
+      <nav className="glass-strong fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 items-center rounded-full border border-line px-1 py-1 shadow-[0_18px_40px_-20px_rgb(0_0_0/0.45)] lg:hidden" aria-label="Hlavní navigace" data-tour="nav-mobile">
         {NAV.slice(0, 5).map((item) => (
           <BottomItem key={item.view} item={item} active={view === item.view} badge={item.view === 'ukoly' ? urgent : 0} />
         ))}

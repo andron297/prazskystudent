@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
+  Play,
   ArrowLeft,
   ArrowRight,
   BellRing,
@@ -35,6 +36,7 @@ import { uid } from '../../lib/id';
 import { isMoodleCalendarUrl } from '../../lib/moodleIcs';
 import { MUSIC_PICKS, isSpotifyUrl } from '../../lib/music';
 import { AI_KEY_PAGES, AI_NAMES, providerForKey } from '../../lib/aiProvider';
+import { GuideAnimation } from './GuideAnimation';
 import { useConnections, type ServiceId, type ServiceStatus } from '../../hooks/useConnections';
 import { importSisIcsFile } from '../../services/icsFileImport';
 import { connectGoogle, refreshIcsSource } from '../../services/syncCenter';
@@ -400,6 +402,7 @@ function SisStep({ onDone }: { onDone: () => void }) {
       <StepHead icon={GraduationCap} kicker="Univerzita" title={<>Rozvrh ze <em className="text-moss">SISu</em></>}>
         Jeden soubor a máš tu všechny předměty, místnosti i sylaby. Zabere to asi minutu.
       </StepHead>
+      <GuideAnimation guide="sis" className="mb-4" />
       <NumberedSteps
         items={[
           <>
@@ -482,6 +485,7 @@ function MoodleStep({ onDone }: { onDone: () => void }) {
       <StepHead icon={BookOpenCheck} kicker="Úkoly a termíny" title={<>Termíny z <em className="text-moss">Moodlu</em></>}>
         Odevzdávárny a testy se ti samy objeví v kalendáři. Bez hesla – jen jeden odkaz.
       </StepHead>
+      <GuideAnimation guide="moodle" className="mb-4" />
       <NumberedSteps
         items={[
           <>
@@ -549,6 +553,7 @@ function GoogleStep({ onDone }: { onDone: () => void }) {
         <Success>Propojeno – {status.detail}</Success>
       ) : (
         <>
+          <GuideAnimation guide="google" className="mb-4" />
           <BigButton icon={CalendarDays} onClick={() => void connect()} busy={busy} autoFocus>
             {status.state === 'attention' ? 'Znovu potvrdit Google' : 'Propojit s Googlem'}
           </BigButton>
@@ -731,9 +736,19 @@ function DoneStep({ onClose, onGo }: { onClose: () => void; onGo: (s: StepId) =>
           </li>
         ))}
       </ul>
-      <div className="mt-6">
+      <div className="mt-6 flex flex-col gap-2 sm:flex-row">
         <BigButton icon={Check} onClick={onClose} autoFocus>
           Hotovo, jdu na to
+        </BigButton>
+        <BigButton
+          icon={Play}
+          variant="secondary"
+          onClick={() => {
+            onClose();
+            setTimeout(() => useUiStore.getState().startTour(), 450);
+          }}
+        >
+          Ukázat, jak to funguje
         </BigButton>
       </div>
     </div>

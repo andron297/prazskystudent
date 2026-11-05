@@ -41,11 +41,11 @@ export function useThemeEffect(pref: ThemePref): 'light' | 'dark' {
 /* Hash routing (#/dnes, #/predmety/<id>, #/harmonogram, #/integrace)  */
 /* ------------------------------------------------------------------ */
 
-export type View = 'dnes' | 'ukoly' | 'doprava' | 'predmety' | 'kalendar' | 'propojeni' | 'import' | 'ucet' | 'podminky' | 'soukromi';
+export type View = 'dnes' | 'ukoly' | 'doprava' | 'predmety' | 'kalendar' | 'propojeni' | 'import' | 'ucet' | 'podminky' | 'soukromi' | 'pruvodce';
 
-const VIEWS: View[] = ['dnes', 'ukoly', 'doprava', 'predmety', 'kalendar', 'propojeni', 'import', 'ucet', 'podminky', 'soukromi'];
+const VIEWS: View[] = ['dnes', 'ukoly', 'doprava', 'predmety', 'kalendar', 'propojeni', 'import', 'ucet', 'podminky', 'soukromi', 'pruvodce'];
 /** Staré adresy z první verze. */
-const ALIASES: Record<string, View> = { harmonogram: 'kalendar', integrace: 'propojeni', nastaveni: 'propojeni', mapa: 'doprava', account: 'ucet', prihlaseni: 'ucet', zasady: 'soukromi' };
+const ALIASES: Record<string, View> = { harmonogram: 'kalendar', integrace: 'propojeni', nastaveni: 'propojeni', mapa: 'doprava', account: 'ucet', prihlaseni: 'ucet', zasady: 'soukromi', napoveda: 'pruvodce', help: 'pruvodce', tour: 'pruvodce' };
 
 function parseHash(): { view: View; param?: string } {
   const raw = window.location.hash.replace(/^#\/?/, '');

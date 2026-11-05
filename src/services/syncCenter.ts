@@ -63,7 +63,7 @@ const APP_URL = typeof window !== 'undefined' ? window.location.origin : 'https:
 let suppressChangeUntil = 0;
 let lastDriveFingerprint = '';
 
-function serverFlow(): boolean {
+export function serverFlow(): boolean {
   return useUiStore.getState().server.googleServerFlow;
 }
 

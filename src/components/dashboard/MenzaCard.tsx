@@ -70,6 +70,7 @@ export function MenzaCard({ now, building, fallback }: { now: Date; building?: B
 
   return (
     <Card
+      data-tour="menza"
       title={
         <>
           Jídelníček <em className="italic text-moss">menzy</em>

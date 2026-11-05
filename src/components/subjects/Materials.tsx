@@ -2,12 +2,13 @@ import { useMemo, useRef, useState, type DragEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Download, Eye, FileUp, KeyRound, Link2, NotebookPen, Paperclip, Pencil, Plus, Trash, Upload, ExternalLink } from 'lucide-react';
+import { Download, Eye, FileText, FileUp, FolderOpen, HardDrive, KeyRound, Link2, NotebookPen, Paperclip, Pencil, Plus, Trash, Upload, ExternalLink } from 'lucide-react';
 import type { Material, Requirement, Subject } from '../../types';
 import { formatBytes, loadBlob, saveBlob } from '../../lib/blobStore';
 import { formatDate } from '../../lib/dates';
 import { uid } from '../../lib/id';
 import { moodleFileUrlWithToken } from '../../services/moodle';
+import { drivePickerAvailable, parseDriveLink, pickFromDrive, type PickedDriveItem } from '../../services/google/picker';
 import { useAppStore } from '../../store/appStore';
 import { confirmAction, toast } from '../../store/uiStore';
 import { Menu, Modal } from '../ui/overlays';
@@ -208,7 +209,11 @@ function guessLinkTitle(url: string): string {
 
 export function AddMaterialModal({ open, onClose, subject, requirements, defaultRequirementId }: { open: boolean; onClose: () => void; subject: Subject; requirements: Requirement[]; defaultRequirementId?: string }) {
   const addMaterial = useAppStore((s) => s.addMaterial);
-  const [tab, setTab] = useState<'file' | 'link' | 'note'>('file');
+  const [tab, setTab] = useState<'file' | 'drive' | 'link' | 'note'>('file');
+  const [picked, setPicked] = useState<PickedDriveItem[]>([]);
+  const [driveLink, setDriveLink] = useState('');
+  const pickerReady = drivePickerAvailable();
+  const parsedDrive = driveLink.trim() ? parseDriveLink(driveLink) : null;
   const [requirementId, setRequirementId] = useState(defaultRequirementId ?? '');
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -243,6 +248,25 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
           saved++;
         }
         if (saved) toast.success(saved === 1 ? 'Soubor uložen do zařízení.' : `Uloženo ${saved} souborů.`);
+      } else if (tab === 'drive') {
+        for (const item of picked) {
+          addMaterial({ ...base, id: uid('mat'), kind: 'link', title: item.name, url: item.url, mimeType: item.mimeType, driveFileId: item.id, size: item.sizeBytes, source: 'google' });
+        }
+        if (parsedDrive) {
+          const kindTitle = { folder: 'Složka na Google Disku', document: 'Dokument Google', spreadsheet: 'Tabulka Google', presentation: 'Prezentace Google', file: 'Soubor na Google Disku' }[parsedDrive.kind];
+          addMaterial({
+            ...base,
+            id: uid('mat'),
+            kind: 'link',
+            title: title.trim() || kindTitle,
+            url: parsedDrive.url,
+            driveFileId: parsedDrive.id,
+            mimeType: parsedDrive.kind === 'folder' ? 'application/vnd.google-apps.folder' : undefined,
+            source: 'google',
+          });
+        }
+        const count = picked.length + (parsedDrive ? 1 : 0);
+        toast.success(count === 1 ? 'Přidáno z Google Disku.' : `Přidáno ${count} položek z Google Disku.`);
       } else if (tab === 'link') {
         const normalized = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
         addMaterial({ ...base, id: uid('mat'), kind: 'link', title: title.trim() || guessLinkTitle(normalized), url: normalized });
@@ -259,7 +283,8 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
     }
   };
 
-  const canSave = tab === 'file' ? files.length > 0 : tab === 'link' ? url.trim().length > 3 : markdown.trim().length > 0 || title.trim().length > 0;
+  const canSave =
+    tab === 'file' ? files.length > 0 : tab === 'drive' ? picked.length > 0 || Boolean(parsedDrive) : tab === 'link' ? url.trim().length > 3 : markdown.trim().length > 0 || title.trim().length > 0;
 
   return (
     <Modal
@@ -285,6 +310,7 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
         onChange={setTab}
         options={[
           { value: 'file', label: 'Soubor', icon: FileUp },
+          { value: 'drive', label: 'Google Disk', icon: HardDrive },
           { value: 'link', label: 'Odkaz', icon: Link2 },
           { value: 'note', label: 'Poznámka', icon: NotebookPen },
         ]}
@@ -317,6 +343,56 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+      )}
+      {tab === 'drive' && (
+        <div className="grid gap-3">
+          {pickerReady ? (
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const items = await pickFromDrive();
+                  if (items.length) setPicked((prev) => [...prev, ...items.filter((i) => !prev.some((p) => p.id === i.id))]);
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : String(error));
+                }
+              }}
+              className="flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-line-strong px-4 py-7 text-center transition-colors hover:bg-surface-2"
+            >
+              <HardDrive className="mb-2 size-7 text-moss" aria-hidden />
+              <span className="text-sm font-semibold">Vybrat soubory nebo složky z Google Disku</span>
+              <span className="mt-1 text-xs text-muted">Můžeš vybrat víc položek najednou, i ze sdílených disků. Aplikace uvidí jen to, co vybereš.</span>
+            </button>
+          ) : (
+            <p className="rounded-2xl bg-surface-2 px-4 py-3 text-[13px] text-muted">
+              Vlož odkaz na soubor nebo složku z Disku (v Disku: pravé tlačítko → <strong>Sdílet</strong> → <strong>Kopírovat odkaz</strong>).
+              {useAppStore.getState().settings.mode === 'live' && ' Výběr přímo z Disku se objeví, až ho správce aplikace zapne.'}
+            </p>
+          )}
+          {picked.length > 0 && (
+            <ul className="space-y-1 text-[13px]">
+              {picked.map((p) => (
+                <li key={p.id} className="flex items-center justify-between gap-2 rounded-xl bg-surface-2 px-3 py-1.5">
+                  <span className="flex min-w-0 items-center gap-2">
+                    {p.isFolder ? <FolderOpen className="size-4 shrink-0 text-emerald-600" aria-hidden /> : <FileText className="size-4 shrink-0 text-blue-600" aria-hidden />}
+                    <span className="truncate">{p.name}</span>
+                  </span>
+                  <button type="button" onClick={() => setPicked((prev) => prev.filter((x) => x.id !== p.id))} className="shrink-0 text-xs font-semibold text-muted hover:text-fg">
+                    Odebrat
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Field label={pickerReady ? 'Nebo vlož odkaz' : 'Odkaz na Google Disk'} hint={driveLink && !parsedDrive ? 'Tohle nevypadá jako odkaz na Google Disk nebo Dokumenty Google.' : undefined}>
+            <TextInput value={driveLink} onChange={(e) => setDriveLink(e.target.value)} placeholder="https://drive.google.com/drive/folders/…" inputMode="url" />
+          </Field>
+          {parsedDrive && (
+            <Field label="Název (nepovinné)">
+              <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder={parsedDrive.kind === 'folder' ? 'např. Podklady k seminárce' : 'např. Seminárka – pracovní verze'} />
+            </Field>
           )}
         </div>
       )}

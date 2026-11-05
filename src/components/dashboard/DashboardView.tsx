@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Droplets } from 'lucide-react';
 import type { ScheduleEvent } from '../../types';
@@ -10,6 +10,7 @@ import { useTransitPlan } from '../../hooks/useTransitPlan';
 import { useLeaveReminder } from '../../hooks/useLeaveReminder';
 import { DepartureRest, FocusRest } from '../rest/RestSpots';
 import { useWeather } from '../../services/weather';
+import { setNextLeave } from '../../services/leaveBadge';
 import { useVisibleEvents } from '../../hooks/useVisibleEvents';
 import { useAppStore } from '../../store/appStore';
 import { buildingForEvent, isTransitTarget, upcomingEvents } from '../../store/selectors';
@@ -19,7 +20,7 @@ import { TransitPanel } from '../transit/TransitPanel';
 import { KIND_LABEL } from '../transit/transitStatus';
 import { WeatherCard } from '../weather/WeatherCard';
 import { WeatherIcon } from '../weather/WeatherBits';
-import { MilestonesCard, SubjectsGlance, TasksCard, TodayTimeline, WelcomeCard } from './DashboardCards';
+import { MilestonesCard, SubjectsGlance, TasksCard, TodayTimeline, TourOffer, WelcomeCard } from './DashboardCards';
 import { DayBrief } from './DayBrief';
 import { MenzaCard } from './MenzaCard';
 
@@ -58,6 +59,9 @@ export function DashboardView() {
   const subject = within?.subjectId ? subjects.find((s) => s.id === within.subjectId) : undefined;
   const transit = useTransitPlan(within, building ?? null);
   useLeaveReminder(within, transit.selected, now);
+  // Odpočet na ikoně aplikace a v záložce prohlížeče.
+  const leaveAt = transit.selected && transit.selected.source !== 'estimate' ? transit.selected.leaveAt : null;
+  useEffect(() => setNextLeave(leaveAt), [leaveAt]);
 
   // Budova, kde student učí nejčastěji (pro menzu, když dnes nic nemá).
   const mainBuilding = useMemo(() => {
@@ -144,6 +148,7 @@ export function DashboardView() {
       </section>
 
       <WelcomeCard />
+      <TourOffer />
 
       {within && transit.selected && <DepartureRest event={within} itinerary={transit.selected} now={now} rain={Boolean(advice?.umbrella)} />}
 

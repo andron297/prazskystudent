@@ -42,6 +42,9 @@ export interface NavigationTarget {
 }
 
 interface UiState {
+  /** Běží krátká prohlídka aplikace. */
+  tour: boolean;
+  startTour: () => void;
   navigation: NavigationTarget | null;
   startNavigation: (target: NavigationTarget) => void;
   stopNavigation: () => void;
@@ -120,6 +123,8 @@ export const useUiStore = create<UiState>()((set, get) => ({
     get().confirmRequest?.resolve(value);
     set({ confirmRequest: null });
   },
+  tour: false,
+  startTour: () => set({ tour: true, setupOpen: false }),
   navigation: null,
   startNavigation: (target) => set({ navigation: target }),
   stopNavigation: () => set({ navigation: null }),

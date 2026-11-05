@@ -53,3 +53,17 @@ describe('navigace', () => {
     expect(phases.some((p) => p.kind === 'ride')).toBe(true);
   });
 });
+
+import { parseDriveLink } from '../services/google/picker';
+
+describe('odkazy na Google Disk', () => {
+  it('pozná složku, dokument, tabulku i soubor', () => {
+    expect(parseDriveLink('https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOp?usp=sharing')).toMatchObject({ kind: 'folder', id: '1AbCdEfGhIjKlMnOp' });
+    expect(parseDriveLink('https://drive.google.com/drive/u/1/folders/1AbCdEfGhIjKlMnOp')).toMatchObject({ kind: 'folder' });
+    expect(parseDriveLink('docs.google.com/document/d/1xYz_abcdefghij/edit')).toMatchObject({ kind: 'document', id: '1xYz_abcdefghij' });
+    expect(parseDriveLink('https://docs.google.com/spreadsheets/d/1xYz_abcdefghij/edit#gid=0')).toMatchObject({ kind: 'spreadsheet' });
+    expect(parseDriveLink('https://drive.google.com/file/d/1xYz_abcdefghij/view')).toMatchObject({ kind: 'file' });
+    expect(parseDriveLink('https://example.com/folders/1AbCdEfGhIjKlMnOp')).toBeNull();
+    expect(parseDriveLink('nesmysl')).toBeNull();
+  });
+});

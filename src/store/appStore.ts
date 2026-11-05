@@ -117,6 +117,8 @@ export interface AppMeta {
   /** Služby, které student v průvodci přeskočil. */
   setupSkipped?: string[];
   settingsUpdatedAt?: string;
+  /** Krátkou prohlídku aplikace už student viděl (nebo odmítl). */
+  tourSeen?: boolean;
   deviceId: string;
 }
 
@@ -243,6 +245,7 @@ export interface AppState extends AppData {
   clearAllData: () => void;
   importBackup: (data: Partial<AppData> & { settings?: Partial<Settings> }) => void;
   dismissWelcome: () => void;
+  markTourSeen: () => void;
 }
 
 const nowIso = () => new Date().toISOString();
@@ -811,6 +814,7 @@ export const useAppStore = create<AppState>()(
         }
         set((st) => ({ settings: { ...st.settings, mode: 'demo' } }));
       },
+      markTourSeen: () => set((s) => ({ meta: { ...s.meta, tourSeen: true } })),
       setSetup: (patch) =>
         set((s) => ({ meta: { ...s.meta, setupDone: patch.done ?? s.meta.setupDone, setupSkipped: patch.skipped ?? s.meta.setupSkipped } })),
       clearAllData: () => {

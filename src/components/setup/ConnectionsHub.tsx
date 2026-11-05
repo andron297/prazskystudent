@@ -310,6 +310,32 @@ function OwnerCard() {
       ),
     },
     {
+      ok: Boolean(server.googlePickerKey),
+      title: 'Výběr souborů a složek z Google Disku',
+      why: 'Studenti si k předmětům přidají cokoli z Disku jedním klepnutím (bez toho jen vložením odkazu).',
+      vars: ['GOOGLE_PICKER_API_KEY'],
+      how: (
+        <ol className="ml-4 list-decimal space-y-1.5">
+          <li>
+            V Google Cloud (stejný projekt jako přihlášení Googlem) otevři{' '}
+            <a href="https://console.cloud.google.com/apis/library/picker.googleapis.com" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
+              Google Picker API
+            </a>{' '}
+            a klikni <strong>Enable</strong>.
+          </li>
+          <li>
+            V{' '}
+            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
+              Credentials
+            </a>{' '}
+            → <strong>Create credentials → API key</strong>. U klíče nastav <strong>Application restrictions: Websites</strong> s adresou <CopyName name={`${typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app'}/*`} /> a{' '}
+            <strong>API restrictions: Google Picker API</strong>.
+          </li>
+          <li>Klíč vlož do Vercelu jako GOOGLE_PICKER_API_KEY a dej Redeploy. (Tenhle klíč je veřejný z principu – chrání ho omezení na tvoji adresu.)</li>
+        </ol>
+      ),
+    },
+    {
       ok: server.golemio,
       title: 'Klimatizace a bezbariérovost spojů (nepovinné)',
       why: 'Doprava funguje i bez toho; Golemio přidá podrobnosti o vozech.',

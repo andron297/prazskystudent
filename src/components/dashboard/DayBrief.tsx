@@ -155,6 +155,7 @@ export function DayBrief({ now, target, itinerary }: { now: Date; target: Schedu
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="band-forest grain relative overflow-hidden rounded-[28px] px-4 py-5 text-[var(--forest-fg)] sm:px-7 sm:py-6"
+      data-tour="brief"
       aria-label="Den v kostce"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
