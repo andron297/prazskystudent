@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import {
   BookOpen,
@@ -9,6 +9,7 @@ import {
   ArrowRight,
   FlaskConical,
   House,
+  ListTodo,
   LogIn,
   ShieldCheck,
   LoaderCircle,
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react';
 import type { ThemePref } from '../../types';
 import { formatRelative, formatTime } from '../../lib/dates';
+import { buildTaskRows, dueGroup } from '../../lib/taskList';
 import { navigateTo, type View } from '../../hooks/useAppShell';
 import { useNow } from '../../hooks/useNow';
 import { runGoogleSync, useSyncStore } from '../../services/syncCenter';
@@ -37,11 +39,37 @@ import { cn, IconButton } from '../ui/primitives';
 
 const NAV: { view: View; label: string; icon: LucideIcon }[] = [
   { view: 'dnes', label: 'Dnes', icon: House },
+  { view: 'ukoly', label: 'Úkoly', icon: ListTodo },
   { view: 'doprava', label: 'Doprava', icon: TramFront },
   { view: 'predmety', label: 'Předměty', icon: BookOpen },
   { view: 'kalendar', label: 'Kalendář', icon: CalendarDays },
   { view: 'propojeni', label: 'Propojení', icon: Settings2 },
 ];
+
+/** Při posunu dolů tlačítko Přidat uhne, aby nezakrývalo obsah; při posunu nahoru se vrátí. */
+function useHideOnScroll(): boolean {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (Math.abs(y - last) < 12) return;
+      setHidden(y > last && y > 120);
+      last = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  return hidden;
+}
+
+/** Počet úkolů a termínů po termínu a na dnešek (odznak v navigaci). */
+function useUrgentCount(): number {
+  const tasks = useAppStore((s) => s.tasks);
+  const requirements = useAppStore((s) => s.requirements);
+  const now = useNow(60_000);
+  return useMemo(() => buildTaskRows(tasks, requirements, now).filter((r) => ['overdue', 'today'].includes(dueGroup(r, now))).length, [tasks, requirements, now]);
+}
 
 export function BrandMark({ className }: { className?: string }) {
   // Unikátní id gradientu – logo je v DOM víckrát.
@@ -217,6 +245,8 @@ export function SyncChip({ compact = false }: { compact?: boolean }) {
 export function AppShell({ view, children, fullBleed = false }: { view: View; children: ReactNode; fullBleed?: boolean }) {
   const openEditor = useUiStore((s) => s.openEditor);
   const demo = useAppStore((s) => s.settings.mode === 'demo');
+  const urgent = useUrgentCount();
+  const fabHidden = useHideOnScroll();
 
   return (
     <div className={fullBleed ? 'flex h-dvh flex-col overflow-hidden' : 'min-h-dvh'}>
@@ -243,6 +273,7 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
                   {active && <motion.span layoutId="nav-active" className="absolute inset-0 rounded-full bg-accent shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
                   <item.icon className="relative size-4" aria-hidden />
                   <span className="relative">{item.label}</span>
+                  {item.view === 'ukoly' && urgent > 0 && <span className={cn('relative grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10.5px] font-black tabular', active ? 'bg-accent-fg text-accent' : 'bg-clay text-white')} aria-label={`${urgent} na dnešek nebo po termínu`}>{urgent}</span>}
                 </a>
               );
             })}
@@ -276,26 +307,45 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
 
       <main className={cn(fullBleed ? 'relative min-h-0 w-full flex-1' : 'mx-auto w-full max-w-[1320px] px-4 pb-32 pt-4 sm:px-6 lg:px-8 lg:pb-14 lg:pt-6')}>{children}</main>
 
+      {/* Mobil: tlačítko Přidat nad navigací */}
+      {!fullBleed && (
+        <motion.button
+          type="button"
+          onClick={() => openEditor({ type: 'quick' })}
+          whileTap={{ scale: 0.92 }}
+          animate={{ y: fabHidden ? 110 : 0, opacity: fabHidden ? 0 : 1 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+          tabIndex={fabHidden ? -1 : 0}
+          className="fixed bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+4.6rem)] right-4 z-30 grid size-14 place-items-center rounded-full bg-accent text-accent-fg shadow-[0_14px_30px_-12px_var(--accent)] lg:hidden"
+          aria-label="Přidat úkol nebo událost"
+        >
+          <Plus className="size-7" aria-hidden />
+        </motion.button>
+      )}
+
       {/* Spodní navigace (mobil) */}
       <nav className="glass-strong fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 items-center rounded-full border border-line px-1 py-1 shadow-[0_18px_40px_-20px_rgb(0_0_0/0.45)] lg:hidden" aria-label="Hlavní navigace">
-        <BottomItem item={NAV[0]} active={view === 'dnes'} />
-        <BottomItem item={NAV[1]} active={view === 'doprava'} />
-        <button type="button" onClick={() => openEditor({ type: 'quick' })} className="mx-auto grid size-12 place-items-center rounded-full bg-accent text-accent-fg shadow-[0_10px_24px_-10px_var(--accent)] active:scale-95" aria-label="Přidat úkol nebo událost">
-          <Plus className="size-6" aria-hidden />
-        </button>
-        <BottomItem item={NAV[2]} active={view === 'predmety'} />
-        <BottomItem item={NAV[3]} active={view === 'kalendar'} />
+        {NAV.slice(0, 5).map((item) => (
+          <BottomItem key={item.view} item={item} active={view === item.view} badge={item.view === 'ukoly' ? urgent : 0} />
+        ))}
       </nav>
       {demo && <div className="demo-frame" aria-hidden />}
     </div>
   );
 }
 
-function BottomItem({ item, active }: { item: (typeof NAV)[number]; active: boolean }) {
+function BottomItem({ item, active, badge = 0 }: { item: (typeof NAV)[number]; active: boolean; badge?: number }) {
   return (
     <button type="button" onClick={() => navigateTo(item.view)} aria-current={active ? 'page' : undefined} className={cn('relative flex flex-col items-center justify-center gap-0.5 rounded-full py-1.5 text-[10.5px] font-bold transition-colors', active ? 'text-accent' : 'text-muted')}>
       {active && <motion.span layoutId="bottom-active" className="absolute inset-0 rounded-full bg-accent-soft" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
-      <item.icon className="relative size-5" aria-hidden />
+      <span className="relative">
+        <item.icon className="size-5" aria-hidden />
+        {badge > 0 && (
+          <span className="absolute -right-2.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-clay px-1 text-[9.5px] font-black text-white tabular ring-2 ring-[var(--surface)]" aria-label={`${badge} na dnešek nebo po termínu`}>
+            {badge}
+          </span>
+        )}
+      </span>
       <span className="relative">{item.label}</span>
     </button>
   );

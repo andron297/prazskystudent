@@ -3,7 +3,6 @@ import { motion } from 'motion/react';
 import { Droplets } from 'lucide-react';
 import type { ScheduleEvent } from '../../types';
 import { addDays, capitalize, formatDateLong, formatTime, isSameDay } from '../../lib/dates';
-import { isRequirementComplete, subjectProgress } from '../../lib/progress';
 import { commuteWindows, weatherAdvice, weatherLabel } from '../../lib/weather';
 import { useNow } from '../../hooks/useNow';
 import { useOrigin } from '../../hooks/useOrigin';
@@ -11,6 +10,7 @@ import { useTransitPlan } from '../../hooks/useTransitPlan';
 import { useLeaveReminder } from '../../hooks/useLeaveReminder';
 import { DepartureRest, FocusRest } from '../rest/RestSpots';
 import { useWeather } from '../../services/weather';
+import { useVisibleEvents } from '../../hooks/useVisibleEvents';
 import { useAppStore } from '../../store/appStore';
 import { buildingForEvent, isTransitTarget, upcomingEvents } from '../../store/selectors';
 import { OriginSheet } from '../transit/OriginSheet';
@@ -19,7 +19,8 @@ import { TransitPanel } from '../transit/TransitPanel';
 import { KIND_LABEL } from '../transit/transitStatus';
 import { WeatherCard } from '../weather/WeatherCard';
 import { WeatherIcon } from '../weather/WeatherBits';
-import { MilestonesCard, StatsBand, SubjectsGlance, TasksCard, TodayTimeline, WelcomeCard } from './DashboardCards';
+import { MilestonesCard, SubjectsGlance, TasksCard, TodayTimeline, WelcomeCard } from './DashboardCards';
+import { DayBrief } from './DayBrief';
 
 function greeting(hour: number): [string, string] {
   if (hour < 5) return ['Dobrou', 'noc'];
@@ -38,11 +39,10 @@ function heroPhoto(hour: number, wet: boolean): string {
 
 export function DashboardView() {
   const now = useNow(1000);
-  const events = useAppStore((s) => s.events);
+  const events = useVisibleEvents();
   const subjects = useAppStore((s) => s.subjects);
   const settings = useAppStore((s) => s.settings);
   const tasks = useAppStore((s) => s.tasks);
-  const requirements = useAppStore((s) => s.requirements);
   const account = useAppStore((s) => s.googleSync[s.settings.mode].account);
   const [targetId, setTargetId] = useState<string | null>(null);
   const [originOpen, setOriginOpen] = useState(false);
@@ -72,13 +72,6 @@ export function DashboardView() {
   const todayHasMore = events.some((e) => isSameDay(new Date(e.start), now) && new Date(e.end) > now);
   const timelineDay = todayHasMore || now.getHours() < 12 ? now : addDays(now, 1);
   const timelineLabel = isSameDay(timelineDay, now) ? 'Dnes' : 'Zítra';
-
-  // Statistiky
-  const todayClasses = events.filter((e) => isSameDay(new Date(e.start), now) && e.kind !== 'personal');
-  const classMinutes = todayClasses.reduce((sum, e) => sum + (new Date(e.end).getTime() - new Date(e.start).getTime()) / 60_000, 0);
-  const openToday = tasks.filter((t) => !t.done && t.due && new Date(t.due.length === 10 ? `${t.due}T12:00` : t.due) <= new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59)).length;
-  const deadlines3 = requirements.filter((r) => r.deadline && !isRequirementComplete(r) && new Date(r.deadline).getTime() - now.getTime() <= 3 * 86_400_000 && new Date(r.deadline) > now).length;
-  const avg = subjects.length ? Math.round(subjects.reduce((sum, s) => sum + subjectProgress(requirements.filter((r) => r.subjectId === s.id)).percent, 0) / subjects.length) : 0;
 
   const [g1, g2] = greeting(now.getHours());
   const name = settings.displayName.trim() || undefined;
@@ -139,14 +132,7 @@ export function DashboardView() {
 
       {within && transit.selected && <DepartureRest event={within} itinerary={transit.selected} now={now} rain={Boolean(advice?.umbrella)} />}
 
-      <StatsBand
-        stats={[
-          { value: String(openToday + todayClasses.filter((e) => new Date(e.end) > now).length), label: 'Dnes na tobě', hint: `${todayClasses.length} ${todayClasses.length === 1 ? 'hodina' : todayClasses.length < 5 && todayClasses.length > 0 ? 'hodiny' : 'hodin'} výuky · ${openToday} úkolů` },
-          { value: String(deadlines3), label: 'Termíny do 3 dnů', hint: deadlines3 ? 'Nic nenechávej na poslední chvíli' : 'V klidu' },
-          { value: classMinutes ? `${Math.round((classMinutes / 60) * 10) / 10}`.replace('.', ',') : '0', label: 'Hodin ve škole', hint: todayClasses[0] ? `od ${formatTime(new Date(todayClasses[0].start))}` : 'Dnes bez výuky' },
-          { value: `${avg} %`, label: 'Semestr hotový', hint: `${subjects.length} předmětů` },
-        ]}
-      />
+      <DayBrief now={now} target={within} itinerary={transit.selected ?? null} />
 
       <div className="grid gap-4 sm:gap-5 lg:grid-cols-12">
         <div className="min-w-0 lg:col-span-7">

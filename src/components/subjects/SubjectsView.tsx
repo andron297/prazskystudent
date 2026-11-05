@@ -1,25 +1,29 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, BookOpen, CalendarDays, ExternalLink, GraduationCap, ListChecks, MapPin, Paperclip, Pencil, Plug, Plus, RefreshCw, ScrollText, Trash } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarDays, Combine, ExternalLink, GraduationCap, ListChecks, ListTodo, MapPin, Paperclip, Pencil, Plug, Plus, RefreshCw, ScrollText, Trash } from 'lucide-react';
 import type { Subject, SubjectColor } from '../../types';
 import { requirementToCalendarItem } from '../../lib/calendarExport';
 import { SUBJECT_COLOR_CLASSES, SUBJECT_COLORS, nextSubjectColor } from '../../lib/colors';
-import { formatDeadline, formatTime, formatWeekdayShort, formatDayMonth } from '../../lib/dates';
+import { formatDeadline, formatTime, formatWeekdayShort, formatDayMonth, plural } from '../../lib/dates';
 import { uid } from '../../lib/id';
 import { sisSubjectUrl } from '../../lib/sisImport';
 import { isRequirementComplete, subjectProgress } from '../../lib/progress';
 import { DEADLINE_STYLES, deadlineUrgency } from '../../lib/urgency';
+import { buildTaskRows } from '../../lib/taskList';
 import { navigateTo } from '../../hooks/useAppShell';
 import { useNow } from '../../hooks/useNow';
+import { useVisibleEvents } from '../../hooks/useVisibleEvents';
 import { useAppStore } from '../../store/appStore';
 import { buildingForEvent } from '../../store/selectors';
 import { confirmAction, toast, useUiStore } from '../../store/uiStore';
 import { importSyllabus, useSyllabusSync } from '../../services/syllabusSync';
+import { markSubjectsDistinct, useSubjectDuplicates } from '../../services/subjectAssist';
 import { AddToCalendar } from '../common/AddToCalendar';
 import { Modal } from '../ui/overlays';
 import { Button, Card, Chip, cn, EmptyState, Field, ProgressBar, ProgressRing, TextInput } from '../ui/primitives';
 import { MaterialsPanel, MaterialViewer, useMaterialOpener } from './Materials';
 import { RequirementCard, RequirementEditor } from './RequirementCard';
+import { TaskRowItem } from '../tasks/TaskRow';
 
 const SOURCE_BADGE: Partial<Record<Subject['source'], string>> = {
   moodle: 'Moodle',
@@ -37,6 +41,43 @@ export function SubjectsView({ subjectId }: { subjectId?: string }) {
   return <SubjectGrid />;
 }
 
+/** „Jsou to stejné předměty?“ – u podobných názvů se raději zeptáme. */
+function DuplicatePrompt() {
+  const duplicates = useSubjectDuplicates();
+  const merge = useAppStore((s) => s.mergeSubjects);
+  const first = duplicates[0];
+  if (!first) return null;
+  return (
+    <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="card flex flex-col gap-3 rounded-[26px] p-5 sm:flex-row sm:items-center">
+      <span className="grid size-11 shrink-0 place-items-center rounded-full bg-sand/25 text-clay">
+        <Combine className="size-5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-display text-[22px] leading-tight">Je to jeden předmět?</p>
+        <p className="mt-0.5 text-[13.5px] text-muted">
+          „{first.keep.name}“{first.keep.code ? ` (${first.keep.code})` : ''} a „{first.drop.name}“{first.drop.code ? ` (${first.drop.code})` : ''} vypadají jako totéž. Po sloučení budou rozvrh, termíny, úkoly i materiály pohromadě.
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="secondary" onClick={() => markSubjectsDistinct(first.keep.id, first.drop.id)}>
+          Ne, jsou různé
+        </Button>
+        <Button
+          size="sm"
+          variant="primary"
+          icon={Combine}
+          onClick={() => {
+            merge(first.drop.id, first.keep.id);
+            toast.success(`Sloučeno do předmětu „${first.keep.name}“.`);
+          }}
+        >
+          Sloučit
+        </Button>
+      </div>
+    </motion.section>
+  );
+}
+
 function SubjectGrid() {
   const now = useNow(60_000);
   const subjects = useAppStore((s) => s.subjects);
@@ -52,7 +93,9 @@ function SubjectGrid() {
         <div className="photo-scrim absolute inset-0" />
         <div className="relative flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="eyebrow text-white/75">{subjects.length} předmětů v semestru</p>
+            <p className="eyebrow text-white/75">
+              {subjects.length} {plural(subjects.length, ['předmět', 'předměty', 'předmětů'])} v semestru
+            </p>
             <h1 className="mt-2 font-display text-[48px] leading-[0.95] sm:text-[62px]">
               Předměty <em className="text-[#e7d6b5]">a materiály</em>
             </h1>
@@ -74,6 +117,8 @@ function SubjectGrid() {
           </div>
         </div>
       </header>
+
+      <DuplicatePrompt />
 
       {subjects.length === 0 ? (
         <EmptyState icon={BookOpen} title="Zatím žádné předměty" action={<Button variant="primary" icon={Plug} onClick={() => navigateTo('propojeni', 'sis')}>Propojit SIS</Button>}>
@@ -153,7 +198,7 @@ function SubjectHub({ subject }: { subject: Subject }) {
   const now = useNow(30_000);
   const allRequirements = useAppStore((s) => s.requirements);
   const allMaterials = useAppStore((s) => s.materials);
-  const allEvents = useAppStore((s) => s.events);
+  const allEvents = useVisibleEvents();
   const settings = useAppStore((s) => s.settings);
   const removeSubject = useAppStore((s) => s.removeSubject);
   const openConnect = useUiStore((s) => s.openConnect);
@@ -277,6 +322,7 @@ function SubjectHub({ subject }: { subject: Subject }) {
           )}
         </div>
         <div className="min-w-0 space-y-4 lg:col-span-5">
+          <SubjectTasks subject={subject} />
           <SyllabusCard subject={subject} />
           <MaterialsPanel subject={subject} materials={materials} requirements={requirements} onOpen={openMaterial} />
           <Card title="Nejbližší výuka" icon={CalendarDays}>
@@ -310,6 +356,56 @@ function SubjectHub({ subject }: { subject: Subject }) {
       <SubjectEditor key={`subj-${subjKey}`} open={subjEditor} onClose={() => setSubjEditor(false)} subject={subject} />
       <MaterialViewer material={viewer} onClose={closeViewer} />
     </div>
+  );
+}
+
+/** Vlastní úkoly k předmětu – stejné jako v Úkolech, jen pro tento předmět. */
+function SubjectTasks({ subject }: { subject: Subject }) {
+  const now = useNow(60_000);
+  const tasks = useAppStore((s) => s.tasks);
+  const subjects = useAppStore((s) => s.subjects);
+  const addTask = useAppStore((s) => s.addTask);
+  const [text, setText] = useState('');
+  const byId = useMemo(() => new Map(subjects.map((s) => [s.id, s])), [subjects]);
+  const rows = useMemo(() => buildTaskRows(tasks.filter((t) => t.subjectId === subject.id), [], now), [tasks, subject.id, now]);
+  const add = () => {
+    const title = text.trim();
+    if (!title) return;
+    addTask({ title, subjectId: subject.id });
+    setText('');
+  };
+  return (
+    <Card
+      title="Moje úkoly"
+      icon={ListTodo}
+      action={
+        <Button size="sm" variant="ghost" onClick={() => navigateTo('ukoly')}>
+          Všechny úkoly
+        </Button>
+      }
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          add();
+        }}
+        className="flex h-11 items-center gap-2 rounded-full bg-surface-2 pl-4 pr-1.5 ring-1 ring-inset ring-line focus-within:ring-2 focus-within:ring-accent"
+      >
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Nový úkol k tomuto předmětu" className="min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-subtle" aria-label={`Nový úkol k předmětu ${subject.name}`} />
+        <button type="submit" disabled={!text.trim()} className="h-8 rounded-full bg-accent px-3 text-[12.5px] font-bold text-accent-fg disabled:opacity-40">
+          Přidat
+        </button>
+      </form>
+      {rows.length === 0 ? (
+        <p className="mt-3 text-[13px] text-muted">Žádné otevřené úkoly. Úkoly, které k předmětu patří, sem aplikace přiřadí sama.</p>
+      ) : (
+        <ul className="mt-2 space-y-0.5">
+          {rows.map((row) => (
+            <TaskRowItem key={row.key} row={row} now={now} subjects={subjects} byId={byId} hideSubject />
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }
 

@@ -28,6 +28,7 @@ import type {
 } from '../../types';
 import { hashString } from '../id';
 import { isRequirementComplete } from '../progress';
+import { classesInOwnCalendar } from '../dedupe';
 import { keyOf } from './keys';
 import {
   eventFieldsFromRemote,
@@ -202,6 +203,8 @@ export async function syncCalendar(ctx: SyncContext): Promise<ServiceResult> {
   const candidates = new Map<string, CalCandidate>();
   const exists = new Set<string>();
   const classEnd = now.getTime() + Math.max(1, cal.rangeWeeks) * 7 * DAY;
+  // Hodiny, které student už má ve vlastním kalendáři, podruhé nezapisujeme.
+  const ownCopies = new Set([...classesInOwnCalendar(data.events, data.subjects)].map((id) => keyOf.event(id)));
 
   for (const e of data.events) {
     if (e.google?.readOnly) continue;
@@ -218,6 +221,7 @@ export async function syncCalendar(ctx: SyncContext): Promise<ServiceResult> {
       if (e.kind === 'exam' ? !cal.push.exams : !cal.push.classes) continue;
       const start = new Date(e.start).getTime();
       if (start < now.getTime() - DAY || start > classEnd) continue;
+      if (ownCopies.has(key)) continue;
     }
     const subject = e.subjectId ? subjects.get(e.subjectId) : undefined;
     candidates.set(key, {
@@ -294,6 +298,7 @@ export async function syncCalendar(ctx: SyncContext): Promise<ServiceResult> {
   const obsolete: { id: string; link: SyncLink }[] = [];
   let appLinks = 0;
   let droppedContainer = 0;
+  let removedCopies = 0;
 
   const queueDelete = (remoteId: string, label: string) => {
     jobs.push(async () => {
@@ -355,6 +360,12 @@ export async function syncCalendar(ctx: SyncContext): Promise<ServiceResult> {
     const local = candidates.get(key);
     const localExists = exists.has(key);
     if (localExists && !local) {
+      if (ownCopies.has(key) && link.origin === 'app' && canPush) {
+        // Dřív zapsaná kopie hodiny, kterou student má i ve vlastním kalendáři → uklidit.
+        queueDelete(link.remoteId, 'Úklid zdvojené hodiny');
+        removedCopies++;
+        continue;
+      }
       result.links[id] = link; // mimo okno nebo vypnutá kategorie – nesahat
       continue;
     }
@@ -425,6 +436,7 @@ export async function syncCalendar(ctx: SyncContext): Promise<ServiceResult> {
     }
   }
   if (droppedContainer > 0 && targetId) result.notes.push(`Cílový kalendář se změnil – ${droppedContainer} starých vazeb rozpojeno.`);
+  if (removedCopies > 0) result.notes.push(`Zdvojené hodiny odstraněny z Google Kalendáře: ${removedCopies} (máš je ve vlastním kalendáři).`);
 
   // 5) Nové lokální položky → Google
   for (const [key, local] of candidates) {

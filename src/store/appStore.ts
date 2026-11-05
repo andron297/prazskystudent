@@ -135,6 +135,8 @@ export interface NewTaskInput {
   notes?: string;
   due?: string;
   subjectId?: string;
+  /** Předmět jen odhadnutý aplikací. */
+  subjectAuto?: boolean;
   priority?: 'high';
 }
 
@@ -168,6 +170,8 @@ export interface AppState extends AppData {
   // Předměty
   upsertSubject: (subject: Subject) => void;
   removeSubject: (subjectId: string) => void;
+  /** Sloučí zdvojený předmět do jiného (události, termíny, úkoly i materiály přejdou k ponechanému). */
+  mergeSubjects: (dropId: string, keepId: string) => void;
   setSubjectSyllabus: (subjectId: string, syllabus: SubjectSyllabus) => void;
   importSisSubject: (input: { code?: string; name?: string; syllabus: SubjectSyllabus }) => string;
 
@@ -190,6 +194,10 @@ export interface AppState extends AppData {
   updateTask: (taskId: string, patch: Partial<Task>) => void;
   toggleTask: (taskId: string) => void;
   removeTask: (taskId: string) => void;
+  /** Předmět úkolu: 'user' = vybral student (už neměnit), 'auto' = odhad aplikace. */
+  setTaskSubject: (taskId: string, subjectId: string | null, how: 'user' | 'auto') => void;
+  /** Student odmítl navržený předmět. */
+  rejectTaskSubject: (taskId: string, subjectId: string) => void;
 
   // Harmonogram
   addMilestones: (milestones: Milestone[]) => void;
@@ -366,6 +374,34 @@ export const useAppStore = create<AppState>()(
           };
         });
       },
+      mergeSubjects: (dropId, keepId) =>
+        set((s) => {
+          const drop = s.subjects.find((x) => x.id === dropId);
+          const keep = s.subjects.find((x) => x.id === keepId);
+          if (!drop || !keep || dropId === keepId) return {};
+          const at = nowIso();
+          const move = <T extends { subjectId?: string; updatedAt?: string }>(list: T[]): T[] => list.map((x) => (x.subjectId === dropId ? { ...x, subjectId: keepId, updatedAt: at } : x));
+          const merged: Subject = {
+            ...keep,
+            code: keep.code ?? drop.code,
+            teacher: keep.teacher ?? drop.teacher,
+            credits: keep.credits ?? drop.credits,
+            completion: keep.completion ?? drop.completion,
+            moodleCourseId: keep.moodleCourseId ?? drop.moodleCourseId,
+            moodleCourseUrl: keep.moodleCourseUrl ?? drop.moodleCourseUrl,
+            syllabus: keep.syllabus ?? drop.syllabus,
+            updatedAt: at,
+          };
+          return {
+            tombstones: tomb(s.tombstones, [keyOf.subject(dropId)]),
+            subjects: s.subjects.filter((x) => x.id !== dropId).map((x) => (x.id === keepId ? merged : x)),
+            events: move(s.events),
+            requirements: move(s.requirements),
+            tasks: move(s.tasks).map((t) => (t.notSubjects?.includes(dropId) ? { ...t, notSubjects: t.notSubjects.filter((x) => x !== dropId) } : t)),
+            materials: move(s.materials),
+            milestones: move(s.milestones),
+          };
+        }),
       setSubjectSyllabus: (subjectId, syllabus) =>
         set((s) => ({
           subjects: s.subjects.map((x) =>
@@ -491,6 +527,7 @@ export const useAppStore = create<AppState>()(
           notes: input.notes?.trim() || undefined,
           due: input.due,
           subjectId: input.subjectId,
+          subjectAuto: input.subjectId && input.subjectAuto ? true : undefined,
           priority: input.priority,
           done: false,
           source: 'manual',
@@ -506,6 +543,23 @@ export const useAppStore = create<AppState>()(
           tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done, completedAt: !t.done ? nowIso() : undefined, updatedAt: nowIso() } : t)),
         })),
       removeTask: (taskId) => set((s) => ({ tombstones: tomb(s.tombstones, [keyOf.task(taskId)]), tasks: s.tasks.filter((t) => t.id !== taskId) })),
+      setTaskSubject: (taskId, subjectId, how) =>
+        set((s) => ({
+          tasks: s.tasks.map((t) => {
+            if (t.id !== taskId) return t;
+            if (how === 'auto') return { ...t, subjectId: subjectId ?? undefined, subjectAuto: Boolean(subjectId), updatedAt: nowIso() };
+            const notSubjects = subjectId ? t.notSubjects?.filter((x) => x !== '*' && x !== subjectId) : [...new Set([...(t.notSubjects ?? []), ...(t.subjectId ? [t.subjectId] : []), '*'])];
+            return { ...t, subjectId: subjectId ?? undefined, subjectAuto: false, notSubjects: notSubjects?.length ? notSubjects : undefined, updatedAt: nowIso() };
+          }),
+        })),
+      rejectTaskSubject: (taskId, subjectId) =>
+        set((s) => ({
+          tasks: s.tasks.map((t) =>
+            t.id === taskId
+              ? { ...t, subjectId: t.subjectId === subjectId ? undefined : t.subjectId, subjectAuto: t.subjectId === subjectId ? false : t.subjectAuto, notSubjects: [...new Set([...(t.notSubjects ?? []), subjectId])], updatedAt: nowIso() }
+              : t,
+          ),
+        })),
 
       /* ------------------------------- harmonogram ---------------------------- */
 

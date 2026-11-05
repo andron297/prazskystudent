@@ -13,6 +13,7 @@ import { useResolvedTheme } from '../../hooks/useAppShell';
 import { useNow } from '../../hooks/useNow';
 import { useOrigin } from '../../hooks/useOrigin';
 import { departuresFor, useStops, type DepartureBoard } from '../../services/stops';
+import { useVisibleEvents } from '../../hooks/useVisibleEvents';
 import { useAppStore } from '../../store/appStore';
 import { appNow } from '../../store/clockStore';
 import { buildingForEvent, upcomingEvents } from '../../store/selectors';
@@ -278,7 +279,7 @@ export function TransitMapView() {
   const walkSpeed = useAppStore((s) => s.settings.walkSpeed);
   const originStop = useAppStore((s) => s.settings.originStop[s.settings.mode]);
   const setOriginStop = useAppStore((s) => s.setOriginStop);
-  const events = useAppStore((s) => s.events);
+  const events = useVisibleEvents();
   const settings = useAppStore((s) => s.settings);
   const focusStop = useUiStore((s) => s.focusStop);
   const setFocusStop = useUiStore((s) => s.setFocusStop);

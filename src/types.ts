@@ -202,6 +202,10 @@ export interface Task {
   done: boolean;
   completedAt?: ISODateTime;
   subjectId?: string;
+  /** Předmět odhadla aplikace sama (student ho může jedním klepnutím změnit). */
+  subjectAuto?: boolean;
+  /** Předměty, které student u úkolu odmítl ('*' = úkol nepatří k žádnému předmětu). */
+  notSubjects?: string[];
   priority?: 'high';
   source: DataSource;
   externalId?: string;
@@ -401,6 +405,8 @@ export interface Settings {
   weather: WeatherSettings;
   /** Jméno pro pozdrav (jinak z Moodlu / Googlu). */
   displayName: string;
+  /** Dvojice předmětů, o kterých student řekl, že jsou různé ('idA|idB'). */
+  distinctSubjects?: string[];
 }
 
 /* ------------------------------------------------------------------ */

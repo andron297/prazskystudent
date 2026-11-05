@@ -1,7 +1,10 @@
 import { useMemo, useState, type KeyboardEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CalendarClock, CornerDownLeft, Flag, GraduationCap, ListTodo, MapPin, Sparkles } from 'lucide-react';
+import { CalendarClock, CornerDownLeft, Flag, GraduationCap, ListTodo, MapPin, Sparkles, X } from 'lucide-react';
 import { parseQuickAdd, type QuickAddResult } from '../../lib/quickAdd';
+import type { SubjectGuess } from '../../lib/subjectMatch';
+import { SUBJECT_COLOR_CLASSES } from '../../lib/colors';
+import { guessForText } from '../../services/subjectAssist';
 import { useNow } from '../../hooks/useNow';
 import { useAppStore } from '../../store/appStore';
 import { appNow } from '../../store/clockStore';
@@ -11,11 +14,13 @@ import { cn } from '../ui/primitives';
 const TOKEN_ICON = { date: CalendarClock, time: CalendarClock, subject: GraduationCap, place: MapPin, priority: Flag, kind: Sparkles } as const;
 
 /** Uloží výsledek rychlého zadání; vrací popisek pro potvrzení. */
-export function saveQuickAdd(result: QuickAddResult): string {
+export function saveQuickAdd(result: QuickAddResult, guess?: SubjectGuess | null): string {
   const store = useAppStore.getState();
   if (result.kind === 'task') {
-    store.addTask({ title: result.title, due: result.due, subjectId: result.subjectId, priority: result.priority });
-    return `Úkol „${result.title}“ přidán`;
+    const subjectId = result.subjectId ?? (guess && guess.confidence !== 'low' ? guess.subjectId : undefined);
+    store.addTask({ title: result.title, due: result.due, subjectId, subjectAuto: !result.subjectId && Boolean(subjectId), priority: result.priority });
+    const subject = subjectId ? store.subjects.find((s) => s.id === subjectId) : undefined;
+    return `Úkol „${result.title}“ přidán${subject ? ` k předmětu ${subject.name}` : ''}`;
   }
   store.addEvent({
     title: result.title,
@@ -45,9 +50,18 @@ export function QuickAdd({ autoFocus = false, onSaved, variant = 'card', initial
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, forced, subjects, buildings, now]);
 
+  const [dismissedGuess, setDismissedGuess] = useState<string | null>(null);
+  const guess = useMemo(() => {
+    if (!parsed || parsed.kind !== 'task' || parsed.subjectId) return null;
+    const g = guessForText({ title: parsed.title, due: parsed.due });
+    return g && g.confidence !== 'low' && g.subjectId !== dismissedGuess ? g : null;
+  }, [parsed, dismissedGuess]);
+  const guessSubject = guess ? subjects.find((s) => s.id === guess.subjectId) : undefined;
+
   const submit = () => {
     if (!parsed) return;
-    const message = saveQuickAdd(parsed);
+    const message = saveQuickAdd(parsed, guess);
+    setDismissedGuess(null);
     toast.success(message);
     setText('');
     setForced(null);
@@ -111,6 +125,15 @@ export function QuickAdd({ autoFocus = false, onSaved, variant = 'card', initial
                     </span>
                   );
                 })}
+              {guessSubject && (
+                <span className={cn('inline-flex items-center gap-1 rounded-full py-0.5 pl-2 pr-1 text-[12px] font-bold', SUBJECT_COLOR_CLASSES[guessSubject.color].soft)} title={`Odhad ${guess!.reason}`}>
+                  <Sparkles className="size-3" aria-hidden />
+                  {guessSubject.code ?? guessSubject.name}
+                  <button type="button" onClick={() => setDismissedGuess(guessSubject.id)} className="grid size-4 place-items-center rounded-full hover:bg-black/10" aria-label="Bez tohoto předmětu">
+                    <X className="size-3" aria-hidden />
+                  </button>
+                </span>
+              )}
               {parsed.kind === 'event' && !parsed.tokens.some((t) => t.type === 'date') && <span className="text-[12px] text-subtle">dnes</span>}
             </div>
           </motion.div>

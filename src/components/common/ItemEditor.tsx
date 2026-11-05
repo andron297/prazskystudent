@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CalendarClock, ExternalLink, ListTodo, Sparkles, Trash } from 'lucide-react';
 import type { ScheduleEvent, Task } from '../../types';
 import { addDays, fromLocalInputValue, isDateKey, startOfDay, toDateKey, toLocalInputValue } from '../../lib/dates';
+import { guessForText } from '../../services/subjectAssist';
 import { useAppStore } from '../../store/appStore';
 import { appNow } from '../../store/clockStore';
 import { confirmAction, toast, useUiStore } from '../../store/uiStore';
@@ -17,6 +18,7 @@ function TaskForm({ task, onClose }: { task?: Task; onClose: () => void }) {
   const subjects = useAppStore((s) => s.subjects);
   const addTask = useAppStore((s) => s.addTask);
   const updateTask = useAppStore((s) => s.updateTask);
+  const setTaskSubject = useAppStore((s) => s.setTaskSubject);
   const removeTask = useAppStore((s) => s.removeTask);
   const [title, setTitle] = useState(task?.title ?? '');
   const [notes, setNotes] = useState(task?.notes ?? '');
@@ -25,6 +27,8 @@ function TaskForm({ task, onClose }: { task?: Task; onClose: () => void }) {
   const [subjectId, setSubjectId] = useState(task?.subjectId ?? '');
   const [priority, setPriority] = useState(task?.priority === 'high');
   const [done, setDone] = useState(task?.done ?? false);
+  const guess = useMemo(() => (!subjectId && !task?.notSubjects?.includes('*') ? guessForText({ title, notes }) : null), [subjectId, title, notes, task?.notSubjects]);
+  const guessSubject = guess && guess.confidence !== 'low' ? subjects.find((s) => s.id === guess.subjectId) : undefined;
 
   const save = () => {
     if (!title.trim()) return;
@@ -34,13 +38,15 @@ function TaskForm({ task, onClose }: { task?: Task; onClose: () => void }) {
         title: title.trim(),
         notes: notes.trim() || undefined,
         due,
-        subjectId: subjectId || undefined,
         priority: priority ? 'high' : undefined,
         done,
         completedAt: done ? (task.completedAt ?? new Date().toISOString()) : undefined,
       });
+      // Předmět vybraný (nebo odebraný) ručně už aplikace sama nemění.
+      if ((task.subjectId ?? '') !== subjectId) setTaskSubject(task.id, subjectId || null, 'user');
     } else {
-      addTask({ title, notes, due, subjectId: subjectId || undefined, priority: priority ? 'high' : undefined });
+      const auto = !subjectId && guess && guess.confidence !== 'low' ? guess.subjectId : undefined;
+      addTask({ title, notes, due, subjectId: subjectId || auto, subjectAuto: Boolean(auto), priority: priority ? 'high' : undefined });
     }
     toast.success(task ? 'Úkol uložen' : 'Úkol přidán');
     onClose();
@@ -77,7 +83,16 @@ function TaskForm({ task, onClose }: { task?: Task; onClose: () => void }) {
           </button>
         )}
       </div>
-      <Field label="Předmět">
+      <Field
+        label="Předmět"
+        hint={
+          guessSubject ? (
+            <button type="button" onClick={() => setSubjectId(guessSubject.id)} className="inline-flex items-center gap-1 font-semibold text-moss hover:underline">
+              <Sparkles className="size-3.5" aria-hidden /> Navrhuji: {guessSubject.name} ({guess!.reason}) – použít
+            </button>
+          ) : undefined
+        }
+      >
         <Select value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
           <option value="">Bez předmětu</option>
           {subjects.map((s) => (

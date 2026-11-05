@@ -2,12 +2,13 @@ import { motion } from 'motion/react';
 import { ArrowRight, CalendarDays, Check, Flag, FlaskConical, GraduationCap, ListTodo, MapPin, Zap } from 'lucide-react';
 import type { Milestone, ScheduleEvent, Subject } from '../../types';
 import { SUBJECT_COLOR_CLASSES } from '../../lib/colors';
-import { formatDayMonth, formatDeadline, formatTime, isSameDay, toDate, toDateKey } from '../../lib/dates';
+import { formatDayMonth, formatDeadline, formatTime, isSameDay, plural, toDate, toDateKey } from '../../lib/dates';
 import { isRequirementComplete, requirementProgress, subjectProgress } from '../../lib/progress';
 import { CATEGORY_LABELS } from '../../lib/scheduleTextParser';
 import { DEADLINE_STYLES, deadlineUrgency } from '../../lib/urgency';
 import { navigateTo } from '../../hooks/useAppShell';
 import { useNow } from '../../hooks/useNow';
+import { useVisibleEvents } from '../../hooks/useVisibleEvents';
 import { useAppStore } from '../../store/appStore';
 import { agendaForDay, buildingForEvent, openItems, subjectMap, type AgendaItem } from '../../store/selectors';
 import { useUiStore } from '../../store/uiStore';
@@ -35,36 +36,12 @@ const KIND_SHORT: Record<ScheduleEvent['kind'], string> = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Pás se statistikami                                                 */
-/* ------------------------------------------------------------------ */
-
-export function StatsBand({ stats }: { stats: { value: string; label: string; hint?: string }[] }) {
-  return (
-    <section className="band-forest grain relative overflow-hidden rounded-[28px] px-5 py-6 sm:px-8 sm:py-7" aria-label="Přehled">
-      <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-10 -top-12 size-56 text-white/[0.06]" aria-hidden>
-        <path d="M100 10c40 30 60 70 50 110-8 34-40 60-50 70-10-10-42-36-50-70C40 80 60 40 100 10z" fill="currentColor" />
-        <path d="M100 30v150" stroke="currentColor" strokeWidth="3" fill="none" />
-      </svg>
-      <dl className="relative grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label}>
-            <dt className="eyebrow text-[var(--forest-fg)]/65">{s.label}</dt>
-            <dd className="mt-1.5 font-display text-[44px] leading-none tabular sm:text-[52px]">{s.value}</dd>
-            {s.hint && <dd className="mt-1 text-xs text-[var(--forest-fg)]/70">{s.hint}</dd>}
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /* Časová osa dne                                                      */
 /* ------------------------------------------------------------------ */
 
 export function TodayTimeline({ day, label, targetId, onSelect }: { day: Date; label: string; targetId?: string; onSelect: (event: ScheduleEvent) => void }) {
   const now = useNow(30_000);
-  const events = useAppStore((s) => s.events);
+  const events = useVisibleEvents();
   const tasks = useAppStore((s) => s.tasks);
   const requirements = useAppStore((s) => s.requirements);
   const subjects = useAppStore((s) => s.subjects);
@@ -143,8 +120,8 @@ export function TodayTimeline({ day, label, targetId, onSelect }: { day: Date; l
 
   return (
     <Card
-      title={label}
-      eyebrow={formatDayMonth(day)}
+      title={label === 'Dnes' ? 'Celý den' : 'Celý zítřek'}
+      eyebrow={`${label} · ${formatDayMonth(day)}`}
       className="h-full"
       action={
         <Button size="sm" variant="ghost" onClick={() => navigateTo('kalendar')}>
@@ -202,6 +179,11 @@ export function TasksCard() {
       }
       eyebrow={doneToday ? `${doneToday} hotovo dnes` : `${list.length} otevřených`}
       className="h-full"
+      action={
+        <Button size="sm" variant="ghost" onClick={() => navigateTo('ukoly')}>
+          Všechny <ArrowRight className="size-3.5" />
+        </Button>
+      }
     >
       <QuickAdd />
       {shown.length === 0 ? (
@@ -254,8 +236,8 @@ export function TasksCard() {
         </ul>
       )}
       {list.length > shown.length && (
-        <button type="button" onClick={() => navigateTo('kalendar')} className="mt-2 w-full rounded-full py-2 text-[13px] font-semibold text-muted hover:bg-surface-2 hover:text-fg">
-          + {list.length - shown.length} dalších
+        <button type="button" onClick={() => navigateTo('ukoly')} className="mt-2 w-full rounded-full py-2 text-[13px] font-semibold text-muted hover:bg-surface-2 hover:text-fg">
+          a {list.length - shown.length} {plural(list.length - shown.length, ['další', 'další', 'dalších'])} v Úkolech
         </button>
       )}
     </Card>

@@ -1,16 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'motion/react';
-import { CalendarRange, ChevronLeft, ChevronRight, Clock, Flag, MapPin, Plus, ScrollText, Trash } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Clock, Flag, MapPin, Plus, ScrollText, Trash } from 'lucide-react';
 import type { Milestone, MilestoneCategory, Requirement, Subject, Task } from '../../types';
 import { milestoneToCalendarItem, requirementToCalendarItem, type CalendarItem } from '../../lib/calendarExport';
 import { SUBJECT_COLOR_CLASSES } from '../../lib/colors';
 import {
-  academicYearStart,
   addDays,
-  calendarDayDiff,
   formatDayMonth,
   formatDeadline,
-  formatMonthShort,
   formatMonthYear,
   formatRelative,
   formatTime,
@@ -29,139 +25,16 @@ import { CATEGORY_LABELS } from '../../lib/scheduleTextParser';
 import { DEADLINE_STYLES, deadlineUrgency } from '../../lib/urgency';
 import { navigateTo } from '../../hooks/useAppShell';
 import { useNow } from '../../hooks/useNow';
+import { useVisibleEvents } from '../../hooks/useVisibleEvents';
 import { useAppStore } from '../../store/appStore';
 import { buildingForEvent, subjectMap } from '../../store/selectors';
 import { toast, useUiStore } from '../../store/uiStore';
 import { AddToCalendar } from '../common/AddToCalendar';
 import { MILESTONE_STYLES } from '../dashboard/DashboardCards';
+import { YearOverview } from './YearOverview';
 import { Modal } from '../ui/overlays';
 import { Button, Card, Checkbox, Chip, cn, EmptyState, Field, IconButton, Segmented, Select, TextInput, Toggle } from '../ui/primitives';
 
-
-const BAR_COLORS: Record<MilestoneCategory, string> = {
-  semester: 'bg-moss/70',
-  teaching: 'bg-accent/75',
-  'exam-period': 'bg-rose-700/65',
-  enrollment: 'bg-sand',
-  holiday: 'bg-emerald-600/55',
-  deadline: 'bg-red-600',
-  assessment: 'bg-clay',
-  event: 'bg-sky-600/70',
-};
-
-const LANES: { label: string; categories: MilestoneCategory[] }[] = [
-  { label: 'Výuka', categories: ['teaching', 'semester'] },
-  { label: 'Zkouškové', categories: ['exam-period'] },
-  { label: 'Zápis a volno', categories: ['enrollment', 'holiday', 'event'] },
-];
-
-/* ------------------------------------------------------------------ */
-/* Časová osa semestru                                                 */
-/* ------------------------------------------------------------------ */
-
-function SemesterTimeline({ milestones, requirements, subjects }: { milestones: Milestone[]; requirements: Requirement[]; subjects: Map<string, Subject> }) {
-  const now = useNow(60_000);
-  const scroller = useRef<HTMLDivElement>(null);
-  const ay = academicYearStart(now);
-  const rangeStart = new Date(ay, 8, 1);
-  const rangeEnd = new Date(ay + 1, 8, 30);
-  const days = calendarDayDiff(rangeEnd, rangeStart) + 1;
-  const px = 4.2;
-  const width = Math.round(days * px);
-  const x = (d: Date) => Math.max(0, Math.min(width, calendarDayDiff(d, rangeStart) * px));
-  const months = Array.from({ length: 13 }, (_, i) => new Date(ay, 8 + i, 1));
-  const todayX = x(now);
-
-  useEffect(() => {
-    const el = scroller.current;
-    if (el) el.scrollLeft = Math.max(0, todayX - el.clientWidth / 2);
-  }, [todayX]);
-
-  const markers = [
-    ...requirements
-      .filter((r) => r.deadline)
-      .map((r) => ({ id: r.id, date: new Date(r.deadline!), title: r.title, subject: subjects.get(r.subjectId), done: isRequirementComplete(r), kind: 'req' as const })),
-    ...milestones
-      .filter((m) => !m.end && m.category !== 'holiday')
-      .map((m) => ({ id: m.id, date: toDate(m.start), title: m.title, subject: undefined, done: false, kind: 'ms' as const })),
-  ];
-
-  return (
-    <Card title="Časová osa akademického roku" icon={CalendarRange} action={<span className="text-xs text-muted">{ay}/{ay + 1}</span>} padded={false} className="overflow-hidden">
-      <div className="flex">
-        <div className="hidden w-28 shrink-0 border-r border-line pt-8 sm:block">
-          {[...LANES.map((l) => l.label), 'Termíny'].map((label) => (
-            <div key={label} className="flex h-10 items-center px-4 text-xs font-medium text-muted">
-              {label}
-            </div>
-          ))}
-        </div>
-        <div ref={scroller} className="scrollbar-thin min-w-0 flex-1 overflow-x-auto">
-          <div className="relative" style={{ width, height: 32 + 4 * 40 + 30 }}>
-            {months.map((m) => (
-              <div key={m.toISOString()} className="absolute top-0 h-full border-l border-line" style={{ left: x(m) }}>
-                <span className="ml-1.5 mt-2 block text-[11px] font-medium capitalize text-subtle">
-                  {formatMonthShort(m)}
-                  {m.getMonth() === 0 ? ` ${m.getFullYear()}` : ''}
-                </span>
-              </div>
-            ))}
-            {LANES.map((lane, laneIndex) =>
-              milestones
-                .filter((m) => lane.categories.includes(m.category) && (m.end || m.category === 'holiday'))
-                .map((m) => {
-                  const start = toDate(m.start);
-                  const end = m.end ? toDate(m.end) : start;
-                  const left = x(start);
-                  const w = Math.max(6, x(addDays(end, 1)) - left);
-                  return (
-                    <motion.div
-                      key={m.id}
-                      initial={{ opacity: 0, scaleX: 0.6 }}
-                      animate={{ opacity: 1, scaleX: 1 }}
-                      style={{ left, width: w, top: 32 + laneIndex * 40 + 8, originX: 0 }}
-                      className={cn('absolute h-6 overflow-hidden rounded-lg px-2 text-[11px] font-medium leading-6 text-white shadow-sm', BAR_COLORS[m.category])}
-                      title={`${m.title}: ${formatDayMonth(start)}${m.end ? ` – ${formatDayMonth(end)}` : ''}`}
-                    >
-                      <span className="truncate">{w > 60 ? m.title : ''}</span>
-                    </motion.div>
-                  );
-                }),
-            )}
-            {markers.map((mk) => (
-              <button
-                key={mk.id}
-                type="button"
-                onClick={() => mk.kind === 'req' && mk.subject && navigateTo('predmety', mk.subject.id)}
-                className={cn(
-                  'absolute size-3.5 -translate-x-1/2 rounded-full ring-2 ring-[var(--surface)] transition-transform hover:scale-150',
-                  mk.done ? 'bg-zinc-400' : mk.subject ? SUBJECT_COLOR_CLASSES[mk.subject.color].dot : 'bg-red-500',
-                )}
-                style={{ left: x(mk.date), top: 32 + 3 * 40 + 13 }}
-                title={`${mk.title} – ${formatDayMonth(mk.date)}${mk.subject ? ` (${mk.subject.code ?? mk.subject.name})` : ''}`}
-                aria-label={`${mk.title}, ${formatDayMonth(mk.date)}`}
-              />
-            ))}
-            <div className="absolute top-7 w-0.5 rounded-full bg-accent" style={{ left: todayX, bottom: 18 }}>
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full rounded-md bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-accent-fg">dnes</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-4 py-2.5 text-[11.5px] text-muted">
-        {(['teaching', 'exam-period', 'holiday', 'enrollment'] as MilestoneCategory[]).map((c) => (
-          <span key={c} className="inline-flex items-center gap-1.5">
-            <span className={cn('size-2.5 rounded-sm', BAR_COLORS[c])} />
-            {CATEGORY_LABELS[c]}
-          </span>
-        ))}
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-red-500" /> Termíny (barva předmětu)
-        </span>
-      </div>
-    </Card>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* Agenda                                                              */
@@ -289,7 +162,7 @@ function Agenda({ items, now, showPast }: { items: AgendaItem[]; now: Date; show
 
 function WeekSchedule() {
   const now = useNow(60_000);
-  const events = useAppStore((s) => s.events);
+  const events = useVisibleEvents();
   const tasks = useAppStore((s) => s.tasks);
   const subjects = useAppStore((s) => s.subjects);
   const settings = useAppStore((s) => s.settings);
@@ -547,7 +420,7 @@ export function CalendarView() {
         </div>
       </header>
 
-      <SemesterTimeline milestones={milestones} requirements={requirements} subjects={byId} />
+      <YearOverview milestones={milestones} requirements={requirements} subjects={byId} />
 
       <div className="grid gap-4 lg:grid-cols-12">
         <Card

@@ -12,6 +12,7 @@ import { useClockStore } from './store/clockStore';
 import { toast, useUiStore } from './store/uiStore';
 import { SetupWizard } from './components/setup/SetupWizard';
 import { initAccount, useAccount } from './services/account';
+import { startSubjectAssist } from './services/subjectAssist';
 
 // Méně používané sekce se načítají až při otevření (menší první načtení PWA).
 const TransitMapView = lazy(() => import('./components/map/TransitMapView').then((m) => ({ default: m.TransitMapView })));
@@ -60,6 +61,7 @@ export default function App() {
   }, [editor]);
 
   const accountStatus = useAccount((s) => s.status);
+  useEffect(() => startSubjectAssist(), []);
   useEffect(() => {
     void useUiStore
       .getState()
@@ -95,7 +97,7 @@ export default function App() {
       clock.switchToRealTime();
       // Vlastní data nikdy nemíchat s ukázkou (i po starších verzích aplikace).
       const removed = useAppStore.getState().purgeSampleData();
-      if (removed > 0) toast.info('Ukázková data jsem uklidil – teď vidíš jen to svoje.');
+      if (removed > 0) toast.info('Ukázková data jsou pryč – teď vidíš jen to svoje.');
     }
     document.documentElement.dataset.mode = mode;
   }, [mode]);
