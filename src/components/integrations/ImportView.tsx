@@ -297,7 +297,7 @@ function SmartExtractCard({ text, course, subjects, known, onDone }: { text: str
         toast.success(`${requirementsCountText(requirements.length)} přidáno${engine === 'ai' ? ' (AI)' : ''}`);
         onDone();
         navigateTo('predmety', subjectId);
-      } else toast.info('V textu jsem nenašel žádné nové úkoly ani termíny.');
+      } else toast.info('V textu nejsou žádné nové úkoly ani termíny.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Čtení se nepodařilo.');
     } finally {

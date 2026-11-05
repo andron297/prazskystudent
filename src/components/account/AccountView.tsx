@@ -180,7 +180,7 @@ export function AccountView() {
           <button
             type="button"
             onClick={async () => {
-              if (await confirmAction({ title: 'Odhlásit všude?', message: 'Odhlásí tě na všech telefonech a počítačích. Hodí se, když jsi zařízení ztratil(a).', confirmLabel: 'Odhlásit všude' })) void run('all', () => signOutAccount(true));
+              if (await confirmAction({ title: 'Odhlásit všude?', message: 'Odhlásí tě na všech telefonech a počítačích. Hodí se třeba při ztrátě telefonu.', confirmLabel: 'Odhlásit všude' })) void run('all', () => signOutAccount(true));
             }}
             className={cn(btn, 'bg-surface-2 hover:bg-line')}
           >
@@ -229,7 +229,7 @@ export function AccountView() {
               if (await confirmAction({ title: 'Opravdu smazat účet?', message: 'Účet i všechna data v něm zmizí natrvalo.', confirmLabel: 'Smazat natrvalo', tone: 'danger' }))
                 void run('delete', async () => {
                   await deleteAccount(confirmEmail);
-                  toast.success('Účet je smazaný. Děkujeme, že jsi Stihnu zkusil(a).');
+                  toast.success('Účet je smazaný. Díky za vyzkoušení Stihnu.');
                 });
             }}
             className={cn(btn, 'bg-red-600 text-white disabled:opacity-40')}

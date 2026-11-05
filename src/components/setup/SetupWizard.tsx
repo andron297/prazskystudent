@@ -241,7 +241,7 @@ function StartStep({ onOwn, onDemo }: { onOwn: () => void; onDemo: () => void })
     const account = useAccount.getState().status;
     if (useAppStore.getState().settings.mode === 'demo') {
       const removed = useAppStore.getState().startOwnData();
-      if (removed > 0) toast.success('Ukázková data jsem uklidil – teď tu bude jen to tvoje.');
+      if (removed > 0) toast.success('Ukázková data jsou pryč – teď tu bude jen to tvoje.');
     }
     // S účty: nejdřív přihlášení, pak průvodce pokračuje sám.
     if (account !== 'off' && account !== 'ready') {

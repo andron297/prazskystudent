@@ -114,13 +114,28 @@ const ITEM_PROPS = {
 } as const;
 const REQUIRED = Object.keys(ITEM_PROPS);
 
+const OPENAI_MODELS = [...new Set([process.env.OPENAI_MODEL?.trim(), 'gpt-5-mini', 'gpt-4.1-mini'].filter((m): m is string => Boolean(m && /^[\w.-]{3,60}$/.test(m))))];
+
 async function callOpenAi(key: string, system: string, text: string): Promise<unknown> {
+  for (let i = 0; i < OPENAI_MODELS.length; i++) {
+    try {
+      return await callOpenAiModel(key, system, text, OPENAI_MODELS[i]);
+    } catch (error) {
+      // Neznámý model (starý účet / ukončený model) → zkusit další.
+      if (error instanceof HttpError && error.code === 'ai_model_missing' && i < OPENAI_MODELS.length - 1) continue;
+      throw error;
+    }
+  }
+  throw new HttpError(502, 'ai_api_error', 'ChatGPT teď neodpovídá.');
+}
+
+async function callOpenAiModel(key: string, system: string, text: string, model: string): Promise<unknown> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
     signal: AbortSignal.timeout(55_000),
     body: JSON.stringify({
-      model: 'gpt-4.1-mini',
+      model,
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: `<text>\n${text}\n</text>` },
@@ -136,6 +151,11 @@ async function callOpenAi(key: string, system: string, text: string): Promise<un
     }),
   });
   if (response.status === 401) throw new HttpError(401, 'invalid_ai_key', 'ChatGPT (OpenAI) odmítlo klíč.');
+  if (response.status === 404 || response.status === 400) {
+    const body = await response.text();
+    if (/model/i.test(body) && /(not exist|not found|does not have access|unsupported)/i.test(body)) throw new HttpError(404, 'ai_model_missing', 'Model není dostupný.');
+    throw new HttpError(400, 'ai_bad_request', 'ChatGPT požadavek odmítlo.');
+  }
   if (response.status === 429) throw new HttpError(429, 'ai_rate_limited', 'ChatGPT je teď přetížené nebo je vyčerpaný kredit.');
   if (!response.ok) throw new HttpError(502, 'ai_api_error', `Chyba ChatGPT (HTTP ${response.status}).`);
   const data = (await response.json()) as { choices?: { message?: { content?: string; refusal?: string } }[] };
@@ -158,28 +178,42 @@ function geminiSchema() {
   return { type: 'OBJECT', properties: { items: { type: 'ARRAY', items: { type: 'OBJECT', properties: props, required: REQUIRED } } }, required: ['items'] };
 }
 
+/**
+ * Gemini: nejnovější model s bezplatnou úrovní; když je přetížený, vyčerpaný
+ * nebo ho Google ukončí, zkusí se další. Správce může model určit v GEMINI_MODEL.
+ */
+const GEMINI_MODELS = [...new Set([process.env.GEMINI_MODEL?.trim(), 'gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'].filter((m): m is string => Boolean(m && /^[\w.-]{3,60}$/.test(m))))];
+
 async function callGemini(key: string, system: string, text: string): Promise<unknown> {
-  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
-    method: 'POST',
-    headers: { 'x-goog-api-key': key, 'content-type': 'application/json' },
-    signal: AbortSignal.timeout(55_000),
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: 'user', parts: [{ text: `<text>\n${text}\n</text>` }] }],
-      generationConfig: { responseMimeType: 'application/json', responseSchema: geminiSchema() },
-    }),
-  });
-  if (response.status === 400 || response.status === 403) {
-    const body = await response.text();
-    if (/API key|PERMISSION/i.test(body)) throw new HttpError(401, 'invalid_ai_key', 'Gemini odmítlo klíč.');
-    throw new HttpError(400, 'ai_bad_request', 'Gemini požadavek odmítlo.');
+  let lastStatus = 0;
+  for (const model of GEMINI_MODELS) {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST',
+      headers: { 'x-goog-api-key': key, 'content-type': 'application/json' },
+      signal: AbortSignal.timeout(55_000),
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: `<text>\n${text}\n</text>` }] }],
+        generationConfig: { responseMimeType: 'application/json', responseSchema: geminiSchema() },
+      }),
+    });
+    lastStatus = response.status;
+    if (response.status === 400 || response.status === 403) {
+      const body = await response.text();
+      if (/API key|API_KEY|PERMISSION_DENIED/i.test(body)) throw new HttpError(401, 'invalid_ai_key', 'Gemini odmítlo klíč.');
+      if (/not found|not supported|deprecated/i.test(body)) continue; // model už není k dispozici → další
+      throw new HttpError(400, 'ai_bad_request', 'Gemini požadavek odmítlo.');
+    }
+    // Model neexistuje, je přetížený nebo je vyčerpaná kvóta → zkusit další model.
+    if (response.status === 404 || response.status === 429 || response.status >= 500) continue;
+    if (!response.ok) throw new HttpError(502, 'ai_api_error', `Chyba Gemini (HTTP ${response.status}).`);
+    const data = (await response.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+    const content = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('');
+    if (!content) throw new HttpError(422, 'ai_refused', 'AI tento text nezpracovalo.');
+    return JSON.parse(content);
   }
-  if (response.status === 429) throw new HttpError(429, 'ai_rate_limited', 'Gemini je teď přetížené nebo je vyčerpaný limit.');
-  if (!response.ok) throw new HttpError(502, 'ai_api_error', `Chyba Gemini (HTTP ${response.status}).`);
-  const data = (await response.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  const content = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('');
-  if (!content) throw new HttpError(422, 'ai_refused', 'AI tento text nezpracovalo.');
-  return JSON.parse(content);
+  if (lastStatus === 429) throw new HttpError(429, 'ai_rate_limited', 'Bezplatná AI je teď vytížená nebo je vyčerpaný denní limit. Zkus to později.');
+  throw new HttpError(502, 'ai_api_error', `Gemini teď neodpovídá (HTTP ${lastStatus}).`);
 }
 
 async function callClaude(key: string, system: string, text: string): Promise<{ items: AiExtractionResult['items']; model: string }> {

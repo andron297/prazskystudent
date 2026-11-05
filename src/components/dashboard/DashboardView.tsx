@@ -155,28 +155,28 @@ export function DashboardView() {
       <DayBrief now={now} target={within} itinerary={transit.selected ?? null} />
 
       <div className="grid gap-4 sm:gap-5 lg:grid-cols-12">
-        <div className="min-w-0 lg:col-span-7">
+        <motion.div className="min-w-0 lg:col-span-7" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.05, ease: [0.22, 1, 0.36, 1] }}>
           <TodayTimeline day={timelineDay} label={timelineLabel} targetId={within?.id} onSelect={(e) => setTargetId(e.id)} />
-        </div>
-        <div className="min-w-0 space-y-4 lg:col-span-5">
+        </motion.div>
+        <motion.div className="min-w-0 space-y-4 lg:col-span-5" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.10, ease: [0.22, 1, 0.36, 1] }}>
           <TasksCard />
           <FocusRest task={tasks.find((t) => !t.done) ?? null} />
-        </div>
-        <div className="min-w-0 space-y-4 sm:space-y-5 lg:col-span-5">
+        </motion.div>
+        <motion.div className="min-w-0 space-y-4 sm:space-y-5 lg:col-span-5" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}>
           <WeatherCard forecast={forecast} advice={advice} now={now} dayLabel={plan.day === 'tomorrow' ? 'Zítra do školy' : plan.day === 'today' ? 'Dnes do školy' : 'Dnes'} />
           <MenzaCard now={now} building={building ?? mainBuilding} fallback={origin.coords} />
-        </div>
-        <div className="min-w-0 lg:col-span-7">
+        </motion.div>
+        <motion.div className="min-w-0 lg:col-span-7" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.20, ease: [0.22, 1, 0.36, 1] }}>
           {within ? (
             <TransitPanel event={within} building={building ?? null} room={room} subject={subject} transit={transit} onOrigin={() => setOriginOpen(true)} />
           ) : (
             <SubjectsGlance />
           )}
-        </div>
+        </motion.div>
         {within && (
-          <div className="min-w-0 lg:col-span-7">
+          <motion.div className="min-w-0 lg:col-span-7" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}>
             <SubjectsGlance />
-          </div>
+          </motion.div>
         )}
         <div className={within ? 'min-w-0 lg:col-span-5' : 'min-w-0 lg:col-span-12'}>
           <MilestonesCard />

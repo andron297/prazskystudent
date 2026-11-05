@@ -178,7 +178,7 @@ function DemoClockChip() {
       label="Simulovaný čas"
       items={[
         { label: 'Posunout o 5 minut', hint: 'Sleduj, jak se mění stav spojů', icon: FastForward, onSelect: () => clock.shiftMinutes(5) },
-        { label: 'Posunout o 15 minut', hint: 'Rychle do „Last call“', icon: FastForward, onSelect: () => clock.shiftMinutes(15) },
+        { label: 'Posunout o 15 minut', hint: 'Rychle k poslednímu spoji', icon: FastForward, onSelect: () => clock.shiftMinutes(15) },
         {
           label: 'Restart na 13:05',
           hint: 'Seminář na Hollaru za 55 minut',
@@ -207,7 +207,7 @@ function DemoClockChip() {
           type="button"
           {...props}
           className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface-2 px-3 text-[12px] font-semibold text-muted ring-1 ring-inset ring-line transition-colors hover:text-fg tabular"
-          title="Simulovaný čas Sandboxu"
+          title="Simulovaný čas ukázky"
         >
           <Timer className="size-3.5" aria-hidden />
           {simulated ? `${formatTime(now)}:${String(now.getSeconds()).padStart(2, '0')}` : 'reálný čas'}

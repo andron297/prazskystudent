@@ -505,13 +505,13 @@ export function MaterialViewer({ material, onClose }: { material: Material | nul
           </div>
           <p>
             {settings.mode === 'demo'
-              ? 'Tohle je ukázkový soubor ze sandboxu. V Live režimu se po kliknutí otevře přímo z Moodlu – aplikace k adrese souboru automaticky připojí tvůj token webové služby:'
-              : 'Pro stažení souboru z Moodlu je potřeba token webové služby. Propoj Moodle v sekci Integrace – odkaz pak bude vypadat takto:'}
+              ? 'Tohle je ukázkový soubor. S vlastními daty se po kliknutí otevře přímo z Moodlu – aplikace k adrese souboru sama připojí tvůj klíč webové služby:'
+              : 'Ke stažení souboru z Moodlu je potřeba klíč webové služby. Propoj Moodle v sekci Propojení – odkaz pak bude vypadat takto:'}
           </p>
           <code className="block overflow-x-auto whitespace-nowrap rounded-xl border border-line bg-surface-2 p-3 font-mono text-[12px]">
             {moodleFileUrlWithToken(material.url ?? '', tokenPreview)}
           </code>
-          <p className="text-xs text-muted">Token zůstává jen v tvém prohlížeči a do odkazu se vkládá až v okamžiku otevření.</p>
+          <p className="text-xs text-muted">Klíč zůstává jen v tvém zařízení a do odkazu se vloží až ve chvíli otevření.</p>
         </div>
       )}
     </Modal>

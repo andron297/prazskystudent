@@ -182,7 +182,7 @@ function DemoGooglePreview() {
     <div className="rounded-[22px] bg-sand/15 p-4 ring-1 ring-inset ring-sand/30">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-[13px] font-bold text-clay">
-          <FlaskConical className="size-4" aria-hidden /> Simulovaný Google (Sandbox)
+          <FlaskConical className="size-4" aria-hidden /> Simulovaný Google (ukázka)
         </p>
         <Button size="sm" variant="sand" icon={Wand2} onClick={() => void simulate()}>
           Simulovat změnu v Googlu
@@ -319,7 +319,7 @@ export function GoogleSection() {
                 {mode === 'demo' ? 'Propojit (simulace)' : 'Propojit s Googlem'}
               </Button>
               {mode === 'demo' ? (
-                <p className="mt-2 text-xs text-subtle">V Sandboxu se propojí simulovaný Google – nic se nezapíše do tvého účtu. Naostro přepni na Live.</p>
+                <p className="mt-2 text-xs text-subtle">V ukázce se propojí jen simulovaný Google – do tvého účtu se nic nezapíše. Naostro to funguje s vlastními daty.</p>
               ) : (
                 <p className="mt-2 text-xs text-subtle">
                   Aplikace žádá jen o přístup k Kalendáři, Úkolům a vlastním souborům na Disku.{server.googleServerFlow ? ' Přihlášení se drží i na pozadí.' : ''}

@@ -142,7 +142,7 @@ function AddSource({ kind, placeholder, validate }: { kind: IcsSource['kind']; p
   };
   return (
     <div className="flex flex-col gap-2 sm:flex-row">
-      <TextInput value={url} onChange={(e) => setUrl(e.target.value)} placeholder={mode === 'demo' ? `${placeholder} (v Sandboxu stačí kliknout)` : placeholder} inputMode="url" className="flex-1 font-mono text-[12.5px]" />
+      <TextInput value={url} onChange={(e) => setUrl(e.target.value)} placeholder={mode === 'demo' ? `${placeholder} (v ukázce stačí kliknout)` : placeholder} inputMode="url" className="flex-1 font-mono text-[12.5px]" />
       <Button variant="primary" icon={busy ? LoaderCircle : Plus} className={busy ? '[&>svg]:animate-spin' : undefined} onClick={() => void add()} disabled={busy || (mode === 'live' && !url.trim())}>
         Přidat
       </Button>
@@ -167,7 +167,7 @@ function MoodleSection() {
           <p className="flex items-center gap-2 text-[14px] font-bold text-accent">
             <Zap className="size-4" aria-hidden /> Doporučeno: kalendář Moodlu – žádný token
           </p>
-          <p className="mt-1 text-[13px] text-muted">Klíč z Moodlu nepotřebuješ. Moodle umí sdílet všechny termíny jako odkaz na kalendář – Stihnu z něj průběžně vytáhne úkoly, testy a odevzdávárny. Odevzdání a známky pak přeneseš záložkou „→ Stihnu“, nebo je stáhne token (níže).</p>
+          <p className="mt-1 text-[13px] text-muted">Klíč z Moodlu nepotřebuješ. Moodle umí sdílet všechny termíny jako odkaz na kalendář – Stihnu z něj průběžně vytáhne úkoly, testy a odevzdávárny. Odevzdání a známky pak přeneseš záložkou „→ Stihnu“, nebo je aplikace stáhne sama s klíčem z Moodlu (níže).</p>
         </div>
         <Steps
           items={[
@@ -584,7 +584,7 @@ function AppSection() {
     void _a;
     const payload = { app: 'stihnu', version: 2, exportedAt: new Date().toISOString(), ...pickPersisted(state), settings: { ...safeSettings, moodle: moodle ? { ...moodle, token: '' } : null } };
     downloadTextFile(`stihnu-zaloha-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), 'application/json');
-    toast.success('Záloha stažena (bez klíčů a tokenů).');
+    toast.success('Záloha je stažená (bez klíčů a přístupových údajů).');
   };
 
   const onImport = async (file: File) => {
@@ -611,7 +611,7 @@ function AppSection() {
                   toast.info('Ukázka: vymyšlené předměty a simulovaná doprava.');
                 } else {
                   const removed = useAppStore.getState().startOwnData();
-                  toast.success(removed ? 'Moje data – ukázku jsem uklidil.' : 'Moje data.');
+                  toast.success(removed ? 'Moje data – ukázka je pryč.' : 'Moje data.');
                 }
               }}
               options={[
@@ -719,7 +719,7 @@ function AppSection() {
             ? 'Zjišťuji serverové funkce…'
             : server.reachable
               ? `Server běží · ${[server.golemio && 'Golemio', server.google && 'Google Maps', server.googleClientId && 'Google přihlášení', server.anthropic && 'AI'].filter(Boolean).join(', ') || 'bez serverových klíčů'}`
-              : 'Server nedostupný – Live režim potřebuje nasazení na Vercel.'}
+              : 'Server aplikace je nedostupný – vlastní data potřebují aplikaci nasazenou na Vercelu.'}
         </p>
       </div>
     </Card>

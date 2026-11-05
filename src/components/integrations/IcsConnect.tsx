@@ -172,7 +172,7 @@ export function IcsConnect() {
 
       {settings.mode === 'demo' && source !== 'ics-file' && (
         <p className="rounded-2xl bg-sand/15 px-3.5 py-2.5 text-[13px] text-clay">
-          Sandbox načte ukázkový export rozvrhu ze SISu (týdenní RRULE, pásmo Europe/Prague). V Live režimu se odkaz stáhne přes serverovou iCal proxy.
+          V ukázce se načte vzorový rozvrh ze SISu. S vlastními daty se kalendář stáhne přes server aplikace.
         </p>
       )}
 

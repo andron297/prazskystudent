@@ -13,7 +13,7 @@ import { navigateTo } from '../../hooks/useAppShell';
 import { Button, Chip, cn, Field, TextInput } from '../ui/primitives';
 
 const STEPS: { step: MoodleSyncStep; label: string }[] = [
-  { step: 'site', label: 'Ověření tokenu (core_webservice_get_site_info)' },
+  { step: 'site', label: 'Ověření klíče' },
   { step: 'courses', label: 'Zapsané předměty (core_enrol_get_users_courses)' },
   { step: 'assignments', label: 'Odevzdávárny a deadliny (mod_assign_get_assignments)' },
   { step: 'events', label: 'Testy a termíny (core_calendar_get_action_events_by_timesort)' },
@@ -107,7 +107,7 @@ export function MoodleConnect() {
 
       {settings.mode === 'demo' && (
         <p className="rounded-2xl bg-sand/15 px-3.5 py-2.5 text-[13px] text-clay">
-          Sandbox: odpovědi Moodlu jsou simulované (stejný formát jako skutečné API), takže si celý tok vyzkoušíš bez účtu. Token „invalid“ nasimuluje chybu.
+          Ukázka: odpovědi Moodlu jsou jen simulované, takže si celý postup vyzkoušíš bez účtu.
         </p>
       )}
 

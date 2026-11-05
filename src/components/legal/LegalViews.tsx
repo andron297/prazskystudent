@@ -152,7 +152,7 @@ export function TermsView() {
       </section>
       <section>
         <h2>5. Bez záruky</h2>
-        <p>Aplikace se poskytuje zdarma tak, jak je, bez záruky nepřetržité dostupnosti, bezchybnosti nebo vhodnosti pro určitý účel. Provozovatel může aplikaci kdykoli změnit nebo ukončit; o ukončení dá vědět předem, aby sis mohl(a) stáhnout svá data.</p>
+        <p>Aplikace se poskytuje zdarma tak, jak je, bez záruky nepřetržité dostupnosti, bezchybnosti nebo vhodnosti pro určitý účel. Provozovatel může aplikaci kdykoli změnit nebo ukončit; o ukončení dá vědět s předstihem, aby bylo dost času stáhnout si svá data.</p>
       </section>
       <section>
         <h2>6. Omezení odpovědnosti</h2>
