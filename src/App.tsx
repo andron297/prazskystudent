@@ -18,7 +18,8 @@ import { startLeaveBadge } from './services/leaveBadge';
 // Méně používané sekce se načítají až při otevření (menší první načtení PWA).
 const TransitMapView = lazy(() => import('./components/map/TransitMapView').then((m) => ({ default: m.TransitMapView })));
 const SubjectsView = lazy(() => import('./components/subjects/SubjectsView').then((m) => ({ default: m.SubjectsView })));
-const CalendarView = lazy(() => import('./components/calendar/CalendarView').then((m) => ({ default: m.CalendarView })));
+const StudyProfileDialog = lazy(() => import('./components/plan/StudyProfileDialog').then((m) => ({ default: m.StudyProfileDialog })));
+const PlanView = lazy(() => import('./components/plan/PlanView').then((m) => ({ default: m.PlanView })));
 const ConnectionsView = lazy(() => import('./components/integrations/ConnectionsView').then((m) => ({ default: m.ConnectionsView })));
 const ImportView = lazy(() => import('./components/integrations/ImportView').then((m) => ({ default: m.ImportView })));
 const ConnectStudyModal = lazy(() => import('./components/integrations/ConnectStudyModal').then((m) => ({ default: m.ConnectStudyModal })));
@@ -26,7 +27,6 @@ const ItemEditor = lazy(() => import('./components/common/ItemEditor').then((m) 
 const AccountView = lazy(() => import('./components/account/AccountView').then((m) => ({ default: m.AccountView })));
 const PrivacyView = lazy(() => import('./components/legal/LegalViews').then((m) => ({ default: m.PrivacyView })));
 const TermsView = lazy(() => import('./components/legal/LegalViews').then((m) => ({ default: m.TermsView })));
-const TasksView = lazy(() => import('./components/tasks/TasksView').then((m) => ({ default: m.TasksView })));
 const AccountGate = lazy(() => import('./components/account/AccountScreens').then((m) => ({ default: m.AccountGate })));
 const LiveNavigation = lazy(() => import('./components/navigation/LiveNavigation').then((m) => ({ default: m.LiveNavigation })));
 const GuideView = lazy(() => import('./components/tour/GuideView').then((m) => ({ default: m.GuideView })));
@@ -53,6 +53,7 @@ export default function App() {
   const editor = useUiStore((s) => s.editor);
   const navigation = useUiStore((s) => s.navigation);
   const tour = useUiStore((s) => s.tour);
+  const askStudyProfile = useUiStore((s) => s.askStudyProfile);
   const [connectMounted, setConnectMounted] = useState(false);
   const [editorMounted, setEditorMounted] = useState(false);
   useThemeEffect(theme);
@@ -135,10 +136,9 @@ export default function App() {
               {view === 'dnes' && <DashboardView />}
               {view === 'doprava' && <TransitMapView />}
               {view === 'predmety' && <SubjectsView subjectId={param} />}
-              {view === 'kalendar' && <CalendarView />}
+              {view === 'plan' && <PlanView tab={param} />}
               {view === 'propojeni' && <ConnectionsView section={param} />}
               {view === 'import' && <ImportView />}
-              {view === 'ukoly' && <TasksView />}
               {view === 'ucet' && <AccountView />}
               {view === 'podminky' && <TermsView />}
               {view === 'soukromi' && <PrivacyView />}
@@ -160,6 +160,11 @@ export default function App() {
       {navigation && (
         <Suspense fallback={null}>
           <LiveNavigation />
+        </Suspense>
+      )}
+      {askStudyProfile && (
+        <Suspense fallback={null}>
+          <StudyProfileDialog open onClose={() => useUiStore.setState({ askStudyProfile: false })} />
         </Suspense>
       )}
       {tour && (

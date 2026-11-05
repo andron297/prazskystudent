@@ -62,7 +62,7 @@ export function ImportView() {
     const n = addExamTerms(chosen);
     toast.success(`${n} ${n === 1 ? 'termín přidán' : n < 5 ? 'termíny přidány' : 'termínů přidáno'} do kalendáře`);
     setSisImport(null);
-    navigateTo('kalendar');
+    navigateTo('plan', 'rok');
   };
 
   return (

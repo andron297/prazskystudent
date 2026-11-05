@@ -217,7 +217,7 @@ export function DayBrief({ now, target, itinerary }: { now: Date; target: Schedu
       </div>
 
       {(todayOther.length > 0 || overdue.length > 0) && (
-        <button type="button" onClick={() => navigateTo('ukoly')} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 text-[13px] font-semibold hover:bg-white/15">
+        <button type="button" onClick={() => navigateTo('plan', 'ukoly')} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 text-[13px] font-semibold hover:bg-white/15">
           {overdue.length > 0 && <span className="text-[#ffb4a2]">{overdue.length} po termínu</span>}
           {overdue.length > 0 && todayOther.length > 0 && <span className="opacity-50">·</span>}
           {todayOther.length > 0 && (

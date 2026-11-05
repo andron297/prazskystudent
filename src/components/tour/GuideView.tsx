@@ -78,7 +78,7 @@ const SECTIONS: Section[] = [
       </>,
       'Předmět změníš klepnutím na jeho štítek. Když nabídnutý předmět odmítneš, už ho u toho úkolu nenabídne.',
     ],
-    view: 'ukoly',
+    view: 'plan',
   },
   {
     id: 'predmety',
@@ -105,7 +105,7 @@ const SECTIONS: Section[] = [
       'Klepnutím na období nebo na sloupek s termíny se ukážou podrobnosti.',
       'Hodiny, které máš i ve vlastním Google Kalendáři, se ukazují jen jednou – ta obsáhlejší verze – a do Googlu se nezapisují podruhé.',
     ],
-    view: 'kalendar',
+    view: 'plan',
   },
   {
     id: 'doprava',

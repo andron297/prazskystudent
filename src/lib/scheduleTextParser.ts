@@ -152,6 +152,7 @@ const TIME_DOT_RE = /(?:\b(?:v|ve|od|do|cas)\s+)([01]?\d|2[0-3])\.([0-5]\d)(?![\
 const WEIGHT_RE = /(\d{1,3})\s*%/;
 
 const CATEGORY_RULES: [MilestoneCategory, RegExp][] = [
+  ['event', /hodnoceni vyuky|anket[ay]|evaluac/],
   ['exam-period', /zkouskov/],
   ['holiday', /prazdnin|volno|dekansk|rektorsk|svatek|bez vyuky|vyuka se nekona|nekona se vyuka|vanoc|velikonoc|sportovni d(en|ny)/],
   ['enrollment', /zapis|skrtan|registrac|prihlasovan|predzapis|volba predmetu|zmen[ay] zapisu/],

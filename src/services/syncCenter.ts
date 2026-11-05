@@ -19,6 +19,7 @@ import { buildSnapshot, mergeSnapshots, parseSnapshot, pickSharedSettings, snaps
 import { syncCalendar, syncTasks, type ServiceResult, type SyncContext } from '../lib/sync/engine';
 import { GoogleAuthError, type GoogleBackend, type RemoteCalendar } from '../lib/sync/remote';
 import { buildingForEvent } from '../store/selectors';
+import { splitMilestones } from '../lib/relevance';
 import { useAppStore } from '../store/appStore';
 import { appNow } from '../store/clockStore';
 import { toast, useUiStore } from '../store/uiStore';
@@ -255,7 +256,8 @@ export async function runGoogleSync(options: { manual?: boolean; allowMassDelete
           events: s.events,
           requirements: s.requirements,
           tasks: s.tasks,
-          milestones: s.milestones,
+          // Jen termíny harmonogramu, které se studenta týkají (skryté se z Googlu uklidí).
+          milestones: splitMilestones(s.milestones, { profile: s.settings.studyProfile, hidden: s.settings.hiddenMilestones, shown: s.settings.shownMilestones }).visible,
           tombstones: s.tombstones,
           buildingFor: (e) => buildingForEvent(e, s.settings).building,
         },
@@ -452,7 +454,7 @@ function scheduleSoon(): void {
     soonTimer = null;
     const canRun = mode === 'demo' || tokenState().valid || serverFlow();
     if (canRun) void runGoogleSync();
-  }, 20_000);
+  }, 8_000);
 }
 
 export function useBackgroundSync(): void {

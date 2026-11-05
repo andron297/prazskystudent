@@ -10,7 +10,6 @@ import {
   ArrowRight,
   FlaskConical,
   House,
-  ListTodo,
   LogIn,
   ShieldCheck,
   LoaderCircle,
@@ -40,10 +39,9 @@ import { cn, IconButton } from '../ui/primitives';
 
 const NAV: { view: View; label: string; icon: LucideIcon }[] = [
   { view: 'dnes', label: 'Dnes', icon: House },
-  { view: 'ukoly', label: 'Úkoly', icon: ListTodo },
+  { view: 'plan', label: 'Plán', icon: CalendarDays },
   { view: 'doprava', label: 'Doprava', icon: TramFront },
   { view: 'predmety', label: 'Předměty', icon: BookOpen },
-  { view: 'kalendar', label: 'Kalendář', icon: CalendarDays },
   { view: 'propojeni', label: 'Propojení', icon: Settings2 },
 ];
 
@@ -276,7 +274,7 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
                   {active && <motion.span layoutId="nav-active" className="absolute inset-0 rounded-full bg-accent shadow-sm" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
                   <item.icon className="relative size-4" aria-hidden />
                   <span className="relative">{item.label}</span>
-                  {item.view === 'ukoly' && urgent > 0 && <span className={cn('relative grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10.5px] font-black tabular', active ? 'bg-accent-fg text-accent' : 'bg-clay text-white')} aria-label={`${urgent} na dnešek nebo po termínu`}>{urgent}</span>}
+                  {item.view === 'plan' && urgent > 0 && <span className={cn('relative grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10.5px] font-black tabular', active ? 'bg-accent-fg text-accent' : 'bg-clay text-white')} aria-label={`${urgent} na dnešek nebo po termínu`}>{urgent}</span>}
                 </a>
               );
             })}
@@ -334,7 +332,7 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
       {/* Spodní navigace (mobil) */}
       <nav className="glass-strong fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 items-center rounded-full border border-line px-1 py-1 shadow-[0_18px_40px_-20px_rgb(0_0_0/0.45)] lg:hidden" aria-label="Hlavní navigace" data-tour="nav-mobile">
         {NAV.slice(0, 5).map((item) => (
-          <BottomItem key={item.view} item={item} active={view === item.view} badge={item.view === 'ukoly' ? urgent : 0} />
+          <BottomItem key={item.view} item={item} active={view === item.view} badge={item.view === 'plan' ? urgent : 0} />
         ))}
       </nav>
       {demo && <div className="demo-frame" aria-hidden />}

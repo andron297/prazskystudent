@@ -124,7 +124,7 @@ export function TodayTimeline({ day, label, targetId, onSelect }: { day: Date; l
       eyebrow={`${label} · ${formatDayMonth(day)}`}
       className="h-full"
       action={
-        <Button size="sm" variant="ghost" onClick={() => navigateTo('kalendar')}>
+        <Button size="sm" variant="ghost" onClick={() => navigateTo('plan', 'tyden')}>
           Kalendář <ArrowRight className="size-3.5" />
         </Button>
       }
@@ -181,7 +181,7 @@ export function TasksCard() {
       data-tour="tasks"
       className="h-full"
       action={
-        <Button size="sm" variant="ghost" onClick={() => navigateTo('ukoly')}>
+        <Button size="sm" variant="ghost" onClick={() => navigateTo('plan', 'ukoly')}>
           Všechny <ArrowRight className="size-3.5" />
         </Button>
       }
@@ -237,7 +237,7 @@ export function TasksCard() {
         </ul>
       )}
       {list.length > shown.length && (
-        <button type="button" onClick={() => navigateTo('ukoly')} className="mt-2 w-full rounded-full py-2 text-[13px] font-semibold text-muted hover:bg-surface-2 hover:text-fg">
+        <button type="button" onClick={() => navigateTo('plan', 'ukoly')} className="mt-2 w-full rounded-full py-2 text-[13px] font-semibold text-muted hover:bg-surface-2 hover:text-fg">
           a {list.length - shown.length} {plural(list.length - shown.length, ['další', 'další', 'dalších'])} v Úkolech
         </button>
       )}

@@ -171,8 +171,10 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
         const n = await insertGoogleEvents(googleClientId, calendarItems, settings.reminders, server.googleServerFlow);
         toast.success(`Zapsáno do Google Kalendáře: ${n} událostí s připomínkami.`);
       }
-      toast.success(`Uloženo: ${ms.length} milníků${reqs.length ? ` a ${reqs.length} povinností` : ''}.`);
+      toast.success(`Uloženo: ${ms.length} ${ms.length === 1 ? 'termín' : ms.length < 5 && ms.length > 0 ? 'termíny' : 'termínů'} harmonogramu${reqs.length ? ` a ${reqs.length} povinností` : ''}.`);
       closeConnect();
+      // Po harmonogramu fakulty se zeptáme na typ studia, ať zmizí, co se studenta netýká.
+      if (mode === 'harmonogram' && ms.length > 0 && !useAppStore.getState().settings.studyProfile) setTimeout(() => useUiStore.setState({ askStudyProfile: true }), 350);
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {

@@ -20,7 +20,7 @@ import { importSyllabus, useSyllabusSync } from '../../services/syllabusSync';
 import { markSubjectsDistinct, useSubjectDuplicates } from '../../services/subjectAssist';
 import { AddToCalendar } from '../common/AddToCalendar';
 import { Modal } from '../ui/overlays';
-import { Button, Card, Chip, cn, EmptyState, Field, ProgressBar, ProgressRing, TextInput } from '../ui/primitives';
+import { Button, Card, Chip, cn, EmptyState, Field, TextInput } from '../ui/primitives';
 import { MaterialsPanel, MaterialViewer, useMaterialOpener } from './Materials';
 import { RequirementCard, RequirementEditor } from './RequirementCard';
 import { TaskRowItem } from '../tasks/TaskRow';
@@ -81,6 +81,8 @@ function DuplicatePrompt() {
 function SubjectGrid() {
   const now = useNow(60_000);
   const subjects = useAppStore((s) => s.subjects);
+  const events = useVisibleEvents();
+  const settings = useAppStore((s) => s.settings);
   const requirements = useAppStore((s) => s.requirements);
   const materials = useAppStore((s) => s.materials);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -128,12 +130,13 @@ function SubjectGrid() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {subjects.map((subject, index) => {
             const reqs = requirements.filter((r) => r.subjectId === subject.id);
-            const progress = subjectProgress(reqs);
             const color = SUBJECT_COLOR_CLASSES[subject.color];
             const next = reqs
               .filter((r) => r.deadline && !isRequirementComplete(r) && new Date(r.deadline) > now)
               .sort((a, b) => (a.deadline ?? '').localeCompare(b.deadline ?? ''))[0];
             const urgency = next ? deadlineUrgency(new Date(next.deadline!), now) : 'none';
+            const nextClass = events.filter((e) => e.subjectId === subject.id && new Date(e.end) > now).sort((a, b) => a.start.localeCompare(b.start))[0];
+            const place = nextClass ? buildingForEvent(nextClass, settings) : null;
             const matCount = materials.filter((m) => m.subjectId === subject.id).length;
             return (
               <motion.button
@@ -153,22 +156,19 @@ function SubjectGrid() {
                     {subject.moodleCourseId && <Chip className="bg-orange-500/10 text-orange-700 dark:text-orange-300">Moodle</Chip>}
                     {!subject.moodleCourseId && SOURCE_BADGE[subject.source] && <Chip>{SOURCE_BADGE[subject.source]}</Chip>}
                   </span>
-                  <ProgressRing value={progress.ratio} size={46} stroke={5} className={color.text}>
-                    <span className="text-[11px] font-semibold tabular">{progress.percent}%</span>
-                  </ProgressRing>
                 </span>
                 <span className="mt-3 font-display text-[25px] leading-[1.05] group-hover:text-accent">{subject.name}</span>
                 {subject.teacher && <span className="mt-0.5 truncate text-[12.5px] text-muted">{subject.teacher}</span>}
-                <span className="mt-4">
-                  <ProgressBar value={progress.ratio} barClassName={color.bar} />
-                  <span className="mt-1.5 flex justify-between text-xs text-muted">
-                    <span>
-                      {progress.percent} % splněno do {subject.completion?.includes('Zk') ? 'zkoušky' : 'zápočtu'}
+                <span className="mt-4 flex items-center gap-1.5 text-[12.5px] text-muted">
+                  <CalendarDays className="size-3.5 shrink-0" aria-hidden />
+                  {nextClass ? (
+                    <span className="truncate">
+                      {formatWeekdayShort(new Date(nextClass.start))} {formatDayMonth(new Date(nextClass.start))} v {formatTime(new Date(nextClass.start))}
+                      {place?.building ? ` · ${place.building.name}${place.room ? ` ${place.room}` : ''}` : ''}
                     </span>
-                    <span className="tabular">
-                      {progress.completed}/{progress.total} povinností
-                    </span>
-                  </span>
+                  ) : (
+                    <span>Žádná další výuka v rozvrhu</span>
+                  )}
                 </span>
                 <span className="mt-4 flex items-center gap-3 border-t border-line pt-3 text-xs text-muted">
                   {next ? (
@@ -231,12 +231,6 @@ function SubjectHub({ subject }: { subject: Subject }) {
       <section className="card relative isolate overflow-hidden rounded-[30px] p-5 sm:p-7">
         <span className={cn('pointer-events-none absolute -right-16 -top-20 -z-10 size-64 rounded-full bg-gradient-to-br to-transparent blur-3xl', color.glow)} />
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-          <ProgressRing value={progress.ratio} size={96} stroke={9} className={color.text}>
-            <span className="text-center">
-              <span className="block text-xl font-semibold tabular">{progress.percent}%</span>
-              <span className="block text-[10px] uppercase tracking-wide text-muted">splněno</span>
-            </span>
-          </ProgressRing>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               {subject.code && <Chip className={color.soft}>{subject.code}</Chip>}
@@ -244,10 +238,15 @@ function SubjectHub({ subject }: { subject: Subject }) {
               {subject.completion && <Chip>{subject.completion}</Chip>}
             </div>
             <h1 className="mt-2 font-display text-[34px] leading-[1.02] sm:text-[42px]">{subject.name}</h1>
-            <p className="mt-1 text-[13.5px] text-muted">
-              {subject.teacher ?? 'Vyučující neuveden'} · {progress.completed}/{progress.total} povinností hotovo · {progress.percent} % do{' '}
-              {subject.completion?.includes('Zk') ? 'zkoušky' : 'zápočtu'}
-            </p>
+            <p className="mt-1 text-[13.5px] text-muted">{subject.teacher ?? 'Vyučující neuveden'}</p>
+            {progress.total > 0 && (
+              <p className="mt-2 flex items-center gap-2 text-[12px] text-subtle">
+                <span className="h-1 w-20 overflow-hidden rounded-full bg-line">
+                  <span className={cn('block h-full rounded-full opacity-70', color.bar)} style={{ width: `${progress.percent}%` }} />
+                </span>
+                Splněno {progress.completed} z {progress.total} {plural(progress.total, ['povinnosti', 'povinností', 'povinností'])}
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2 sm:flex-col sm:items-stretch">
             {subject.moodleCourseUrl && (
@@ -379,7 +378,7 @@ function SubjectTasks({ subject }: { subject: Subject }) {
       title="Moje úkoly"
       icon={ListTodo}
       action={
-        <Button size="sm" variant="ghost" onClick={() => navigateTo('ukoly')}>
+        <Button size="sm" variant="ghost" onClick={() => navigateTo('plan', 'ukoly')}>
           Všechny úkoly
         </Button>
       }

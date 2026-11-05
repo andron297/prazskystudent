@@ -40,7 +40,7 @@ function Section({ title, count, tone, children, dot }: { title: string; count: 
   );
 }
 
-export function TasksView() {
+export function TasksView({ embedded = false }: { embedded?: boolean } = {}) {
   const now = useNow(60_000);
   const tasks = useAppStore((s) => s.tasks);
   const requirements = useAppStore((s) => s.requirements);
@@ -93,25 +93,27 @@ export function TasksView() {
   ].filter(Boolean);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <header className="px-1">
-        <p className="eyebrow text-subtle">Všechno na jednom místě</p>
-        <SerifTitle as="h1" className="mt-1 text-[44px] sm:text-[56px]">
-          Úkoly <em className="text-moss">a termíny</em>
-        </SerifTitle>
-        <p className="mt-1 text-[14.5px] text-muted">{summary.length ? summary.join(' · ') : 'Nic nehoří. Hezky.'}</p>
-      </header>
+    <div className={cn('space-y-4', !embedded && 'mx-auto max-w-3xl')}>
+      {!embedded && (
+        <header className="px-1">
+          <p className="eyebrow text-subtle">Všechno na jednom místě</p>
+          <SerifTitle as="h1" className="mt-1 text-[44px] sm:text-[56px]">
+            Úkoly <em className="text-moss">a termíny</em>
+          </SerifTitle>
+        </header>
+      )}
+      <p className="px-1 text-[14.5px] text-muted">{summary.length ? summary.join(' · ') : 'Nic nehoří.'}</p>
 
       <div className="card rounded-[26px] p-3 sm:p-4">
         <QuickAdd variant="hero" />
-        <p className="px-2 pt-2 text-[12.5px] text-subtle">Předmět poznám sám – podle kódu, názvu, zkratky, vyučujícího nebo rozvrhu. Můžeš ho napsat i s mřížkou, třeba „#statistika“.</p>
+        <p className="px-2 pt-2 text-[12.5px] text-subtle">Předmět aplikace pozná sama – podle kódu, názvu, zkratky, vyučujícího nebo rozvrhu. Můžete ho napsat i s mřížkou, třeba „#statistika“.</p>
       </div>
 
       {pending.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-start gap-3 rounded-[22px] bg-moss/10 px-4 py-3 text-[13.5px] ring-1 ring-inset ring-moss/25">
           <Sparkles className="mt-0.5 size-4 shrink-0 text-moss" aria-hidden />
           <p>
-            U {pending.length} {plural(pending.length, ['úkolu', 'úkolů', 'úkolů'])} navrhuji předmět. Stačí klepnout na správný – nebo na „Ne“.
+            U {pending.length} {plural(pending.length, ['úkolu', 'úkolů', 'úkolů'])} aplikace navrhuje předmět. Stačí klepnout na správný – nebo na „Ne“.
           </p>
         </motion.div>
       )}
@@ -166,7 +168,7 @@ export function TasksView() {
         {open.length === 0 ? (
           <div className="p-3">
             <EmptyState icon={ListTodo} title={subjectFilter !== undefined || scope !== 'all' ? 'Tady nic není' : 'Čistý stůl'}>
-              {subjectFilter !== undefined || scope !== 'all' ? 'Zkus jiný filtr.' : 'Napiš úkol nahoře – třeba „esej do pátku“. Termíny z předmětů se doplní samy ze SISu a Moodlu.'}
+              {subjectFilter !== undefined || scope !== 'all' ? 'Zkuste jiný filtr.' : 'Napište úkol nahoře – třeba „esej do pátku“. Termíny z předmětů se doplní samy ze SISu a Moodlu.'}
             </EmptyState>
           </div>
         ) : grouping === 'due' ? (

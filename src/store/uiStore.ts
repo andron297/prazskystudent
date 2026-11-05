@@ -42,6 +42,10 @@ export interface NavigationTarget {
 }
 
 interface UiState {
+  /** Otevřený editor odpočtu. */
+  countdownEditor: boolean;
+  /** Po nahrání harmonogramu se zeptat na typ studia. */
+  askStudyProfile: boolean;
   /** Běží krátká prohlídka aplikace. */
   tour: boolean;
   startTour: () => void;
@@ -123,6 +127,8 @@ export const useUiStore = create<UiState>()((set, get) => ({
     get().confirmRequest?.resolve(value);
     set({ confirmRequest: null });
   },
+  countdownEditor: false,
+  askStudyProfile: false,
   tour: false,
   startTour: () => set({ tour: true, setupOpen: false }),
   navigation: null,

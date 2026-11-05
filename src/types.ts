@@ -363,6 +363,18 @@ export interface WeatherSettings {
   feel: 'cold' | 'normal' | 'warm';
 }
 
+/** Odpočet do důležitého okamžiku (zkouškové, odjezd domů, narozeniny…). */
+export interface Countdown {
+  id: string;
+  title: string;
+  /** 'YYYY-MM-DD' (celý den) nebo ISO čas. */
+  at: string;
+  emoji?: string;
+  /** Odkud vznikl (ruční, z termínu nebo z harmonogramu). */
+  sourceKey?: string;
+  createdAt: string;
+}
+
 export interface Settings {
   mode: AppMode;
   theme: ThemePref;
@@ -407,8 +419,15 @@ export interface Settings {
   displayName: string;
   /** Dvojice předmětů, o kterých student řekl, že jsou různé ('idA|idB'). */
   distinctSubjects?: string[];
-  /** Oblíbená menza (prázdné = automaticky nejblíž výuce). */
-  menza?: { canteenIds: number[] };
+  /** Oblíbené menzy (první je hlavní); prázdné = ještě nevybráno. */
+  menza?: { canteenIds: number[]; asked?: boolean };
+  /** Odpovědi o studiu – podle nich se z harmonogramu skryjí termíny, které se studenta netýkají. */
+  studyProfile?: import('./lib/relevance').StudyProfile;
+  /** Termíny harmonogramu ručně skryté / ručně zobrazené. */
+  hiddenMilestones?: string[];
+  shownMilestones?: string[];
+  /** Vlastní odpočty (na hlavní stránce). */
+  countdowns?: Countdown[];
 }
 
 /* ------------------------------------------------------------------ */

@@ -41,17 +41,35 @@ export function useThemeEffect(pref: ThemePref): 'light' | 'dark' {
 /* Hash routing (#/dnes, #/predmety/<id>, #/harmonogram, #/integrace)  */
 /* ------------------------------------------------------------------ */
 
-export type View = 'dnes' | 'ukoly' | 'doprava' | 'predmety' | 'kalendar' | 'propojeni' | 'import' | 'ucet' | 'podminky' | 'soukromi' | 'pruvodce';
+export type View = 'dnes' | 'plan' | 'doprava' | 'predmety' | 'propojeni' | 'import' | 'ucet' | 'podminky' | 'soukromi' | 'pruvodce' | 'vzhled' | 'pripojit';
 
-const VIEWS: View[] = ['dnes', 'ukoly', 'doprava', 'predmety', 'kalendar', 'propojeni', 'import', 'ucet', 'podminky', 'soukromi', 'pruvodce'];
-/** Staré adresy z první verze. */
-const ALIASES: Record<string, View> = { harmonogram: 'kalendar', integrace: 'propojeni', nastaveni: 'propojeni', mapa: 'doprava', account: 'ucet', prihlaseni: 'ucet', zasady: 'soukromi', napoveda: 'pruvodce', help: 'pruvodce', tour: 'pruvodce' };
+const VIEWS: View[] = ['dnes', 'plan', 'doprava', 'predmety', 'propojeni', 'import', 'ucet', 'podminky', 'soukromi', 'pruvodce', 'vzhled', 'pripojit'];
+/** Starší adresy (i z první verze) → nové. */
+const ALIASES: Record<string, [View, string?]> = {
+  ukoly: ['plan', 'ukoly'],
+  kalendar: ['plan', 'tyden'],
+  harmonogram: ['plan', 'rok'],
+  integrace: ['propojeni'],
+  nastaveni: ['propojeni'],
+  mapa: ['doprava'],
+  account: ['ucet'],
+  prihlaseni: ['ucet'],
+  zasady: ['soukromi'],
+  napoveda: ['pruvodce'],
+  help: ['pruvodce'],
+  tour: ['pruvodce'],
+  pair: ['pripojit'],
+};
 
 function parseHash(): { view: View; param?: string } {
   const raw = window.location.hash.replace(/^#\/?/, '');
-  const [first, param] = raw.split('/');
-  const view = (ALIASES[first] ?? first) as View;
-  return VIEWS.includes(view) ? { view, param: param ? decodeURIComponent(param) : undefined } : { view: 'dnes' };
+  const slash = raw.indexOf('/');
+  const first = slash === -1 ? raw : raw.slice(0, slash);
+  const rest = slash === -1 ? '' : raw.slice(slash + 1);
+  const alias = ALIASES[first];
+  if (alias) return { view: alias[0], param: rest ? decodeURIComponent(rest) : alias[1] };
+  const view = first as View;
+  return VIEWS.includes(view) ? { view, param: rest ? decodeURIComponent(rest) : undefined } : { view: 'dnes' };
 }
 
 export function useHashRoute() {
