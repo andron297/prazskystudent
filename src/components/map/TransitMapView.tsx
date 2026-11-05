@@ -3,7 +3,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { MapLibreMap, Marker, NavigationControl, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent } from 'maplibre-gl';
 import { AnimatePresence, motion } from 'motion/react';
-import { Accessibility, Check, ChevronLeft, Crosshair, Footprints, GraduationCap, LoaderCircle, MapPin, Search, Snowflake, Sparkles, X } from 'lucide-react';
+import { Accessibility, Check, ChevronLeft, Crosshair, Footprints, GraduationCap, List, LoaderCircle, Map as MapIcon, MapPin, Search, Snowflake, Sparkles, X } from 'lucide-react';
 import type { TransitMode } from '../../types';
 import { formatTime } from '../../lib/dates';
 import { formatDistance, haversineMeters, walkingMinutes } from '../../lib/geo';
@@ -20,6 +20,8 @@ import { buildingForEvent, upcomingEvents } from '../../store/selectors';
 import { toast, useUiStore } from '../../store/uiStore';
 import { Button, cn, Skeleton } from '../ui/primitives';
 import { LineBadge } from '../transit/TransitBits';
+import { JourneyPlanner } from '../transit/JourneyPlanner';
+import { useJourneyStore } from '../../store/journeyStore';
 import { applyNature, PRAGUE_BOUNDS, STYLE_URL } from './mapStyle';
 
 setWorkerUrl(workerUrl);
@@ -222,6 +224,13 @@ function Departures({ stop }: { stop: StopGroup }) {
 /* Hlavní obrazovka                                                    */
 /* ------------------------------------------------------------------ */
 
+/** Okraje mapy podle toho, který panel ji zakrývá (vyhledávač vlevo, odjezdy vpravo, na mobilu dole). */
+function mapPadding(tab: 'spojeni' | 'odjezdy') {
+  const wide = window.innerWidth >= 1024;
+  if (tab === 'spojeni') return wide ? { top: 0, bottom: 0, left: 470, right: 0 } : { top: 70, bottom: 100, left: 0, right: 0 };
+  return wide ? { top: 0, bottom: 0, left: 0, right: 400 } : { top: 110, bottom: 280, left: 0, right: 0 };
+}
+
 export function TransitMapView() {
   const { stops, error } = useStops();
   const theme = useResolvedTheme();
@@ -244,6 +253,12 @@ export function TransitMapView() {
   const [query, setQuery] = useState('');
   const [modes, setModes] = useState<TransitMode[]>([]);
   const [panelOpen, setPanelOpen] = useState(true);
+  const [tab, setTab] = useState<'spojeni' | 'odjezdy'>('spojeni');
+  const journey = useJourneyStore((s) => s.selected);
+  const journeyFrom = useJourneyStore((s) => s.from);
+  const journeyTo = useJourneyStore((s) => s.to);
+  const focusTick = useJourneyStore((s) => s.focusTick);
+  const endMarkers = useRef<Marker[]>([]);
 
   const filtered = useMemo(() => (stops ? (modes.length ? stops.filter((s) => s.lines.some((l) => !l.night && modes.includes(l.mode))) : stops) : []), [stops, modes]);
   const geojson = useMemo(() => stopsToGeoJSON(filtered), [filtered]);
@@ -270,7 +285,7 @@ export function TransitMapView() {
     });
     map.touchZoomRotate.disableRotation();
     // Střed mapy mimo panel vpravo (desktop) / dole (mobil).
-    map.setPadding(window.innerWidth >= 1024 ? { top: 0, bottom: 0, left: 0, right: 400 } : { top: 110, bottom: 280, left: 0, right: 0 });
+    map.setPadding(mapPadding('spojeni'));
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-left');
     map.on('style.load', () => {
       const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
@@ -337,6 +352,66 @@ export function TransitMapView() {
     schoolMarker.current = school ? new Marker({ element: markerEl('school') }).setLngLat([school.coords.lng, school.coords.lat]).addTo(map) : null;
   }, [school]);
 
+  // Vybrané spojení z vyhledávače
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const features = tab === 'spojeni' && journey
+      ? journey.legs.flatMap((l) => {
+          const path = l.path ?? (l.kind === 'ride' && l.fromCoords && l.toCoords ? [l.fromCoords, ...(l.via?.map((v) => v.coords) ?? []), l.toCoords] : l.kind === 'walk' && l.fromCoords && l.toCoords ? [l.fromCoords, l.toCoords] : null);
+          if (!path || path.length < 2) return [];
+          return [{ type: 'Feature' as const, properties: { kind: l.kind, color: l.kind === 'ride' ? (l.color ?? '#2f6b4a') : '#2f6b4a' }, geometry: { type: 'LineString' as const, coordinates: path.map((c) => [c.lng, c.lat]) } }];
+        })
+      : [];
+    const data = { type: 'FeatureCollection' as const, features };
+    const src = map.getSource('journey') as GeoJSONSource | undefined;
+    if (src) src.setData(data);
+    else {
+      map.addSource('journey', { type: 'geojson', data });
+      map.addLayer({ id: 'journey-ride-casing', type: 'line', source: 'journey', filter: ['==', ['get', 'kind'], 'ride'], paint: { 'line-color': '#ffffff', 'line-width': 9 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
+      map.addLayer({ id: 'journey-ride', type: 'line', source: 'journey', filter: ['==', ['get', 'kind'], 'ride'], paint: { 'line-color': ['get', 'color'], 'line-width': 5.5 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
+      map.addLayer({ id: 'journey-walk', type: 'line', source: 'journey', filter: ['==', ['get', 'kind'], 'walk'], paint: { 'line-color': '#2f6b4a', 'line-width': 4, 'line-dasharray': [0.2, 1.8] }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
+    }
+    for (const m of endMarkers.current) m.remove();
+    endMarkers.current = [];
+    if (tab === 'spojeni' && journeyFrom && journeyTo) {
+      endMarkers.current = [new Marker({ element: markerEl('me') }).setLngLat([journeyFrom.lng, journeyFrom.lat]).addTo(map), new Marker({ element: markerEl('school') }).setLngLat([journeyTo.lng, journeyTo.lat]).addTo(map)];
+    }
+  }, [ready, journey, journeyFrom, journeyTo, tab, theme]);
+
+  // Okraje mapy podle panelu; v odjezdech zpět na okolí výchozího místa
+  const tabRef = useRef(tab);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || tabRef.current === tab) return;
+    tabRef.current = tab;
+    if (tab === 'odjezdy' && !selectedRef.current) map.easeTo({ padding: mapPadding(tab), center: [origin.coords.lng, origin.coords.lat], zoom: 15, duration: 600 });
+    else map.easeTo({ padding: mapPadding(tab), duration: 300 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  // Přiblížit na vybrané spojení (na mobilu až po přepnutí na mapu)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !journey || tab !== 'spojeni') return;
+    const wide = window.innerWidth >= 1024;
+    if (!wide && panelOpen) return;
+    const pts = journey.legs.flatMap((l) => l.path ?? [l.fromCoords, l.toCoords].filter((x): x is NonNullable<typeof x> => Boolean(x)));
+    if (journeyFrom) pts.push(journeyFrom);
+    if (journeyTo) pts.push(journeyTo);
+    if (pts.length < 2) return;
+    const lngs = pts.map((p) => p.lng);
+    const lats = pts.map((p) => p.lat);
+    map.fitBounds(
+      [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+      ],
+      { padding: 64, duration: 700, maxZoom: 16 },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journey?.id, focusTick, tab, panelOpen]);
+
   // Výběr zastávky (z mapy, hledání nebo jiné obrazovky)
   useEffect(() => {
     if (!focusStop || !stops) return;
@@ -386,8 +461,46 @@ export function TransitMapView() {
         </div>
       )}
 
+      {/* Přepínač: vyhledávač spojení × odjezdy ze zastávek */}
+      <div className="absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-1.5 lg:left-4 lg:top-4 lg:translate-x-0">
+        <div className="flex rounded-full border border-line bg-[var(--glass-strong)] p-1 shadow-[var(--card-shadow)] backdrop-blur-md">
+        {(['spojeni', 'odjezdy'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => {
+              setTab(t);
+              setPanelOpen(true);
+            }}
+            className={cn('relative h-9 rounded-full px-4 text-[13.5px] font-bold transition-colors', tab === t ? 'text-accent-fg' : 'text-muted hover:text-fg')}
+            aria-pressed={tab === t}
+          >
+            {tab === t && <motion.span layoutId="transit-tab" className="absolute inset-0 rounded-full bg-accent" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
+            <span className="relative">{t === 'spojeni' ? 'Spojení' : 'Odjezdy'}</span>
+          </button>
+        ))}
+        </div>
+        {tab === 'spojeni' && (
+          <button type="button" onClick={() => setPanelOpen((v) => !v)} className="inline-flex h-[46px] items-center gap-1.5 rounded-full border border-line bg-[var(--glass-strong)] px-3.5 text-[13px] font-bold shadow-[var(--card-shadow)] backdrop-blur-md lg:hidden">
+            {panelOpen ? <MapIcon className="size-4" aria-hidden /> : <List className="size-4" aria-hidden />}
+            {panelOpen ? 'Mapa' : 'Seznam'}
+          </button>
+        )}
+      </div>
+
+      {/* Vyhledávač zůstává připojený, aby se při přepnutí na mapu neztratilo hledání. */}
+      <aside
+        className={cn(
+          'glass-strong scrollbar-thin absolute inset-x-3 bottom-[5.6rem] top-[4rem] z-10 overflow-y-auto overscroll-contain rounded-[26px] border border-line p-3.5 shadow-[var(--card-shadow)] lg:bottom-4 lg:left-4 lg:right-auto lg:top-[4.4rem] lg:w-[440px] lg:p-5',
+          tab !== 'spojeni' ? 'hidden' : !panelOpen && 'hidden lg:block',
+        )}
+        aria-label="Vyhledávač spojení"
+      >
+        <JourneyPlanner active={tab === 'spojeni'} />
+      </aside>
+
       {/* Vyhledávání a filtry */}
-      <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-col gap-2 sm:left-4 sm:right-auto sm:w-[360px] lg:top-4">
+      <div className={cn('pointer-events-none absolute inset-x-3 top-16 z-10 flex flex-col gap-2 sm:left-4 sm:right-auto sm:w-[360px] lg:top-[4.25rem]', tab !== 'odjezdy' && 'hidden')}>
         <div className="glass-strong pointer-events-auto flex h-12 items-center gap-2 rounded-full border border-line px-4 shadow-[var(--card-shadow)]">
           <Search className="size-4 shrink-0 text-subtle" aria-hidden />
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Hledat zastávku…" className="min-w-0 flex-1 bg-transparent text-[14.5px] outline-none placeholder:text-subtle" aria-label="Hledat zastávku" />
@@ -441,7 +554,7 @@ export function TransitMapView() {
 
       {/* Panel: vybraná zastávka / okolí */}
       <AnimatePresence>
-        {panelOpen && (
+        {panelOpen && tab === 'odjezdy' && (
           <motion.aside
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -565,7 +678,7 @@ export function TransitMapView() {
       </AnimatePresence>
       {!panelOpen && (
         <button type="button" onClick={() => setPanelOpen(true)} className="glass-strong absolute bottom-[5.6rem] left-1/2 z-10 -translate-x-1/2 rounded-full border border-line px-4 py-2 text-[13px] font-bold shadow-[var(--card-shadow)] lg:hidden">
-          Zastávky v okolí
+          {tab === 'spojeni' ? 'Zpět na spojení' : 'Zastávky v okolí'}
         </button>
       )}
     </div>

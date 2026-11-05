@@ -181,20 +181,39 @@ export async function handleTransit(request: Request): Promise<Response> {
       const time = parseTime(params.get('time'));
       const arriveBy = params.get('arriveBy') === '1';
       const wheelchair = params.get('wheelchair') === '1';
-      const data = await upstream<{ itineraries?: { startTime?: string; endTime?: string; transfers?: number; legs?: RawLeg[] }[] }>('plan', {
+      // Stránkování „dřívější / pozdější spoje“ – kurzor vrací sám plánovač.
+      const cursor = params.get('cursor');
+      if (cursor && !/^[\w=+/-]{1,600}$/.test(cursor)) throw new HttpError(400, 'bad_cursor', 'Neplatný kurzor.');
+      const count = Math.min(10, Math.max(3, Number(params.get('n')) || 6));
+      const data = await upstream<{ itineraries?: { startTime?: string; endTime?: string; transfers?: number; legs?: RawLeg[] }[]; nextPageCursor?: string; previousPageCursor?: string }>('plan', {
         fromPlace: `${from.lat},${from.lon}`,
         toPlace: `${to.lat},${to.lon}`,
         time,
         arriveBy: String(arriveBy),
-        numItineraries: '6',
+        numItineraries: String(count),
         maxPreTransitTime: '1200',
         maxPostTransitTime: '1200',
+        ...(cursor ? { pageCursor: cursor } : {}),
         ...(wheelchair ? { pedestrianProfile: 'WHEELCHAIR' } : {}),
       });
       const itineraries = (data.itineraries ?? [])
         .filter((it) => !(it.legs ?? []).some((l) => l.cancelled))
         .map((it) => ({ start: it.startTime ?? '', end: it.endTime ?? '', transfers: it.transfers ?? 0, legs: (it.legs ?? []).map(compactLeg) }));
-      return json({ itineraries, source: 'transitous' }, 200, { 'cache-control': 'public, max-age=30, s-maxage=60' });
+      return json({ itineraries, next: data.nextPageCursor, previous: data.previousPageCursor, source: 'transitous' }, 200, { 'cache-control': 'public, max-age=30, s-maxage=60' });
+    }
+    if (op === 'geocode') {
+      // Hledání míst: adresy, zastávky, místa (jen Praha a okolí).
+      const text = (params.get('text') ?? '').trim();
+      if (text.length < 2 || text.length > 80) throw new HttpError(400, 'bad_text', 'Zadejte aspoň dva znaky.');
+      const data = await upstream<{ type?: string; name?: string; id?: string; lat?: number; lon?: number; areas?: { name?: string; adminLevel?: number; matched?: boolean; default?: boolean }[]; street?: string; houseNumber?: string }[]>('geocode', { text, language: 'cs' });
+      const places = (Array.isArray(data) ? data : [])
+        .filter((p) => typeof p.lat === 'number' && typeof p.lon === 'number' && p.lat >= BOUNDS.minLat && p.lat <= BOUNDS.maxLat && p.lon >= BOUNDS.minLon && p.lon <= BOUNDS.maxLon)
+        .slice(0, 10)
+        .map((p) => {
+          const area = (p.areas ?? []).filter((a) => a.name && a.name !== 'Česko').sort((a, b) => (b.adminLevel ?? 0) - (a.adminLevel ?? 0))[0]?.name;
+          return { type: p.type ?? 'PLACE', name: (p.name ?? '').slice(0, 120), area: area?.slice(0, 80), lat: p.lat!, lon: p.lon!, stopId: p.type === 'STOP' ? p.id : undefined };
+        });
+      return json({ places }, 200, { 'cache-control': 'public, max-age=3600, s-maxage=86400' });
     }
     if (op === 'departures') {
       const stopId = (params.get('stopId') ?? '').trim();

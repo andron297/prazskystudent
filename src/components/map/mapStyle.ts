@@ -42,7 +42,24 @@ const NATURE: Record<'light' | 'dark', Record<string, [string, string]>> = {
 };
 
 
+/** Popisky v češtině: podklad jinak dává přednost anglickým názvům („Prague“, „Old Town“). */
+function localizeLabels(map: MapLibreMap) {
+  for (const layer of map.getStyle().layers ?? []) {
+    if (layer.type !== 'symbol') continue;
+    const field = map.getLayoutProperty(layer.id, 'text-field');
+    if (!field) continue;
+    const raw = JSON.stringify(field);
+    if (!/name/.test(raw) || /ref|housenumber/.test(raw)) continue;
+    try {
+      map.setLayoutProperty(layer.id, 'text-field', ['coalesce', ['get', 'name:cs'], ['get', 'name']]);
+    } catch {
+      /* vrstva bez textu */
+    }
+  }
+}
+
 export function applyNature(map: MapLibreMap, theme: 'light' | 'dark') {
+  localizeLabels(map);
   for (const [layer, [prop, value]] of Object.entries(NATURE[theme])) {
     if (!map.getLayer(layer)) continue;
     try {
