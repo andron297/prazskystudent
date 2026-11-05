@@ -395,3 +395,18 @@ body {
   z-index: 70;
   box-shadow: inset 0 0 0 3px rgb(199 166 118 / 0.8);
 }
+
+/* Navigace: kužel směru u polohy */
+.nav-me-cone {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  background: conic-gradient(from -28deg, rgb(47 107 74 / 0.38) 0deg 56deg, transparent 56deg);
+  transition:
+    transform 0.35s ease,
+    opacity 0.35s ease;
+  pointer-events: none;
+}

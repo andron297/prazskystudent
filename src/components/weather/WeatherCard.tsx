@@ -61,7 +61,7 @@ function HourlyChart({ forecast, now, advice }: { forecast: WeatherForecast; now
 export function WeatherCard({ forecast, advice, now, dayLabel }: { forecast: WeatherForecast | null; advice: WeatherAdvice | null; now: Date; dayLabel: string }) {
   if (!forecast || !advice) {
     return (
-      <Card title="Počasí" eyebrow="Na cestu" className="h-full">
+      <Card title="Počasí" eyebrow="Na cestu">
         <div className="h-48 animate-pulse rounded-[22px] bg-surface-2" />
       </Card>
     );
@@ -75,7 +75,6 @@ export function WeatherCard({ forecast, advice, now, dayLabel }: { forecast: Wea
         </>
       }
       eyebrow={dayLabel}
-      className="h-full"
       action={
         <span className="flex items-center gap-1.5 text-muted">
           <WeatherIcon code={c.code} isDay={c.isDay} className="size-5 text-clay" />

@@ -10,6 +10,7 @@ import { handleRoutes } from './routes.js';
 import { handleSis } from './sis.js';
 import { handleTransit } from './transit.js';
 import { handleAccount } from './account.js';
+import { handleMenza } from './menza.js';
 
 const ROUTES: Record<string, (request: Request) => Promise<Response>> = {
   '/api/golemio': handleGolemio,
@@ -22,6 +23,7 @@ const ROUTES: Record<string, (request: Request) => Promise<Response>> = {
   '/api/sis': handleSis,
   '/api/transit': handleTransit,
   '/api/account': handleAccount,
+  '/api/menza': handleMenza,
 };
 
 export async function routeApiRequest(request: Request): Promise<Response> {

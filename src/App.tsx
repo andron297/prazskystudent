@@ -27,6 +27,7 @@ const PrivacyView = lazy(() => import('./components/legal/LegalViews').then((m) 
 const TermsView = lazy(() => import('./components/legal/LegalViews').then((m) => ({ default: m.TermsView })));
 const TasksView = lazy(() => import('./components/tasks/TasksView').then((m) => ({ default: m.TasksView })));
 const AccountGate = lazy(() => import('./components/account/AccountScreens').then((m) => ({ default: m.AccountGate })));
+const LiveNavigation = lazy(() => import('./components/navigation/LiveNavigation').then((m) => ({ default: m.LiveNavigation })));
 
 function ViewFallback() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
   const { view, param } = useHashRoute();
   const connectOpen = useUiStore((s) => s.connectOpen);
   const editor = useUiStore((s) => s.editor);
+  const navigation = useUiStore((s) => s.navigation);
   const [connectMounted, setConnectMounted] = useState(false);
   const [editorMounted, setEditorMounted] = useState(false);
   useThemeEffect(theme);
@@ -147,6 +149,11 @@ export default function App() {
       {editorMounted && (
         <Suspense fallback={null}>
           <ItemEditor />
+        </Suspense>
+      )}
+      {navigation && (
+        <Suspense fallback={null}>
+          <LiveNavigation />
         </Suspense>
       )}
       <SetupWizard />

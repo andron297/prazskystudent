@@ -13,6 +13,7 @@ import {
   MapPin,
   MoveDown,
   Navigation,
+  Navigation2,
   Radio,
   RefreshCw,
 } from 'lucide-react';
@@ -127,6 +128,11 @@ export function TransitPanel({
             </p>
           </div>
           <div className="flex items-center gap-1">
+            {selected && selected.source !== 'estimate' && active && (
+              <Button size="sm" variant="primary" icon={Navigation2} onClick={() => useUiStore.getState().startNavigation({ itinerary: selected, event, building, origin: origin.coords })}>
+                Navigovat
+              </Button>
+            )}
             {building && (
               <a
                 href={googleMapsTransitUrl(building.coords, origin.coords)}

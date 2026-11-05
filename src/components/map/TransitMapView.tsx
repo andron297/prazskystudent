@@ -20,48 +20,9 @@ import { buildingForEvent, upcomingEvents } from '../../store/selectors';
 import { toast, useUiStore } from '../../store/uiStore';
 import { Button, cn, Skeleton } from '../ui/primitives';
 import { LineBadge } from '../transit/TransitBits';
+import { applyNature, PRAGUE_BOUNDS, STYLE_URL } from './mapStyle';
 
 setWorkerUrl(workerUrl);
-
-const STYLE_URL = { light: 'https://tiles.openfreemap.org/styles/positron', dark: 'https://tiles.openfreemap.org/styles/dark' } as const;
-const PRAGUE_BOUNDS: [[number, number], [number, number]] = [
-  [13.95, 49.85],
-  [14.95, 50.3],
-];
-
-/** Přebarvení podkladu do lesní palety aplikace. */
-const NATURE: Record<'light' | 'dark', Record<string, [string, string]>> = {
-  light: {
-    background: ['background-color', '#efebe1'],
-    park: ['fill-color', '#dde4cf'],
-    landuse_park: ['fill-color', '#dde4cf'],
-    landcover_wood: ['fill-color', '#d3ddc4'],
-    water: ['fill-color', '#bdd2cf'],
-    waterway: ['line-color', '#a9c4c0'],
-    landuse_residential: ['fill-color', '#e9e4d8'],
-    building: ['fill-color', '#e3dccd'],
-    highway_minor: ['line-color', '#e2dccd'],
-    highway_major_inner: ['line-color', '#fbf9f4'],
-    highway_major_casing: ['line-color', '#d8d1c0'],
-    railway_transit: ['line-color', '#d3cbb9'],
-    railway: ['line-color', '#d3cbb9'],
-  },
-  dark: {
-    background: ['background-color', '#0d1410'],
-    water: ['fill-color', '#122420'],
-    waterway: ['line-color', '#122420'],
-    landcover_wood: ['fill-color', '#14211a'],
-    landuse_park: ['fill-color', '#14211a'],
-    landuse_residential: ['fill-color', '#101914'],
-    building: ['fill-color', '#0c130f'],
-    highway_minor: ['line-color', '#1a251f'],
-    highway_major_inner: ['line-color', '#1e2b24'],
-    highway_major_subtle: ['line-color', '#1a251f'],
-    highway_path: ['line-color', '#162019'],
-    railway_transit: ['line-color', '#24302a'],
-    railway: ['line-color', '#24302a'],
-  },
-};
 
 const MODE_FILTERS: { id: TransitMode; label: string }[] = [
   { id: 'metro', label: 'Metro' },
@@ -70,16 +31,6 @@ const MODE_FILTERS: { id: TransitMode; label: string }[] = [
   { id: 'train', label: 'Vlak' },
 ];
 
-function applyNature(map: MapLibreMap, theme: 'light' | 'dark') {
-  for (const [layer, [prop, value]] of Object.entries(NATURE[theme])) {
-    if (!map.getLayer(layer)) continue;
-    try {
-      map.setPaintProperty(layer, prop as never, value as never);
-    } catch {
-      /* vrstva má jiný typ */
-    }
-  }
-}
 
 /** Od tohoto přiblížení se místo středu zastávky kreslí jednotlivá nástupiště. */
 const PLATFORM_ZOOM = 15.5;

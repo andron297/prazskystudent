@@ -5,6 +5,7 @@
  */
 import type { Itinerary, JourneyLeg, LatLng, RideLeg, TransitMode } from '../types';
 import { haversineMeters } from '../lib/geo';
+import { decodePolyline } from '../lib/polyline';
 import { requestJson } from './http';
 
 export const TRANSITOUS_SOURCES_URL = 'https://transitous.org/sources/';
@@ -33,6 +34,9 @@ export interface CompactLeg {
   tripId?: string;
   wheelchair?: boolean;
   stops?: number;
+  geometry?: string;
+  steps?: { d: number; s?: string; dir?: string }[];
+  via?: { name: string; lat: number; lon: number; at?: string }[];
 }
 
 export interface CompactItinerary {
@@ -63,6 +67,15 @@ const MODE: Record<string, TransitMode> = {
 };
 
 const ms = (iso: string) => new Date(iso).getTime();
+
+function safeDecode(encoded: string) {
+  try {
+    const path = decodePolyline(encoded, 7);
+    return path.length >= 2 && path.every((p) => Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180) ? path : undefined;
+  } catch {
+    return undefined;
+  }
+}
 const stripPid = (id?: string) => (id?.startsWith('cz-PID_') ? id.slice(7) : id);
 
 /** Itinerář z Transitous → itinerář aplikace (souvislé chůze se sloučí). */
@@ -70,15 +83,30 @@ export function fromTransitous(raw: CompactItinerary, originLabel: string, build
   const legs: JourneyLeg[] = [];
   for (const l of raw.legs) {
     const minutes = Math.max(0, Math.round((ms(l.end) - ms(l.start)) / 60_000));
+    const path = l.geometry ? safeDecode(l.geometry) : undefined;
     if (l.mode === 'WALK' || l.mode === 'BIKE' || !MODE[l.mode]) {
       const prev = legs[legs.length - 1];
       const to = l.to.name === 'Cíl' ? buildingName : l.to.name;
+      const steps = l.steps?.map((st) => ({ distance: st.d, street: st.s, dir: st.dir }));
       if (prev && prev.kind === 'walk') {
         prev.minutes += minutes;
         prev.to = to;
         prev.distanceMeters = (prev.distanceMeters ?? 0) + (l.distance ?? 0);
+        prev.path = prev.path && path ? [...prev.path, ...path] : undefined;
+        prev.steps = prev.steps && steps ? [...prev.steps, ...steps] : undefined;
+        prev.toCoords = { lat: l.to.lat, lng: l.to.lon };
       } else {
-        legs.push({ kind: 'walk', minutes, from: l.from.name === 'Start' ? originLabel : l.from.name, to, distanceMeters: l.distance });
+        legs.push({
+          kind: 'walk',
+          minutes,
+          from: l.from.name === 'Start' ? originLabel : l.from.name,
+          to,
+          distanceMeters: l.distance,
+          path,
+          steps,
+          fromCoords: { lat: l.from.lat, lng: l.from.lon },
+          toCoords: { lat: l.to.lat, lng: l.to.lon },
+        });
       }
       continue;
     }
@@ -103,6 +131,8 @@ export function fromTransitous(raw: CompactItinerary, originLabel: string, build
       color: l.color,
       fromCoords: { lat: l.from.lat, lng: l.from.lon },
       toCoords: { lat: l.to.lat, lng: l.to.lon },
+      path,
+      via: l.via?.map((v) => ({ name: v.name, coords: { lat: v.lat, lng: v.lon }, at: v.at })),
     };
     legs.push(ride);
   }

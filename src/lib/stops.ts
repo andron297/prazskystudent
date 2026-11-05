@@ -216,3 +216,19 @@ export function platformCode(groups: StopGroup[], stopName: string, line: string
   if (exact) return exact.code;
   return candidates.length === 1 ? candidates[0].code : undefined;
 }
+
+/** Poloha nástupiště (podle kódu nebo linky a směru), jinak střed zastávky. */
+export function stopCoords(groups: StopGroup[], stopName: string, opts: { line?: string; headsign?: string; platform?: string } = {}): LatLng | undefined {
+  const group = findStop(groups, stopName);
+  if (!group) return undefined;
+  if (opts.platform) {
+    const byCode = group.platforms.find((p) => p.code === opts.platform);
+    if (byCode) return byCode.coords;
+  }
+  if (opts.line) {
+    const code = platformCode(groups, stopName, opts.line, opts.headsign ?? '');
+    const p = code ? group.platforms.find((x) => x.code === code) : undefined;
+    if (p) return p.coords;
+  }
+  return group.coords;
+}

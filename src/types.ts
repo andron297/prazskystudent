@@ -407,6 +407,8 @@ export interface Settings {
   displayName: string;
   /** Dvojice předmětů, o kterých student řekl, že jsou různé ('idA|idB'). */
   distinctSubjects?: string[];
+  /** Oblíbená menza (prázdné = automaticky nejblíž výuce). */
+  menza?: { canteenIds: number[] };
 }
 
 /* ------------------------------------------------------------------ */
@@ -486,12 +488,24 @@ export interface GoogleSyncState {
 
 export type TransitMode = 'tram' | 'metro' | 'bus' | 'train' | 'ferry' | 'trolleybus' | 'funicular';
 
+/** Úsek chůze podle plánovače (délka v m, ulice, výslovný směr). */
+export interface WalkStep {
+  distance: number;
+  street?: string;
+  dir?: string;
+}
+
 export interface WalkLeg {
   kind: 'walk';
   minutes: number;
   from: string;
   to: string;
   distanceMeters?: number;
+  /** Tvar pěší trasy (pro navigaci a mapu). */
+  path?: LatLng[];
+  steps?: WalkStep[];
+  fromCoords?: LatLng;
+  toCoords?: LatLng;
 }
 
 export interface RideLeg {
@@ -520,6 +534,9 @@ export interface RideLeg {
   toCoords?: LatLng;
   /** Nástupiště, kde se vystupuje. */
   toPlatform?: string;
+  /** Tvar trasy vozidla a zastávky po cestě (pro navigaci). */
+  path?: LatLng[];
+  via?: { name: string; coords: LatLng; at?: string }[];
 }
 
 export type JourneyLeg = WalkLeg | RideLeg;

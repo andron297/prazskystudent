@@ -21,6 +21,7 @@ import { WeatherCard } from '../weather/WeatherCard';
 import { WeatherIcon } from '../weather/WeatherBits';
 import { MilestonesCard, SubjectsGlance, TasksCard, TodayTimeline, WelcomeCard } from './DashboardCards';
 import { DayBrief } from './DayBrief';
+import { MenzaCard } from './MenzaCard';
 
 function greeting(hour: number): [string, string] {
   if (hour < 5) return ['Dobrou', 'noc'];
@@ -57,6 +58,20 @@ export function DashboardView() {
   const subject = within?.subjectId ? subjects.find((s) => s.id === within.subjectId) : undefined;
   const transit = useTransitPlan(within, building ?? null);
   useLeaveReminder(within, transit.selected, now);
+
+  // Budova, kde student učí nejčastěji (pro menzu, když dnes nic nemá).
+  const mainBuilding = useMemo(() => {
+    const counts = new Map<string, number>();
+    const t = minuteKey * 60_000;
+    for (const e of events) {
+      if (!isTransitTarget(e) || new Date(e.start).getTime() < t - 7 * 86_400_000 || new Date(e.start).getTime() > t + 14 * 86_400_000) continue;
+      const b = buildingForEvent(e, settings).building;
+      if (b) counts.set(b.id, (counts.get(b.id) ?? 0) + 1);
+    }
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+    return top ? settings.buildings.find((b) => b.id === top[0]) ?? null : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, settings.buildings, Math.floor(minuteKey / 60)]);
 
   // Počasí a rada na cestu
   const origin = useOrigin();
@@ -142,8 +157,9 @@ export function DashboardView() {
           <TasksCard />
           <FocusRest task={tasks.find((t) => !t.done) ?? null} />
         </div>
-        <div className="min-w-0 lg:col-span-5">
+        <div className="min-w-0 space-y-4 sm:space-y-5 lg:col-span-5">
           <WeatherCard forecast={forecast} advice={advice} now={now} dayLabel={plan.day === 'tomorrow' ? 'Zítra do školy' : plan.day === 'today' ? 'Dnes do školy' : 'Dnes'} />
+          <MenzaCard now={now} building={building ?? mainBuilding} fallback={origin.coords} />
         </div>
         <div className="min-w-0 lg:col-span-7">
           {within ? (

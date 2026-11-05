@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { fetchServerCapabilities, NO_SERVER, type ServerCapabilities } from '../services/api';
 import type { SisPayload } from '../services/sisBridge';
+import type { Building, Itinerary, LatLng, ScheduleEvent } from '../types';
 import { uid } from '../lib/id';
 
 export type ToastTone = 'success' | 'error' | 'info';
@@ -32,7 +33,18 @@ interface ConfirmRequest extends Required<Omit<ConfirmOptions, 'message'>> {
   resolve: (value: boolean) => void;
 }
 
+/** Spuštěná navigace (celoobrazovková). */
+export interface NavigationTarget {
+  itinerary: Itinerary;
+  event: ScheduleEvent | null;
+  building: Building | null;
+  origin: LatLng;
+}
+
 interface UiState {
+  navigation: NavigationTarget | null;
+  startNavigation: (target: NavigationTarget) => void;
+  stopNavigation: () => void;
   toasts: Toast[];
   pushToast: (message: string, tone?: ToastTone) => void;
   dismissToast: (id: string) => void;
@@ -108,6 +120,9 @@ export const useUiStore = create<UiState>()((set, get) => ({
     get().confirmRequest?.resolve(value);
     set({ confirmRequest: null });
   },
+  navigation: null,
+  startNavigation: (target) => set({ navigation: target }),
+  stopNavigation: () => set({ navigation: null }),
   editor: null,
   openEditor: (target) => set({ editor: target }),
   closeEditor: () => set({ editor: null }),

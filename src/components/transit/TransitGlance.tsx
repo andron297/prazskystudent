@@ -1,12 +1,14 @@
 import { motion } from 'motion/react';
-import { ArrowDown, ChevronDown, Flag, Footprints, MapPin } from 'lucide-react';
-import type { Building, RideLeg, ScheduleEvent } from '../../types';
+import { ArrowDown, ChevronDown, Flag, Footprints, MapPin, Navigation2 } from 'lucide-react';
+import type { Building, Itinerary, RideLeg, ScheduleEvent } from '../../types';
 import { formatTime } from '../../lib/dates';
 import { rideLegs } from '../../lib/transitPlanner';
 import { TRANSIT_STYLES } from '../../lib/urgency';
 import type { TransitPlanState } from '../../hooks/useTransitPlan';
 import { useNow } from '../../hooks/useNow';
+import { useOrigin } from '../../hooks/useOrigin';
 import { useAppStore } from '../../store/appStore';
+import { useUiStore } from '../../store/uiStore';
 import { cn } from '../ui/primitives';
 import { DelayChip, LineBadge } from './TransitBits';
 import { transitStatusOf } from './transitStatus';
@@ -54,6 +56,8 @@ export function TransitGlance({
 }) {
   const now = useNow(1000);
   const stop = useAppStore((s) => s.settings.originStop[s.settings.mode]);
+  const origin = useOrigin();
+  const startNavigation = (itinerary: Itinerary) => useUiStore.getState().startNavigation({ itinerary, event, building, origin: origin.coords });
   const platformFor = usePlatformLookup();
   const status = transitStatusOf(event, building, transit, now);
   const style = TRANSIT_STYLES[status];
@@ -150,9 +154,20 @@ export function TransitGlance({
             <span className="tabular">
               odchod <strong className="text-white">{formatTime(new Date(chosen.leaveAt))}</strong> · v budově <strong className="text-white">{formatTime(new Date(chosen.arriveAt))}</strong> · {slack} min předem
             </span>
-            <button type="button" onClick={onDetail} className="inline-flex items-center gap-1 font-semibold text-white hover:underline">
-              Jiný spoj <ArrowDown className="size-3.5" aria-hidden />
-            </button>
+            <span className="flex items-center gap-3">
+              <button type="button" onClick={onDetail} className="inline-flex items-center gap-1 font-semibold text-white hover:underline">
+                Jiný spoj <ArrowDown className="size-3.5" aria-hidden />
+              </button>
+              {!estimate && (
+                <button
+                  type="button"
+                  onClick={() => startNavigation(chosen)}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white px-3.5 text-[13px] font-bold text-[#1d3a2a] shadow-md transition hover:brightness-95"
+                >
+                  <Navigation2 className="size-4" aria-hidden /> Navigovat
+                </button>
+              )}
+            </span>
             {plan.lastCall && plan.lastCall.id !== chosen.id && new Date(plan.lastCall.leaveAt) > new Date(chosen.leaveAt) && (
               <span className="w-full tabular text-white/70">
                 Nejpozději: odchod <strong className="text-white">{formatTime(new Date(plan.lastCall.leaveAt))}</strong> · v budově {formatTime(new Date(plan.lastCall.arriveAt))}

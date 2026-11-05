@@ -78,7 +78,9 @@ interface RawLeg {
   tripId?: string;
   wheelchairAccessible?: string;
   cancelled?: boolean;
-  intermediateStops?: unknown[];
+  intermediateStops?: RawPlace[];
+  legGeometry?: { points?: string; precision?: number };
+  steps?: { relativeDirection?: string; distance?: number; streetName?: string; area?: boolean }[];
 }
 
 export interface CompactPlace {
@@ -105,6 +107,29 @@ export interface CompactLeg {
   tripId?: string;
   wheelchair?: boolean;
   stops?: number;
+  /** Tvar trasy – zakódovaná lomená čára (Google polyline, přesnost 7). */
+  geometry?: string;
+  /** Pokyny pro chůzi: vzdálenost (m), ulice, směr. */
+  steps?: { d: number; s?: string; dir?: string }[];
+  /** Zastávky po cestě (jen jízdy). */
+  via?: { name: string; lat: number; lon: number; at?: string }[];
+}
+
+/** Sloučí drobné úseky „pokračuj rovně“ na stejné ulici do jednoho pokynu. */
+function compactSteps(steps: NonNullable<RawLeg['steps']>): CompactLeg['steps'] {
+  const out: NonNullable<CompactLeg['steps']> = [];
+  for (const st of steps.slice(0, 400)) {
+    const d = Math.max(0, Math.round(st.distance ?? 0));
+    const street = st.streetName?.trim() || undefined;
+    const dir = st.relativeDirection && st.relativeDirection !== 'CONTINUE' ? st.relativeDirection : undefined;
+    const last = out[out.length - 1];
+    if (last && !dir && last.s === street) {
+      last.d += d;
+      continue;
+    }
+    out.push({ d, ...(street ? { s: street.slice(0, 80) } : {}), ...(dir ? { dir } : {}) });
+  }
+  return out.slice(0, 120);
 }
 
 const place = (p: RawPlace | undefined): CompactPlace => ({
@@ -132,6 +157,12 @@ function compactLeg(l: RawLeg): CompactLeg {
     tripId: l.tripId,
     wheelchair: l.wheelchairAccessible ? l.wheelchairAccessible === 'ACCESSIBLE' : undefined,
     stops: Array.isArray(l.intermediateStops) ? l.intermediateStops.length + 1 : undefined,
+    geometry: l.legGeometry?.points && (l.legGeometry.precision ?? 7) === 7 && l.legGeometry.points.length < 40_000 ? l.legGeometry.points : undefined,
+    steps: l.mode === 'WALK' && Array.isArray(l.steps) ? compactSteps(l.steps) : undefined,
+    via:
+      Array.isArray(l.intermediateStops) && l.mode !== 'WALK'
+        ? l.intermediateStops.slice(0, 80).map((p) => ({ name: p.name ?? '', lat: p.lat ?? 0, lon: p.lon ?? 0, at: p.arrival ?? p.scheduledArrival }))
+        : undefined,
   };
 }
 
