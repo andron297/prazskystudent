@@ -19,7 +19,7 @@ export interface SisFileResult {
 export async function importSisIcsFile(file: Blob): Promise<SisFileResult> {
   if (file.size > 5 * 1024 * 1024) throw new Error('Soubor je moc velký – rozvrh ze SISu mívá do 1 MB.');
   const text = await file.text();
-  if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error('Tohle není soubor iCalendar (.ics). V SISu ho stáhneš v Rozvrhu NG přes Export → iCalendar.');
+  if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error('Tohle není soubor iCalendar (.ics). V SISu ho stáhnete v Rozvrhu NG přes Export → iCalendar.');
   // Vlastní rozvrh = vlastní data: z ukázky rovnou přepnout a ukázku uklidit.
   if (useAppStore.getState().settings.mode === 'demo') useAppStore.getState().startOwnData();
   const app = useAppStore.getState();

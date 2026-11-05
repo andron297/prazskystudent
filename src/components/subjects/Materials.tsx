@@ -124,7 +124,7 @@ export function MaterialsPanel({ subject, materials, requirements, onOpen }: { s
       />
       {groups.length === 0 ? (
         <EmptyState icon={FileUp} title="Zatím žádné materiály">
-          Prezentace a PDF se stáhnou automaticky po propojení Moodlu. Vlastní soubory, poznámky a odkazy přidáš tlačítkem Přidat.
+          Prezentace a PDF se stáhnou automaticky po propojení Moodlu. Vlastní soubory, poznámky a odkazy přidáte tlačítkem Přidat.
         </EmptyState>
       ) : (
         <div className="space-y-4">
@@ -239,7 +239,7 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
         let saved = 0;
         for (const file of files) {
           if (file.size > MAX_UPLOAD) {
-            toast.error(`${file.name} je větší než 50 MB – nahraj ho raději na Google Disk a přidej odkaz.`);
+            toast.error(`${file.name} je větší než 50 MB – nahrajte ho raději na Google Disk a přidejte odkaz.`);
             continue;
           }
           const blobKey = uid('blob');
@@ -330,7 +330,7 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
             className={cn('flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-8 text-center transition-colors', dragging ? 'border-accent bg-accent-soft' : 'border-line-strong hover:bg-surface-2')}
           >
             <FileUp className="mb-2 size-7 text-subtle" aria-hidden />
-            <span className="text-sm font-medium">Přetáhni soubory sem nebo klikni</span>
+            <span className="text-sm font-medium">Přetáhněte soubory sem nebo klikněte</span>
             <span className="mt-1 text-xs text-muted">PDF, prezentace, tabulky, obrázky… do 50 MB. Uloží se jen v tomto zařízení (IndexedDB).</span>
           </button>
           <input ref={inputRef} type="file" multiple className="hidden" onChange={(e) => setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])])} />
@@ -363,11 +363,11 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
             >
               <HardDrive className="mb-2 size-7 text-moss" aria-hidden />
               <span className="text-sm font-semibold">Vybrat soubory nebo složky z Google Disku</span>
-              <span className="mt-1 text-xs text-muted">Můžeš vybrat víc položek najednou, i ze sdílených disků. Aplikace uvidí jen to, co vybereš.</span>
+              <span className="mt-1 text-xs text-muted">Můžete vybrat víc položek najednou, i ze sdílených disků. Aplikace uvidí jen to, co vyberete.</span>
             </button>
           ) : (
             <p className="rounded-2xl bg-surface-2 px-4 py-3 text-[13px] text-muted">
-              Vlož odkaz na soubor nebo složku z Disku (v Disku: pravé tlačítko → <strong>Sdílet</strong> → <strong>Kopírovat odkaz</strong>).
+              Vložte odkaz na soubor nebo složku z Disku (v Disku: pravé tlačítko → <strong>Sdílet</strong> → <strong>Kopírovat odkaz</strong>).
               {useAppStore.getState().settings.mode === 'live' && ' Výběr přímo z Disku se objeví, až ho správce aplikace zapne.'}
             </p>
           )}
@@ -386,7 +386,7 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
               ))}
             </ul>
           )}
-          <Field label={pickerReady ? 'Nebo vlož odkaz' : 'Odkaz na Google Disk'} hint={driveLink && !parsedDrive ? 'Tohle nevypadá jako odkaz na Google Disk nebo Dokumenty Google.' : undefined}>
+          <Field label={pickerReady ? 'Nebo vložte odkaz' : 'Odkaz na Google Disk'} hint={driveLink && !parsedDrive ? 'Tohle nevypadá jako odkaz na Google Disk nebo Dokumenty Google.' : undefined}>
             <TextInput value={driveLink} onChange={(e) => setDriveLink(e.target.value)} placeholder="https://drive.google.com/drive/folders/…" inputMode="url" />
           </Field>
           {parsedDrive && (
@@ -505,13 +505,13 @@ export function MaterialViewer({ material, onClose }: { material: Material | nul
           </div>
           <p>
             {settings.mode === 'demo'
-              ? 'Tohle je ukázkový soubor. S vlastními daty se po kliknutí otevře přímo z Moodlu – aplikace k adrese souboru sama připojí tvůj klíč webové služby:'
-              : 'Ke stažení souboru z Moodlu je potřeba klíč webové služby. Propoj Moodle v sekci Propojení – odkaz pak bude vypadat takto:'}
+              ? 'Tohle je ukázkový soubor. S vlastními daty se po kliknutí otevře přímo z Moodlu – aplikace k adrese souboru sama připojí váš klíč webové služby:'
+              : 'Ke stažení souboru z Moodlu je potřeba klíč webové služby. Propojte Moodle v sekci Propojení – odkaz pak bude vypadat takto:'}
           </p>
           <code className="block overflow-x-auto whitespace-nowrap rounded-xl border border-line bg-surface-2 p-3 font-mono text-[12px]">
             {moodleFileUrlWithToken(material.url ?? '', tokenPreview)}
           </code>
-          <p className="text-xs text-muted">Klíč zůstává jen v tvém zařízení a do odkazu se vloží až ve chvíli otevření.</p>
+          <p className="text-xs text-muted">Klíč zůstává jen ve vašem zařízení a do odkazu se vloží až ve chvíli otevření.</p>
         </div>
       )}
     </Modal>

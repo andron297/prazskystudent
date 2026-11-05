@@ -107,7 +107,7 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
       },
       {
         id: 'location',
-        title: 'Odkud vyrážíš',
+        title: 'Odkud vyrážíte',
         state: origin.source === 'gps' ? 'connected' : origin.source === 'custom' || origin.presetId ? 'connected' : pending('location'),
         detail: origin.source === 'gps' ? 'Poloha telefonu (GPS)' : origin.source === 'custom' ? (origin.custom?.label ?? 'Vlastní místo') : findPreset(origin.presetId).label,
         optional: false,
@@ -125,7 +125,7 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
         id: 'music',
         title: 'Hudba (Spotify)',
         state: music?.url ? 'connected' : pending('music'),
-        detail: music?.url ? (music.title ?? 'Tvůj playlist') : 'Playlist na učení a na cestu – bez přihlašování.',
+        detail: music?.url ? (music.title ?? 'Váš playlist') : 'Playlist na učení a na cestu – bez přihlašování.',
         optional: true,
       },
       {
@@ -140,10 +140,10 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
         title: 'Chytré čtení (AI)',
         state: ownAiKey ? 'connected' : server.anthropic ? 'auto' : 'todo',
         detail: ownAiKey
-          ? `Sylaby, Moodle i PDF čte ${AI_NAMES[ownAiKey]} (tvůj klíč).`
+          ? `Sylaby, Moodle i PDF čte ${AI_NAMES[ownAiKey]} (váš klíč).`
           : server.anthropic
             ? 'Sylaby, Moodle i PDF čte AI aplikace.'
-            : 'Bez AI čtu sylaby pravidly. Vlož klíč od Claude, ChatGPT nebo Gemini.',
+            : 'Bez AI čtu sylaby pravidly. Vložte klíč od Claude, ChatGPT nebo Gemini.',
         optional: true,
       },
     ];

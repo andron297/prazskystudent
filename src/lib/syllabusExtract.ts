@@ -209,7 +209,7 @@ export function localSyllabusItems(text: string, now: Date): ParsedItem[] {
     if (set.size < 2) continue;
     const list = [...set].sort().map((d) => `${Number(d.slice(8, 10))}. ${Number(d.slice(5, 7))}.`);
     Object.assign(target, { start: undefined, end: undefined, allDay: true, isDeadline: false, category: 'assessment' });
-    target.sourceLine = truncate(`Možné termíny: ${list.join(', ')} – doplň ten svůj. ${target.sourceLine}`, 400);
+    target.sourceLine = truncate(`Možné termíny: ${list.join(', ')} – doplňte ten svůj. ${target.sourceLine}`, 400);
   }
   return out;
 }

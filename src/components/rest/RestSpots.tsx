@@ -96,10 +96,10 @@ export function DepartureRest({ event, itinerary, now, rain }: { event: Schedule
         <div className="min-w-0">
           <p className="eyebrow text-white/70">Odpočívadlo</p>
           <h3 className="mt-1 font-display text-[34px] leading-none sm:text-[40px]">
-            Máš {left}. <em className="text-[#e7d6b5]">Nadechni se.</em>
+            Máte {left}. <em className="text-[#e7d6b5]">Nadechněte se.</em>
           </h3>
-          <p className="mt-2 text-[14.5px] text-white/80">Vyrážíš v {formatTime(new Date(itinerary.leaveAt))} – do té doby žádný spěch.</p>
-          <div className="mt-4 flex flex-wrap gap-1.5" aria-label="Než vyrazíš">
+          <p className="mt-2 text-[14.5px] text-white/80">Vyrážíte v {formatTime(new Date(itinerary.leaveAt))} – do té doby žádný spěch.</p>
+          <div className="mt-4 flex flex-wrap gap-1.5" aria-label="Než vyrazíte">
             {items.map((item) => (
               <button
                 key={item}
@@ -196,7 +196,7 @@ export function FocusRest({ task }: { task?: Pick<Task, 'title'> | null }) {
         <div className="min-w-0 flex-1">
           <p className="eyebrow text-subtle">Odpočívadlo · studovna</p>
           <h3 className="mt-1 font-display text-[26px] leading-tight">{phase === 'focus' ? <>Soustředění</> : <>Pauza – <em className="text-moss">protáhni se</em></>}</h3>
-          <p className="mt-1 truncate text-[13.5px] text-muted">{phase === 'focus' ? (task ? `Teď: ${task.title}` : '25 minut jen na jednu věc.') : 'Vstaň, napij se, podívej se z okna.'}</p>
+          <p className="mt-1 truncate text-[13.5px] text-muted">{phase === 'focus' ? (task ? `Teď: ${task.title}` : '25 minut jen na jednu věc.') : 'Protáhněte se, napijte se a podívejte se z okna.'}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => setRunning((v) => !v)} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-[13.5px] font-bold text-accent-fg hover:brightness-110">
               {running ? <Pause className="size-4" aria-hidden /> : <Play className="size-4" aria-hidden />} {running ? 'Pozastavit' : phase === 'focus' ? 'Začít 25 min' : 'Pokračovat'}

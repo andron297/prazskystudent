@@ -83,12 +83,12 @@ export async function connectGoogle(options: { reconnect?: boolean } = {}): Prom
   try {
     if (mode === 'live') {
       const clientId = googleClientIdFor();
-      if (!clientId) throw new Error('Chybí OAuth Client ID – vlož ho v nastavení Googlu (návod je hned u pole).');
+      if (!clientId) throw new Error('Chybí OAuth Client ID – vložte ho v nastavení Googlu (návod je hned u pole).');
       const info = await signIn({ clientId, scopes: scopesForSettings(app.settings.google), serverFlow: serverFlow(), prompt: options.reconnect ? '' : 'select_account' });
       const backend = await backendFor('live', serverFlow());
       const account = await backend.profile();
       app.patchGoogleSync('live', { account, connectedAt: app.googleSync.live.connectedAt ?? new Date().toISOString(), scopes: info.scopes });
-      if (!info.persistent && serverFlow()) toast.info('Přihlášení platí hodinu – pro trvalou synchronizaci odeber Stihnu v účtu Google a propoj znovu.');
+      if (!info.persistent && serverFlow()) toast.info('Přihlášení platí hodinu – pro trvalou synchronizaci odeber Stihnu v účtu Google a propojte znovu.');
     } else {
       const backend = await backendFor('demo', false);
       const account = await backend.profile();

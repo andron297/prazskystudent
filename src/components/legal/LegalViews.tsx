@@ -44,9 +44,9 @@ export function PrivacyView() {
       <section>
         <h2>Ve zkratce</h2>
         <ul>
-          <li>Obsah tvého účtu (rozvrh, úkoly, předměty, propojení, klíče) se šifruje přímo ve tvém zařízení. Na serveru je jen v zašifrované podobě a my ho přečíst nemůžeme.</li>
+          <li>Obsah vašeho účtu (rozvrh, úkoly, předměty, propojení, klíče) se šifruje přímo ve vašem zařízení. Na serveru je jen v zašifrované podobě a my ho přečíst nemůžeme.</li>
           <li>Neprodáváme žádná data, nepoužíváme reklamu ani sledovací cookies.</li>
-          <li>Účet i všechna data můžeš kdykoli stáhnout nebo smazat (Účet → Moje data / Smazat účet).</li>
+          <li>Účet i všechna data můžete kdykoli stáhnout nebo smazat (Účet → Moje data / Smazat účet).</li>
         </ul>
       </section>
       <section>
@@ -62,13 +62,13 @@ export function PrivacyView() {
             <strong className="text-fg">Účet:</strong> e-mail, u přihlášení přes Google také jméno a profilová fotka. Slouží k přihlášení a synchronizaci (plnění smlouvy, čl. 6 odst. 1 písm. b) GDPR).
           </li>
           <li>
-            <strong className="text-fg">Obsah účtu:</strong> ukládá se jen zašifrovaný klíčem, který máš jen ty (heslo nebo záchranný kód). Bez něj ho nikdo nepřečte.
+            <strong className="text-fg">Obsah účtu:</strong> ukládá se jen zašifrovaný klíčem, který máte jen vy (heslo nebo záchranný kód). Bez něj ho nikdo nepřečte.
           </li>
           <li>
             <strong className="text-fg">Technické záznamy:</strong> poskytovatelé hostingu krátce uchovávají záznamy o přístupech (např. IP adresu) kvůli bezpečnosti a provozu (oprávněný zájem, čl. 6 odst. 1 písm. f) GDPR).
           </li>
           <li>
-            <strong className="text-fg">Údaje jen na chvíli, když použiješ funkci:</strong> souřadnice startu a cíle při plánování cesty, přibližná poloha pro počasí, text, který necháš přečíst AI, a stránky SIS a Moodlu, které načítáme přes náš server. Nic z toho neukládáme. Poloha během navigace se nikam neposílá – zpracovává se jen v zařízení.
+            <strong className="text-fg">Údaje jen na chvíli, když použijete funkci:</strong> souřadnice startu a cíle při plánování cesty, přibližná poloha pro počasí, text, který necháte přečíst AI, a stránky SIS a Moodlu, které načítáme přes náš server. Nic z toho neukládáme. Poloha během navigace se nikam neposílá – zpracovává se jen v zařízení.
           </li>
         </ul>
       </section>
@@ -76,23 +76,23 @@ export function PrivacyView() {
         <h2>3. Komu údaje předáváme</h2>
         <ul>
           <li>Supabase (účty a zašifrovaná data, servery v EU – Frankfurt) a Vercel (provoz aplikace).</li>
-          <li>Google – jen pokud si Kalendář, Úkoly nebo Disk sám propojíš.</li>
-          <li>Poskytovatel AI (Google Gemini, OpenAI nebo Anthropic) – jen text, který necháš přečíst. U bezplatné AI může poskytovatel text použít ke zlepšování svých služeb, proto do ní neposílej citlivé údaje.</li>
-          <li>Transitous a PID Golemio (trasy a odjezdy), Open-Meteo (počasí) – dostanou jen souřadnice, ne tvoji identitu.</li>
-          <li>Koleje a menzy UK (jídelníček) a OpenFreeMap (mapové podklady) – nedostanou o tobě nic, jen dotaz na jídelníček nebo mapu.</li>
+          <li>Google – jen pokud si Kalendář, Úkoly nebo Disk propojíte.</li>
+          <li>Poskytovatel AI (Google Gemini, OpenAI nebo Anthropic) – jen text, který necháte přečíst. U bezplatné AI může poskytovatel text použít ke zlepšování svých služeb, proto do ní neposílejte citlivé údaje.</li>
+          <li>Transitous a PID Golemio (trasy a odjezdy), Open-Meteo (počasí) – dostanou jen souřadnice, ne vaši identitu.</li>
+          <li>Koleje a menzy UK (jídelníček) a OpenFreeMap (mapové podklady) – nedostanou o vám nic, jen dotaz na jídelníček nebo mapu.</li>
         </ul>
         <p className="mt-2">Někteří poskytovatelé sídlí v USA; předání je chráněné standardními smluvními doložkami nebo rámcem EU–USA pro ochranu údajů.</p>
       </section>
       <section>
         <h2>4. Jak dlouho</h2>
-        <p>Dokud máš účet. Po jeho smazání data zmizí hned; ze záloh poskytovatele nejpozději do 30 dnů.</p>
+        <p>Dokud máte účet. Po jeho smazání data zmizí hned; ze záloh poskytovatele nejpozději do 30 dnů.</p>
       </section>
       <section>
-        <h2>5. Tvoje práva</h2>
+        <h2>5. Vaše práva</h2>
         <ul>
           <li>přístup k údajům a jejich přenositelnost (Účet → Stáhnout moje data),</li>
           <li>oprava a výmaz (úpravy v aplikaci, Účet → Smazat účet),</li>
-          <li>námitka a omezení zpracování – napiš nám na kontakt výše,</li>
+          <li>námitka a omezení zpracování – napište nám na kontakt výše,</li>
           <li>
             stížnost u Úřadu pro ochranu osobních údajů (
             <a href="https://uoou.gov.cz" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
@@ -109,7 +109,7 @@ export function PrivacyView() {
           <a href={REPO} target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
             GitHub
           </a>
-          ), takže ho může kdokoli zkontrolovat. Pokud by přesto došlo k bezpečnostnímu incidentu, který by tě mohl ohrozit, dáme ti vědět a postupujeme podle GDPR.
+          ), takže ho může kdokoli zkontrolovat. Pokud by přesto došlo k bezpečnostnímu incidentu, který by vás mohl ohrozit, dáme vám vědět a postupujeme podle GDPR.
         </p>
       </section>
       <section>
@@ -137,8 +137,8 @@ export function TermsView() {
         <h2>2. Účet</h2>
         <ul>
           <li>Účet si může založit člověk starší 15 let, a to jen pro sebe.</li>
-          <li>Za bezpečí svého hesla a záchranného kódu odpovídáš ty. Data jsou šifrovaná tvým klíčem – když ztratíš heslo i záchranný kód, data v účtu obnovit nejde a provozovatel je obnovit nemůže.</li>
-          <li>Účet můžeš kdykoli smazat v aplikaci (Účet → Smazat účet).</li>
+          <li>Za bezpečí svého hesla a záchranného kódu odpovídáte vy. Data jsou šifrovaná vaším klíčem – když ztratíte heslo i záchranný kód, data v účtu obnovit nejde a provozovatel je obnovit nemůže.</li>
+          <li>Účet můžete kdykoli smazat v aplikaci (Účet → Smazat účet).</li>
         </ul>
       </section>
       <section>
@@ -148,7 +148,7 @@ export function TermsView() {
       <section>
         <h2>4. Údaje z jiných služeb</h2>
         <p>
-          Spoje, zpoždění, rozvrh, termíny, jídelníček a počasí přebíráme od jiných služeb (PID, Transitous, Univerzita Karlova, Google, Open-Meteo a dalších). Jsou orientační a mohou být neúplné nebo zpožděné. Důležité věci – odjezdy, termíny odevzdání a zkoušek – si vždy ověř u zdroje.
+          Spoje, zpoždění, rozvrh, termíny, jídelníček a počasí přebíráme od jiných služeb (PID, Transitous, Univerzita Karlova, Google, Open-Meteo a dalších). Jsou orientační a mohou být neúplné nebo zpožděné. Důležité věci – odjezdy, termíny odevzdání a zkoušek – si vždy ověřte u zdroje.
         </p>
       </section>
       <section>
@@ -163,7 +163,7 @@ export function TermsView() {
       </section>
       <section>
         <h2>7. Změny podmínek</h2>
-        <p>O podstatných změnách dáme vědět v aplikaci. Pokud s nimi nesouhlasíš, můžeš účet kdykoli smazat.</p>
+        <p>O podstatných změnách dáme vědět v aplikaci. Pokud s nimi nesouhlasíte, můžete účet kdykoli smazat.</p>
       </section>
       <section>
         <h2>8. Rozhodné právo</h2>

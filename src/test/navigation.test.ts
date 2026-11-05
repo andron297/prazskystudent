@@ -30,8 +30,8 @@ describe('navigace', () => {
     const { maneuver, distance } = nextManeuver(ms, 20);
     expect(maneuver.type).toBe('left');
     expect(Math.round(distance)).toBeGreaterThan(70);
-    expect(instructionText(maneuver, distance).headline).toMatch(/^Za 80 m odboč vlevo$/);
-    expect(instructionText(maneuver, 5).headline).toBe('Odboč vlevo do ulice Tržiště');
+    expect(instructionText(maneuver, distance).headline).toMatch(/^Za 80 m odbočte vlevo$/);
+    expect(instructionText(maneuver, 5).headline).toBe('Odbočte vlevo do ulice Tržiště');
     const proj = projectOnPath(path, { lat: 50.08 + n(60), lng: 14.4 + w(10) });
     expect(Math.round(proj.along)).toBeGreaterThanOrEqual(58);
     expect(Math.round(proj.offRoute)).toBeLessThanOrEqual(11);

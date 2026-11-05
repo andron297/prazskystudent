@@ -39,10 +39,10 @@ export function useLeaveReminder(event: ScheduleEvent | null | undefined, itiner
     const base = `${event.id}|${itinerary.id}`;
     if (left <= 5 * 60_000 && left > 3 * 60_000 && !sent.has(`${base}|5`)) {
       sent.add(`${base}|5`);
-      void notify(`Za 5 minut vyraz – ${event.title}`, leaveMessage(itinerary), `leave-${event.id}`);
+      void notify(`Za 5 minut vyrazte – ${event.title}`, leaveMessage(itinerary), `leave-${event.id}`);
     } else if (left <= 30_000 && left > -90_000 && !sent.has(`${base}|0`)) {
       sent.add(`${base}|0`);
-      void notify(`Vyraz teď – ${event.title}`, leaveMessage(itinerary), `leave-${event.id}`);
+      void notify(`Vyrazte teď – ${event.title}`, leaveMessage(itinerary), `leave-${event.id}`);
     }
   }, [enabled, mode, event, itinerary, now]);
 }

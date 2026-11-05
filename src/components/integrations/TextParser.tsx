@@ -100,7 +100,7 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
       const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
       const content = isPdf ? await pdfToText(file) : await file.text();
       if (content.replace(/\s/g, '').length < 20) {
-        toast.error('V PDF není čitelný text (nejspíš je to sken). Zkopíruj text ručně.');
+        toast.error('V PDF není čitelný text (nejspíš je to sken). Zkopírujte text ručně.');
         return;
       }
       setText(content);
@@ -154,7 +154,7 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
   const save = async (then: 'none' | 'ics' | 'google') => {
     const { milestones: ms, requirements: reqs } = toDomain();
     if (ms.length === 0 && reqs.length === 0) {
-      toast.error(mode === 'syllabus' && !subjectId ? 'Vyber předmět, ke kterému povinnosti patří.' : 'Není co uložit – vyber položky s datem.');
+      toast.error(mode === 'syllabus' && !subjectId ? 'Vyberte předmět, ke kterému povinnosti patří.' : 'Není co uložit – vyberte položky s datem.');
       return;
     }
     setSaving(true);
@@ -232,7 +232,7 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
 
       <Field
         label={mode === 'harmonogram' ? 'Text harmonogramu z webu fakulty' : 'Text sylabu / podmínek zakončení ze SISu'}
-        hint="Nahraj PDF, nebo zkopíruj celou tabulku či odstavec – rozpoznám 5. 10. 2026, 5.–9. 10., 5. října, „do 18. 10.“, časy i váhy v %."
+        hint="Nahrajte PDF, nebo zkopírujte celou tabulku či odstavec – rozpoznám 5. 10. 2026, 5.–9. 10., 5. října, „do 18. 10.“, časy i váhy v %."
       >
         <TextArea
           value={text}
@@ -253,7 +253,7 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
             ? `${engine === 'ai' ? 'AI' : 'Lokální parser'}: ${items.length} položek z ${stats.stats.lines} řádků · akademický rok ${stats.academicYearStart}/${stats.academicYearStart + 1}${stats.detectedYear ? '' : ' (odhad)'}`
             : 'Výsledky se objeví hned při vložení textu.'}
         </span>
-        <Button size="sm" variant="soft" icon={WandSparkles} onClick={() => void runAi()} loading={aiBusy} disabled={!text.trim()} title={api.canUseAi ? 'Zpřesnit pomocí AI' : 'AI není nastavené – vlož klíč od Claude, ChatGPT nebo Gemini v Propojení'}>
+        <Button size="sm" variant="soft" icon={WandSparkles} onClick={() => void runAi()} loading={aiBusy} disabled={!text.trim()} title={api.canUseAi ? 'Zpřesnit pomocí AI' : 'AI není nastavené – vložte klíč od Claude, ChatGPT nebo Gemini v Propojení'}>
           {api.canUseAi ? 'Zpřesnit pomocí AI' : 'AI (nenastaveno)'}
         </Button>
       </div>

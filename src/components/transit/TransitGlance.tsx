@@ -98,13 +98,13 @@ export function TransitGlance({
             {style.pulse && <span className="absolute inline-flex size-full animate-ping-soft rounded-full bg-white" />}
             <span className="relative inline-flex size-2 rounded-full bg-white" />
           </span>
-          {status === 'idle' && transit.tooFar ? 'Naplánováno' : status === 'critical' && !isLast ? 'Za chvíli vyraz' : style.label}
+          {status === 'idle' && transit.tooFar ? 'Naplánováno' : status === 'critical' && !isLast ? 'Za chvíli vyrazte' : style.label}
         </span>
         <button
           type="button"
           onClick={onOrigin}
           className="inline-flex min-w-0 items-center gap-1 rounded-full bg-white/12 px-2.5 py-1 text-[12px] font-semibold text-white/90 ring-1 ring-inset ring-white/20 transition hover:bg-white/20"
-          title="Změnit, odkud jedeš"
+          title="Změnit, odkud jedete"
         >
           <MapPin className="size-3.5 shrink-0" aria-hidden />
           <span className="max-w-36 truncate">{stop ? stop.name : 'Odkud jedu'}</span>
@@ -114,7 +114,7 @@ export function TransitGlance({
 
       {(status === 'calm' || status === 'prepare' || status === 'critical') && chosen && plan ? (
         <div className="mt-4">
-          <p className="eyebrow text-white/70">{isLast && !plan.bufferMet ? 'Rezerva už nevyjde · vyraz nejpozději za' : isLast ? 'Vyraz nejpozději za' : 'Vyraz za'}</p>
+          <p className="eyebrow text-white/70">{isLast && !plan.bufferMet ? 'Rezerva už nevyjde · vyrazte nejpozději za' : isLast ? 'Vyrazte nejpozději za' : 'Vyrazte za'}</p>
           <div className="mt-1.5" aria-live="polite">
             <BigCountdown seconds={secondsToLeave} />
           </div>
@@ -125,7 +125,7 @@ export function TransitGlance({
                 <li className="flex items-center gap-2">
                   <Footprints className="size-4 shrink-0 text-white/80" aria-hidden />
                   <span>
-                    {estimate ? 'Na zastávku ' : 'Jdi na '}
+                    {estimate ? 'Na zastávku ' : 'Jděte na '}
                     <strong className="font-bold">{first.fromStop}</strong>
                     {platform ? <span className="text-white/80"> · nástupiště {platform}</span> : null}
                     <span className="text-white/80"> · {chosen.walkToStopMinutes} min</span>
@@ -139,7 +139,7 @@ export function TransitGlance({
                 <li className="flex items-center gap-2">
                   <Flag className="size-4 shrink-0 text-white/80" aria-hidden />
                   <span>
-                    Vystup <strong className="font-bold">{last.toStop}</strong>
+                    Vystupte <strong className="font-bold">{last.toStop}</strong>
                     <span className="text-white/80"> · {chosen.walkFromStopMinutes} min pěšky</span>
                   </span>
                 </li>
@@ -185,7 +185,7 @@ export function TransitGlance({
         <div className="mt-4">
           <p className="font-display text-[40px] leading-none">Ujelo to.</p>
           <p className="mt-2 text-[14px] text-white/85">
-            {plan.fastestLate ? `Nejdřív dorazíš v ${formatTime(new Date(plan.fastestLate.arriveAt))}${plan.lateByMinutes ? ` (+${plan.lateByMinutes} min)` : ''}.` : 'Žádný spoj už to nestihne.'}
+            {plan.fastestLate ? `Nejdřív dorazíte v ${formatTime(new Date(plan.fastestLate.arriveAt))}${plan.lateByMinutes ? ` (+${plan.lateByMinutes} min)` : ''}.` : 'Žádný spoj už to nestihne.'}
           </p>
           <button type="button" onClick={onDetail} className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-white hover:underline">
             Co teď <ArrowDown className="size-3.5" aria-hidden />
@@ -194,14 +194,14 @@ export function TransitGlance({
       ) : status === 'on-site' ? (
         <div className="mt-4">
           <p className="font-display text-[44px] leading-none">
-            Jsi <em>na místě</em>
+            Jste <em>na místě</em>
           </p>
           <p className="mt-2 text-[14px] text-white/85">Žádná MHD potřeba – stačí dojít do učebny.</p>
         </div>
       ) : event && transit.tooFar ? (
         <div className="mt-4">
           <p className="font-display text-[44px] leading-none">{formatTime(new Date(event.start))}</p>
-          <p className="mt-2 text-[14px] text-white/85">Spoje dopočítám 3 hodiny předem. Do té doby máš klid.</p>
+          <p className="mt-2 text-[14px] text-white/85">Spoje dopočítám 3 hodiny předem. Do té doby máte klid.</p>
         </div>
       ) : event && !building ? (
         <div className="mt-4">
@@ -223,7 +223,7 @@ export function TransitGlance({
           <p className="font-display text-[44px] leading-none">
             Dnes <em>volno</em>
           </p>
-          <p className="mt-2 text-[14px] text-white/85">Žádná další výuka. Užij si to.</p>
+          <p className="mt-2 text-[14px] text-white/85">Žádná další výuka. Užijte si to.</p>
         </div>
       )}
     </motion.section>

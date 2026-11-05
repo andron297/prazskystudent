@@ -21,12 +21,12 @@ const STEPS: TourStep[] = [
   {
     targets: ['glance'],
     title: 'Kdy vyrazit',
-    text: 'Odpočet do odchodu, zastávka, nástupiště a spoj. Počítá s tvou rezervou. Tlačítkem Navigovat tě aplikace dovede až na zastávku.',
+    text: 'Odpočet do odchodu, zastávka, nástupiště a spoj. Počítá s vaší rezervou. Tlačítkem Navigovat vás aplikace dovede až na zastávku.',
   },
   {
     targets: ['brief'],
     title: 'Den v kostce',
-    text: 'Kam jdeš (budova a učebna), kdy ti to jede a co máš k dnešním předmětům. Večer se přepne na zítřek a úkoly na další dny.',
+    text: 'Kam jdete (budova a učebna), kdy vám to jede a co máte k dnešním předmětům. Večer se přepne na zítřek a úkoly na další dny.',
   },
   {
     targets: ['tasks'],
@@ -36,7 +36,7 @@ const STEPS: TourStep[] = [
   {
     targets: ['menza'],
     title: 'Jídelníček menzy',
-    text: 'Menza nejblíž budově, kde máš výuku, se studentskými cenami. Jinou menzu vybereš klepnutím na její název.',
+    text: 'Menza nejblíž budově, kde máte výuku, se studentskými cenami. Jinou menzu vyberete klepnutím na její název.',
   },
   {
     targets: ['nav', 'nav-mobile'],
@@ -46,12 +46,12 @@ const STEPS: TourStep[] = [
   {
     targets: ['add'],
     title: 'Rychle přidat',
-    text: 'Napiš třeba „esej do pátku“ nebo „zítra 18:00 trénink“. Datum, čas i předmět aplikace pozná z textu.',
+    text: 'Napište třeba „esej do pátku“ nebo „zítra 18:00 trénink“. Datum, čas i předmět aplikace pozná z textu.',
   },
   {
     targets: ['connections', 'account'],
     title: 'Propojení a účet',
-    text: 'Tady propojíš SIS, Moodle a Google a spravuješ účet. Data se šifrují a synchronizují mezi tvými zařízeními.',
+    text: 'Tady propojíte SIS, Moodle a Google a spravujete účet. Data se šifrují a synchronizují mezi vašimi zařízeními.',
   },
 ];
 

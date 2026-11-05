@@ -23,7 +23,7 @@ export function OriginSheet({ open, onClose }: { open: boolean; onClose: () => v
   const near = useMemo(() => (stops ? nearbyStops(stops, origin.coords, { walkSpeed, maxMeters: 1100, limit: 8 }) : null), [stops, origin.coords, walkSpeed]);
 
   return (
-    <Modal open={open} onClose={onClose} title="Odkud jedeš" icon={MapPin} size="md">
+    <Modal open={open} onClose={onClose} title="Odkud jedete" icon={MapPin} size="md">
       <div className="space-y-5">
         <section>
           <p className="eyebrow mb-2 text-subtle">Výchozí místo</p>

@@ -107,7 +107,7 @@ export default function App() {
       clock.switchToRealTime();
       // Vlastní data nikdy nemíchat s ukázkou (i po starších verzích aplikace).
       const removed = useAppStore.getState().purgeSampleData();
-      if (removed > 0) toast.info('Ukázková data jsou pryč – teď vidíš jen to svoje.');
+      if (removed > 0) toast.info('Ukázková data jsou pryč – teď vidíte jen to svoje.');
     }
     document.documentElement.dataset.mode = mode;
   }, [mode]);

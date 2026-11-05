@@ -111,7 +111,7 @@ function ModeSwitch() {
         'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-bold ring-1 ring-inset transition-colors',
         demo ? 'bg-sand/25 text-clay ring-sand/50 hover:bg-sand/35' : 'bg-accent-soft text-accent ring-accent/25 hover:bg-accent/15',
       )}
-      title={demo ? 'Prohlížíš ukázku – klikni a nastav si svoje data' : 'Tvoje data – přehled propojení'}
+      title={demo ? 'Prohlížíte ukázku – klikněte a nastavte si svoje data' : 'Vaše data – přehled propojení'}
     >
       {demo ? <FlaskConical className="size-3.5" aria-hidden /> : <ShieldCheck className="size-3.5" aria-hidden />}
       {demo ? 'Ukázka' : 'Moje data'}
@@ -175,7 +175,7 @@ function DemoClockChip() {
     <Menu
       label="Simulovaný čas"
       items={[
-        { label: 'Posunout o 5 minut', hint: 'Sleduj, jak se mění stav spojů', icon: FastForward, onSelect: () => clock.shiftMinutes(5) },
+        { label: 'Posunout o 5 minut', hint: 'Sledujte, jak se mění stav spojů', icon: FastForward, onSelect: () => clock.shiftMinutes(5) },
         { label: 'Posunout o 15 minut', hint: 'Rychle k poslednímu spoji', icon: FastForward, onSelect: () => clock.shiftMinutes(15) },
         {
           label: 'Restart na 13:05',

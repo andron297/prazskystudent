@@ -315,7 +315,7 @@ export function planDemoItineraries(params: DemoPlanParams): Itinerary[] {
         const next = lineDepartures(second.line, second.dir, second.from, earliest, earliest + 45 * MIN, params.nowMs)[0];
         if (!next) ok = false;
         else {
-          legs.push({ kind: 'walk', minutes: transfer, from: second.from, to: `${second.from} (přestup)` });
+          legs.push({ kind: 'walk', minutes: transfer, from: second.from, to: `${second.from} (přestupte)` });
           const leg2 = rideLeg(next, second);
           legs.push(leg2);
           arrival = new Date(leg2.predictedArrival).getTime();

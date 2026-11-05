@@ -84,7 +84,7 @@ export function ConnectionsHub() {
         <ProgressRing done={done} total={total} />
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-[30px] leading-none sm:text-[34px]">
-            Tvoje <em className="text-moss">propojení</em>
+            Vaše <em className="text-moss">propojení</em>
           </h2>
           <p className="mt-1.5 text-[15px] text-muted">
             {done === total ? 'Všechno důležité je propojené.' : `Hotovo ${done} z ${total}.`}
@@ -182,13 +182,13 @@ function PrivacyCard() {
       </p>
       <ul className="mt-3 space-y-2 text-[14px] leading-snug text-muted">
         <li className="flex gap-2">
-          <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Rozvrh, úkoly i klíče jsou uložené jen v tomhle prohlížeči. Žádný účet, žádná databáze s tvými daty.
+          <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Rozvrh, úkoly i klíče jsou uložené jen v tomhle prohlížeči. Žádný účet, žádná databáze s vašimi daty.
         </li>
         <li className="flex gap-2">
           <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Pro cestu se posílá jen poloha startu a cíle (do plánovače PID) a pro počasí jen přibližná poloha.
         </li>
         <li className="flex gap-2">
-          <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Google a Moodle vidí jen to, co jim povolíš. Odpojit je můžeš kdykoli jedním kliknutím.
+          <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Google a Moodle vidí jen to, co jim povolíte. Odpojit je můžete kdykoli jedním kliknutím.
         </li>
         <li className="flex gap-2">
           <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Kód aplikace je otevřený – kdokoli si může ověřit, co dělá.{' '}
@@ -240,29 +240,29 @@ function OwnerCard() {
       why: server.account
         ? server.accountSchema === 'ok'
           ? 'Databáze účtů je připravená.'
-          : 'Supabase je připojené, ale databáze účtů ještě není připravená – zkontroluj krok 1.'
+          : 'Supabase je připojené, ale databáze účtů ještě není připravená – zkontrolujte krok 1.'
         : 'Bez toho jsou data jen v jednom zařízení.',
       vars: ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'POSTGRES_URL'],
       how: (
         <ol className="ml-4 list-decimal space-y-1.5">
           <li>
-            Ve Vercelu otevři projekt <strong>prazskystudent</strong> → záložka <strong>Storage</strong> → <strong>Create Database</strong> → <strong>Supabase</strong> → plán Free, region <strong>Frankfurt</strong> → <strong>Create</strong>. Pak ji připoj k projektu
+            Ve Vercelu otevřete projekt <strong>prazskystudent</strong> → záložka <strong>Storage</strong> → <strong>Create Database</strong> → <strong>Supabase</strong> → plán Free, region <strong>Frankfurt</strong> → <strong>Create</strong>. Pak ji připojte k projektu
             (<strong>Connect</strong>, všechna prostředí). Proměnné se doplní samy, tabulky si aplikace založí sama.
           </li>
           <li>
-            Dej <strong>Redeploy</strong> (Deployments → ⋯ → Redeploy).
+            Dejte <strong>Redeploy</strong> (Deployments → ⋯ → Redeploy).
           </li>
           <li>
-            Ze Storage otevři Supabase (<strong>Open in Supabase</strong>) → <strong>Authentication → Sign In / Providers → Google</strong> → zapni, do <strong>Client IDs</strong> vlož Client ID a do <strong>Client Secret</strong> secret
+            Ze Storage otevřete Supabase (<strong>Open in Supabase</strong>) → <strong>Authentication → Sign In / Providers → Google</strong> → zapněte, do <strong>Client IDs</strong> vložte Client ID a do <strong>Client Secret</strong> secret
             (stejné jako u GOOGLE_CLIENT_ID a GOOGLE_CLIENT_SECRET) → <strong>Save</strong>.
           </li>
           <li>
-            V Supabase <strong>Authentication → URL Configuration</strong>: Site URL <CopyName name={typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app'} />, do Redirect URLs přidej{' '}
+            V Supabase <strong>Authentication → URL Configuration</strong>: Site URL <CopyName name={typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app'} />, do Redirect URLs přidejte{' '}
             <CopyName name={`${typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app'}/**`} />.
           </li>
           {supabaseCallback && (
             <li>
-              V Google Cloud → Clients → tvůj klient → <strong>Authorized redirect URIs</strong> přidej <CopyName name={supabaseCallback} /> a ulož.
+              V Google Cloud → Clients → váš klient → <strong>Authorized redirect URIs</strong> přidejte <CopyName name={supabaseCallback} /> a uložte.
             </li>
           )}
         </ol>
@@ -279,7 +279,7 @@ function OwnerCard() {
           <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
             Google AI Studiu
           </a>{' '}
-          klikni <strong>Create API key</strong> (zdarma, bez platební karty) a klíč vlož do Vercelu jako GEMINI_API_KEY. Používat ji mohou jen přihlášení, s hodinovým limitem.
+          klikněte <strong>Create API key</strong> (zdarma, bez platební karty) a klíč vložte do Vercelu jako GEMINI_API_KEY. Používat ji mohou jen přihlášení, s hodinovým limitem.
         </>
       ),
     },
@@ -288,7 +288,7 @@ function OwnerCard() {
       title: 'Kontaktní e-mail',
       why: 'Zobrazí se v zásadách ochrany osobních údajů a v podmínkách (vyžaduje to GDPR).',
       vars: ['PUBLIC_CONTACT_EMAIL'],
-      how: <>Vlož e-mail, na který ti mohou uživatelé psát kvůli svým údajům.</>,
+      how: <>Vložte e-mail, na který vám mohou uživatelé psát kvůli svým údajům.</>,
     },
     {
       ok: server.googleServerFlow,
@@ -301,11 +301,11 @@ function OwnerCard() {
           <a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
             Google Cloud → Clients
           </a>{' '}
-          otevři svého klienta a zkopíruj Client ID a Client secret. V{' '}
+          otevřete svého klienta a zkopírujte Client ID a Client secret. V{' '}
           <a href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
             Audience
           </a>{' '}
-          přepni aplikaci na <strong>In production</strong> (jinak Google přihlášení po 7 dnech zruší).
+          přepněte aplikaci na <strong>In production</strong> (jinak Google přihlášení po 7 dnech zruší).
         </>
       ),
     },
@@ -317,21 +317,21 @@ function OwnerCard() {
       how: (
         <ol className="ml-4 list-decimal space-y-1.5">
           <li>
-            V Google Cloud (stejný projekt jako přihlášení Googlem) otevři{' '}
+            V Google Cloud (stejný projekt jako přihlášení Googlem) otevřete{' '}
             <a href="https://console.cloud.google.com/apis/library/picker.googleapis.com" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
               Google Picker API
             </a>{' '}
-            a klikni <strong>Enable</strong>.
+            a klikněte <strong>Enable</strong>.
           </li>
           <li>
             V{' '}
             <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
               Credentials
             </a>{' '}
-            → <strong>Create credentials → API key</strong>. U klíče nastav <strong>Application restrictions: Websites</strong> s adresou <CopyName name={`${typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app'}/*`} /> a{' '}
+            → <strong>Create credentials → API key</strong>. U klíče nastavte <strong>Application restrictions: Websites</strong> s adresou <CopyName name={`${typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app'}/*`} /> a{' '}
             <strong>API restrictions: Google Picker API</strong>.
           </li>
-          <li>Klíč vlož do Vercelu jako GOOGLE_PICKER_API_KEY a dej Redeploy. (Tenhle klíč je veřejný z principu – chrání ho omezení na tvoji adresu.)</li>
+          <li>Klíč vložte do Vercelu jako GOOGLE_PICKER_API_KEY a dejte Redeploy. (Tenhle klíč je veřejný z principu – chrání ho omezení na vaši adresu.)</li>
         </ol>
       ),
     },
@@ -365,7 +365,7 @@ function OwnerCard() {
       {open && (
         <div className="mt-4 space-y-3">
           <p className="text-[13.5px] text-muted">
-            <strong className="text-fg">Stačí jednou a platí pro všechny uživatele</strong> – běžní uživatelé tuhle kartu nepotřebují. Jednou nastavíš ve Vercelu (projekt → <strong>Settings → Environment Variables</strong>), pak <strong>Redeploy</strong>. Klíče zůstávají na serveru, do prohlížeče ani do kódu se nedostanou.{' '}
+            <strong className="text-fg">Stačí jednou a platí pro všechny uživatele</strong> – běžní uživatelé tuhle kartu nepotřebují. Jednou nastavíte ve Vercelu (projekt → <strong>Settings → Environment Variables</strong>), pak <strong>Redeploy</strong>. Klíče zůstávají na serveru, do prohlížeče ani do kódu se nedostanou.{' '}
             <a href="https://vercel.com/dashboard" target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-semibold text-accent hover:underline">
               Otevřít Vercel <ExternalLink className="size-3" aria-hidden />
             </a>

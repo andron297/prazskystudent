@@ -42,12 +42,12 @@ const SECTIONS: Section[] = [
     id: 'dnes',
     icon: House,
     tone: 'bg-accent-soft text-accent',
-    title: 'Dnes: kdy vyrazit a co tě čeká',
-    lead: 'Úvodní obrazovka ukazuje jen to, co právě potřebuješ.',
+    title: 'Dnes: kdy vyrazit a co vás čeká',
+    lead: 'Úvodní obrazovka ukazuje jen to, co právě potřebujete.',
     points: [
-      'Velký odpočet říká, za jak dlouho vyrazit, ze které zastávky (i nástupiště) a čím jet. Počítá s tvou rezervou – nastavíš ji v kartě Cesta.',
-      'Karta „Dnes tě čeká“: budova, učebna, kdy ti to jede a úkoly k dnešním předmětům.',
-      'Večer, když máš po výuce, se přepne na zítřek a ukáže úkoly na další dny.',
+      'Velký odpočet říká, za jak dlouho vyrazit, ze které zastávky (i nástupiště) a čím jet. Počítá s vaší rezervou – nastavíte ji v kartě Cesta.',
+      'Karta „Dnes vás čeká“: budova, učebna, kdy vám to jede a úkoly k dnešním předmětům.',
+      'Večer, když máte po výuce, se přepne na zítřek a ukáže úkoly na další dny.',
     ],
     view: 'dnes',
   },
@@ -56,11 +56,11 @@ const SECTIONS: Section[] = [
     icon: Navigation2,
     tone: 'bg-sky-500/12 text-sky-700 dark:text-sky-300',
     title: 'Navigace až na zastávku',
-    lead: 'Jako v mapách v telefonu – jen rovnou k tvému spoji.',
+    lead: 'Jako v mapách v telefonu – jen rovnou k vašemu spoji.',
     points: [
-      'Klepni na Navigovat. Uvidíš mapu, svoji polohu a pokyny typu „za 80 m odboč vlevo“.',
-      'Dole běží odpočet do odjezdu a aplikace řekne, jestli spoj stíháš, nebo máš přidat do kroku.',
-      'Ve voze tě upozorní (i vibrací), že na příští zastávce vystupuješ, a pak tě dovede do budovy.',
+      'Klepněte na Navigovat. Uvidíte mapu, svoji polohu a pokyny typu „za 80 m odbočte vlevo“.',
+      'Dole běží odpočet do odjezdu a aplikace řekne, jestli spoj stíháte, nebo máte přidat do kroku.',
+      'Ve voze vás upozorní (i vibrací), že na příští zastávce vystupujete, a pak vás dovede do budovy.',
       'Pokyny umí číst nahlas (ikona reproduktoru) a displej mezitím nezhasne. Bez polohy jde cestu projít ručně tlačítky.',
     ],
     view: 'dnes',
@@ -72,11 +72,11 @@ const SECTIONS: Section[] = [
     title: 'Úkoly a termíny na jednom místě',
     lead: 'Vlastní úkoly, Google Úkoly i termíny ze SISu a Moodlu – v jednom seznamu.',
     points: [
-      'Seřadíš je podle termínu (dnes, zítra, tento týden…) nebo podle předmětu.',
+      'Seřadíte je podle termínu (dnes, zítra, tento týden…) nebo podle předmětu.',
       <>
-        Předmět k úkolu aplikace pozná sama – podle kódu předmětu, názvu i v jiném pádě, zkratky, jména vyučujícího, sylabu nebo rozvrhu. Jistý odhad přiřadí hned (poznáš ho podle jiskřičky ✨), u nejistého se zeptá.
+        Předmět k úkolu aplikace pozná sama – podle kódu předmětu, názvu i v jiném pádě, zkratky, jména vyučujícího, sylabu nebo rozvrhu. Jistý odhad přiřadí hned (poznáte ho podle jiskřičky ✨), u nejistého se zeptá.
       </>,
-      'Předmět změníš klepnutím na jeho štítek. Když nabídnutý předmět odmítneš, už ho u toho úkolu nenabídne.',
+      'Předmět změníte klepnutím na jeho štítek. Když nabídnutý předmět odmítnete, už ho u toho úkolu nenabídne.',
     ],
     view: 'plan',
   },
@@ -89,7 +89,7 @@ const SECTIONS: Section[] = [
     points: [
       'Sylabus a podmínky zakončení ze SISu – aplikace z nich vytáhne povinnosti, váhy a termíny.',
       'Materiály z Moodlu, vlastní soubory, poznámky a odkazy.',
-      'Soubory a celé složky z Google Disku: Přidat → Google Disk. Aplikace vidí jen to, co vybereš.',
+      'Soubory a celé složky z Google Disku: Přidat → Google Disk. Aplikace vidí jen to, co vyberete.',
       'Když se předmět objeví dvakrát (třeba ze SISu a z vlastního kalendáře), aplikace ho sloučí, nebo se zeptá.',
     ],
     view: 'predmety',
@@ -101,9 +101,9 @@ const SECTIONS: Section[] = [
     title: 'Kalendář a akademický rok',
     lead: 'Celý rok na jednom řádku: výuka, zkouškové, prázdniny a kdy se kupí termíny.',
     points: [
-      'Nahoře vidíš, kde v semestru jsi („6. týden z 15“), co přijde dál a kolik termínů máš tento týden.',
+      'Nahoře vidíte, kde v semestru jste („6. týden z 15“), co přijde dál a kolik termínů máte tento týden.',
       'Klepnutím na období nebo na sloupek s termíny se ukážou podrobnosti.',
-      'Hodiny, které máš i ve vlastním Google Kalendáři, se ukazují jen jednou – ta obsáhlejší verze – a do Googlu se nezapisují podruhé.',
+      'Hodiny, které máte i ve vlastním Google Kalendáři, se ukazují jen jednou – ta obsáhlejší verze – a do Googlu se nezapisují podruhé.',
     ],
     view: 'plan',
   },
@@ -113,7 +113,7 @@ const SECTIONS: Section[] = [
     tone: 'bg-amber-500/12 text-amber-700 dark:text-amber-300',
     title: 'Doprava a mapa zastávek',
     lead: 'Všechny zastávky PID s odjezdy v reálném čase.',
-    points: ['Klepni na zastávku a uvidíš nejbližší odjezdy i se zpožděním.', 'Vybereš si, ze které zastávky obvykle vyrážíš – aplikace s ní pak počítá.'],
+    points: ['Klepněte na zastávku a uvidíte nejbližší odjezdy i se zpožděním.', 'Vyberete si, ze které zastávky obvykle vyrážíte – aplikace s ní pak počítá.'],
     view: 'doprava',
   },
   {
@@ -121,8 +121,8 @@ const SECTIONS: Section[] = [
     icon: UtensilsCrossed,
     tone: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300',
     title: 'Jídelníček menzy',
-    lead: 'Co se dnes vaří v menze nejblíž tvé výuce.',
-    points: ['Studentské ceny, alergeny a víc dní dopředu.', 'Jinou menzu vybereš klepnutím na její název nad jídelníčkem.'],
+    lead: 'Co se dnes vaří v menze nejblíž vaše výuce.',
+    points: ['Studentské ceny, alergeny a víc dní dopředu.', 'Jinou menzu vyberete klepnutím na její název nad jídelníčkem.'],
     view: 'dnes',
   },
   {
@@ -130,7 +130,7 @@ const SECTIONS: Section[] = [
     icon: CloudSun,
     tone: 'bg-sky-500/12 text-sky-700 dark:text-sky-300',
     title: 'Počasí na cestu',
-    lead: 'Ne obecná předpověď, ale počasí ve chvíli, kdy půjdeš ven.',
+    lead: 'Ne obecná předpověď, ale počasí ve chvíli, kdy půjdete ven.',
     points: ['Poradí, co si vzít na sebe a jestli deštník – zvlášť na cestu tam a zpátky.'],
     view: 'dnes',
   },
@@ -150,9 +150,9 @@ const SECTIONS: Section[] = [
     title: 'Účet a bezpečnost',
     lead: 'Data se šifrují přímo v zařízení. Na serveru jsou jen zašifrovaná.',
     points: [
-      'Přihlásíš se Googlem nebo e-mailem. Při založení dostaneš záchranný kód – ulož si ho, je to jediný náhradní klíč k datům.',
-      'Nový telefon přidáš přihlášením a QR kódem z Účtu.',
-      'Kdykoli si stáhneš všechna data, odhlásíš se ze všech zařízení nebo účet smažeš.',
+      'Přihlásíte se Googlem nebo e-mailem. Při založení dostanete záchranný kód – uložte si ho, je to jediný náhradní klíč k datům.',
+      'Nový telefon přidáte přihlášením a QR kódem z Účtu.',
+      'Kdykoli si stáhnete všechna data, odhlásíte se ze všech zařízení nebo účet smažete.',
     ],
     view: 'ucet',
   },
@@ -161,11 +161,11 @@ const SECTIONS: Section[] = [
     icon: BellRing,
     tone: 'bg-clay/15 text-clay',
     title: 'Ikona s odpočtem, zkratky a upozornění',
-    lead: 'Kolik minut zbývá do odchodu, uvidíš i bez otevření aplikace.',
+    lead: 'Kolik minut zbývá do odchodu, uvidíte i bez otevření aplikace.',
     points: [
       'Na ikoně nainstalované aplikace se ukáže počet minut do odchodu (na iPhonu po povolení upozornění, na Androidu podle systému jako tečka nebo číslo). V prohlížeči je odpočet v ikoně záložky.',
-      'Dlouhým podržením ikony otevřeš zkratky: Dnes, Úkoly, Doprava, Kalendář.',
-      'Upozornění „vyraz za 5 minut“ zapneš v Propojení.',
+      'Dlouhým podržením ikony otevřete zkratky: Dnes, Úkoly, Doprava, Kalendář.',
+      'Upozornění „vyrazte za 5 minut“ zapnete v Propojení.',
       'Widgety na plochu telefonu umí jen aplikace z App Storu nebo Google Play. Stihnu je webová aplikace, proto místo widgetu nabízí odpočet na ikoně, zkratky a upozornění.',
     ],
   },
@@ -204,7 +204,7 @@ export function GuideView() {
           <h1 className="mt-2 font-display text-[46px] leading-[0.95] sm:text-[62px]">
             Průvodce <em className="text-[#e7d6b5]">aplikací</em>
           </h1>
-          <p className="mt-3 max-w-xl text-[15.5px] leading-relaxed text-white/85">Všechno, co aplikace umí, krátce a po lopatě. Nejrychleji to pochopíš z minutové prohlídky přímo v aplikaci.</p>
+          <p className="mt-3 max-w-xl text-[15.5px] leading-relaxed text-white/85">Všechno, co aplikace umí, krátce a po lopatě. Nejrychleji to pochopíte z minutové prohlídky přímo v aplikaci.</p>
           <div className="mt-5 flex flex-wrap gap-2">
             <button
               type="button"
@@ -277,7 +277,7 @@ export function GuideView() {
           <div>
             <p className="eyebrow text-subtle">Návody krok za krokem</p>
             <SerifTitle className="mt-1 text-[30px]">
-              Jak propojit <em className="text-moss">tvoje služby</em>
+              Jak propojit <em className="text-moss">vaše služby</em>
             </SerifTitle>
           </div>
           <Segmented
@@ -294,9 +294,9 @@ export function GuideView() {
         <div className="mt-4 grid gap-4 md:grid-cols-[1.2fr_1fr] md:items-center">
           <GuideAnimation key={guide} guide={guide} />
           <div className="space-y-3 text-[14.5px] leading-relaxed">
-            {guide === 'sis' && <p>Rozvrh ze SISu je jeden soubor. Stáhneš ho v Rozvrhu NG (Export → iCalendar) a nahraješ do Stihnu. Předměty, místnosti i sylaby se doplní samy.</p>}
+            {guide === 'sis' && <p>Rozvrh ze SISu je jeden soubor. Stáhnete ho v Rozvrhu NG (Export → iCalendar) a nahrajete do Stihnu. Předměty, místnosti i sylaby se doplní samy.</p>}
             {guide === 'moodle' && <p>Termíny z Moodlu jsou jeden odkaz z Exportu kalendáře. Heslo do Moodlu aplikace nepotřebuje – odkaz umí jen číst termíny.</p>}
-            {guide === 'google' && <p>Google Kalendář a Úkoly propojíš jedním tlačítkem. Aplikace uvidí jen kalendáře a úkoly, které jí povolíš. Propojení můžeš kdykoli zrušit.</p>}
+            {guide === 'google' && <p>Google Kalendář a Úkoly propojíte jedním tlačítkem. Aplikace uvidí jen kalendáře a úkoly, které jí povolíte. Propojení můžete kdykoli zrušit.</p>}
             <button type="button" onClick={() => openSetup(guide)} className="inline-flex h-11 items-center gap-2 rounded-full bg-accent px-5 text-[14.5px] font-bold text-accent-fg hover:brightness-110">
               <Download className="size-4" aria-hidden /> Propojit {guide === 'sis' ? 'SIS' : guide === 'moodle' ? 'Moodle' : 'Google'}
             </button>

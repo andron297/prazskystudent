@@ -238,10 +238,10 @@ const API_NAMES: { test: RegExp; name: string; library: string }[] = [
 export function friendlyApiError(url: string, status: number, message: string): string {
   const api = API_NAMES.find((a) => a.test.test(url));
   if (status === 403 && /has not been used|is disabled|SERVICE_DISABLED|accessNotConfigured/i.test(message) && api) {
-    return `V Google Cloud projektu není zapnuté ${api.name}. Zapni ho na console.cloud.google.com/apis/library/${api.library} (tlačítko Enable) a zkus to za minutu znovu.`;
+    return `V Google Cloud projektu není zapnuté ${api.name}. Zapněte ho na console.cloud.google.com/apis/library/${api.library} (tlačítko Enable) a zkuste to za minutu znovu.`;
   }
   if (status === 403 && /insufficient|scope/i.test(message)) {
-    return 'Google nepovolil potřebná oprávnění – při přihlášení zaškrtni všechna políčka (Kalendář, Úkoly, Disk) a propoj znovu.';
+    return 'Google nepovolil potřebná oprávnění – při přihlášení zaškrtněte všechna políčka (Kalendář, Úkoly, Disk) a propojte znovu.';
   }
   return message;
 }

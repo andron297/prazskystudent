@@ -18,7 +18,7 @@ export function useOrigin(): ResolvedOrigin {
   const geo = useGeolocation(pref.source === 'gps');
 
   if (pref.source === 'gps' && geo.coords) {
-    return { coords: geo.coords, label: 'Tvoje poloha', source: 'gps', usingFallback: false, geo };
+    return { coords: geo.coords, label: 'Vaše poloha', source: 'gps', usingFallback: false, geo };
   }
   if (pref.source === 'custom' && pref.custom) {
     return { coords: pref.custom.coords, label: pref.custom.label, source: 'custom', usingFallback: false, geo };

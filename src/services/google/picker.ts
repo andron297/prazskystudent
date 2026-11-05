@@ -80,7 +80,7 @@ function loadPicker(): Promise<PickerNamespace> {
     script.src = 'https://apis.google.com/js/api.js';
     script.async = true;
     script.onload = ready;
-    script.onerror = () => reject(new Error('Nepodařilo se načíst Google Picker (jsi online?).'));
+    script.onerror = () => reject(new Error('Nepodařilo se načíst Google Picker (jste online?).'));
     document.head.appendChild(script);
   }).catch((error) => {
     loader = null;
@@ -100,7 +100,7 @@ export function drivePickerAvailable(): boolean {
 export async function pickFromDrive(): Promise<PickedDriveItem[]> {
   const apiKey = useUiStore.getState().server.googlePickerKey;
   const clientId = googleClientIdFor();
-  if (!apiKey || !clientId) throw new Error('Výběr z Disku zatím správce aplikace nezapnul. Vlož odkaz ručně.');
+  if (!apiKey || !clientId) throw new Error('Výběr z Disku zatím správce aplikace nezapnul. Vložte odkaz ručně.');
   const fileScope = GOOGLE_SCOPES.drive[0];
   if (!hasScopes([fileScope])) {
     const settings = useAppStore.getState().settings.google;
@@ -122,7 +122,7 @@ export async function pickFromDrive(): Promise<PickedDriveItem[]> {
       .setAppId(appId)
       .setLocale('cs')
       .setOrigin(window.location.origin)
-      .setTitle('Vyber soubory nebo složky k předmětu')
+      .setTitle('Vyberte soubory nebo složky k předmětu')
       .setCallback((data) => {
         if (data.action === g.Action.PICKED) {
           resolve(

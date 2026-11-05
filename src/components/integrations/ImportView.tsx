@@ -76,12 +76,12 @@ export function ImportView() {
 
       {!payload && (
         <Card title="Vložit text stránky" eyebrow="Bez záložky" icon={ClipboardPaste}>
-          <p className="mb-3 text-[13.5px] text-muted">V SISu otevři stránku předmětu nebo termíny zkoušek (v Moodlu stránku úkolu, testu či kurzu), označ vše (Ctrl+A), zkopíruj a vlož sem.</p>
+          <p className="mb-3 text-[13.5px] text-muted">V SISu otevřete stránku předmětu nebo termíny zkoušek (v Moodlu stránku úkolu, testu či kurzu), označte vše (Ctrl+A), zkopírujte a vložte sem.</p>
           <div className="space-y-3">
             <Field label="Adresa stránky (nepovinné)">
               <TextInput value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://is.cuni.cz/studium/predmety/…" inputMode="url" />
             </Field>
-            <TextArea value={text} onChange={(e) => setText(e.target.value)} placeholder="Vlož text stránky…" className="min-h-48" />
+            <TextArea value={text} onChange={(e) => setText(e.target.value)} placeholder="Vložte text stránky…" className="min-h-48" />
             <Button variant="primary" icon={Sparkles} onClick={load} disabled={!text.trim()}>
               Přečíst
             </Button>
@@ -327,7 +327,7 @@ function SmartExtractCard({ text, course, subjects, known, onDone }: { text: str
           </Button>
         </div>
       ) : (
-        <p className="mt-2 text-[13px] text-muted">Nejdřív si přidej předměty (rozvrh ze SISu).</p>
+        <p className="mt-2 text-[13px] text-muted">Nejdřív si přidejte předměty (rozvrh ze SISu).</p>
       )}
       <Button className="mt-3" variant="ghost" icon={ScrollText} onClick={() => useUiStore.getState().openConnect('parser')}>
         Harmonogram nebo jiný text do kalendáře

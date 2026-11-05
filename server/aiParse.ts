@@ -212,7 +212,7 @@ async function callGemini(key: string, system: string, text: string): Promise<un
     if (!content) throw new HttpError(422, 'ai_refused', 'AI tento text nezpracovalo.');
     return JSON.parse(content);
   }
-  if (lastStatus === 429) throw new HttpError(429, 'ai_rate_limited', 'Bezplatná AI je teď vytížená nebo je vyčerpaný denní limit. Zkus to později.');
+  if (lastStatus === 429) throw new HttpError(429, 'ai_rate_limited', 'Bezplatná AI je teď vytížená nebo je vyčerpaný denní limit. Zkuste to později.');
   throw new HttpError(502, 'ai_api_error', `Gemini teď neodpovídá (HTTP ${lastStatus}).`);
 }
 
@@ -228,7 +228,7 @@ async function callClaude(key: string, system: string, text: string): Promise<{ 
     messages: [{ role: 'user', content: `<text>\n${text}\n</text>` }],
   });
   if (response.stop_reason === 'refusal') throw new HttpError(422, 'ai_refused', 'AI tento text nezpracovalo. Použij výsledek lokálního parseru.');
-  if (response.stop_reason === 'max_tokens') throw new HttpError(422, 'ai_truncated', 'Výstup AI byl příliš dlouhý – zkus vložit kratší část textu.');
+  if (response.stop_reason === 'max_tokens') throw new HttpError(422, 'ai_truncated', 'Výstup AI byl příliš dlouhý – zkuste vložit kratší část textu.');
   if (!response.parsed_output) throw new HttpError(502, 'ai_unparseable', 'AI vrátilo nečitelnou odpověď.');
   return { items: response.parsed_output.items, model: response.model };
 }
@@ -238,21 +238,21 @@ export async function handleAiParse(request: Request): Promise<Response> {
   try {
     const resolved = resolveKey(request);
     if (!resolved) {
-      throw new HttpError(401, 'missing_ai_key', 'AI není nastavená – vlož vlastní klíč (Claude, ChatGPT nebo Gemini). Lokální parser funguje i bez něj.');
+      throw new HttpError(401, 'missing_ai_key', 'AI není nastavená – vložte vlastní klíč (Claude, ChatGPT nebo Gemini). Lokální parser funguje i bez něj.');
     }
     if (resolved.shared) {
       // AI zdarma od správce: jen pro přihlášené (když jsou účty zapnuté) a s limitem, ať ji nikdo nezneužije.
       const user = accountConfig() ? await verifyUser(request) : null;
-      if (accountConfig() && !user) throw new HttpError(401, 'login_required', 'AI zdarma je pro přihlášené – přihlas se ke svému účtu.');
+      if (accountConfig() && !user) throw new HttpError(401, 'login_required', 'AI zdarma je pro přihlášené – přihlaste se ke svému účtu.');
       const who = user?.id ?? request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anon';
-      if (!allow(who, user ? 40 : 15)) throw new HttpError(429, 'ai_rate_limited', 'Na tuto hodinu je limit AI vyčerpaný. Zkus to později.');
+      if (!allow(who, user ? 40 : 15)) throw new HttpError(429, 'ai_rate_limited', 'Na tuto hodinu je limit AI vyčerpaný. Zkuste to později.');
     }
     const body = await readJsonBody<AiParseBody>(request, 120_000);
     if (typeof body.text !== 'string' || body.text.trim().length < 5) {
-      throw new HttpError(400, 'missing_text', 'Vlož text harmonogramu nebo sylabu.');
+      throw new HttpError(400, 'missing_text', 'Vložte text harmonogramu nebo sylabu.');
     }
     if (body.text.length > MAX_TEXT_CHARS) {
-      throw new HttpError(413, 'text_too_long', `Text je příliš dlouhý (max. ${MAX_TEXT_CHARS} znaků) – vlož jen část s termíny.`);
+      throw new HttpError(413, 'text_too_long', `Text je příliš dlouhý (max. ${MAX_TEXT_CHARS} znaků) – vložte jen část s termíny.`);
     }
     const mode = body.mode === 'syllabus' ? 'syllabus' : 'harmonogram';
     const ayStart = Number.isInteger(body.academicYearStart) ? Number(body.academicYearStart) : new Date().getFullYear();
@@ -272,7 +272,7 @@ export async function handleAiParse(request: Request): Promise<Response> {
       return json({ error: 'invalid_ai_key', message: 'Claude (Anthropic) odmítl klíč.' }, 401);
     }
     if (error instanceof Anthropic.RateLimitError) {
-      return json({ error: 'ai_rate_limited', message: 'AI je teď přetížené nebo je vyčerpaný limit. Zkus to později.' }, 429);
+      return json({ error: 'ai_rate_limited', message: 'AI je teď přetížené nebo je vyčerpaný limit. Zkuste to později.' }, 429);
     }
     if (error instanceof Anthropic.BadRequestError) {
       return json({ error: 'ai_bad_request', message: `Požadavek na AI byl odmítnut: ${error.message}` }, 400);

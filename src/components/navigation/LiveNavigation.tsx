@@ -339,7 +339,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
       if (!walk.target.isStop) {
         setArrived(true);
         buzz([120, 60, 120]);
-        if (voice) speak(`Jsi u cíle, ${walk.target.name}.`);
+        if (voice) speak(`Jste u cíle, ${walk.target.name}.`);
         return;
       }
       const ridePhase = phases[phaseIndex + 1];
@@ -370,12 +370,12 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     if (rideState.left <= 1 && !spoken.current.has(key)) {
       spoken.current.add(key);
       buzz([200, 100, 200, 100, 200]);
-      if (voice) speak(`Příští zastávka ${ride.ride.toStop}. Vystupuješ.`);
+      if (voice) speak(`Příští zastávka ${ride.ride.toStop}. Vystupujete.`);
     }
   }, [rideState, ride, phaseIndex, voice]);
   useEffect(() => {
-    if (phase?.kind === 'walk' && phase.target.isStop && voice && phaseIndex === 0) speak(`Jdi na zastávku ${phase.target.name}${phase.target.platform ? `, nástupiště ${phase.target.platform}` : ''}.`);
-    if (phase?.kind === 'ride' && voice) speak(`Nastup do ${phase.ride.mode === 'tram' ? 'tramvaje' : phase.ride.mode === 'metro' ? 'metra' : phase.ride.mode === 'bus' ? 'autobusu' : 'spoje'} ${phase.ride.line}. Vystupuješ na zastávce ${phase.ride.toStop}.`);
+    if (phase?.kind === 'walk' && phase.target.isStop && voice && phaseIndex === 0) speak(`Jděte na zastávku ${phase.target.name}${phase.target.platform ? `, nástupiště ${phase.target.platform}` : ''}.`);
+    if (phase?.kind === 'ride' && voice) speak(`Nastupte do ${phase.ride.mode === 'tram' ? 'tramvaje' : phase.ride.mode === 'metro' ? 'metra' : phase.ride.mode === 'bus' ? 'autobusu' : 'spoje'} ${phase.ride.line}. Vystupujete na zastávce ${phase.ride.toStop}.`);
   }, [phaseIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* --------------------------------- mapa --------------------------------- */
@@ -434,7 +434,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     const p = phases[phaseIndex];
     if (p) {
       const coords = p.kind === 'walk' ? p.target.coords : p.stops[p.stops.length - 1]?.coords;
-      const label = p.kind === 'walk' ? (p.target.isStop ? `${p.target.name}${p.target.platform ? ` · ${p.target.platform}` : ''}` : p.target.name) : `Vystup: ${p.ride.toStop}`;
+      const label = p.kind === 'walk' ? (p.target.isStop ? `${p.target.name}${p.target.platform ? ` · ${p.target.platform}` : ''}` : p.target.name) : `Vystupte: ${p.ride.toStop}`;
       if (coords) targetRef.current = new Marker({ element: targetMarker(label, p.kind === 'ride' ? (p.ride.color ?? '#2f6b4a') : '#a36f45'), anchor: 'left', offset: [-12, 0] }).setLngLat([coords.lng, coords.lat]).addTo(map);
     }
   }, [mapReady, phaseIndex, phases]);
@@ -459,7 +459,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
   const instruction =
     walk && next
       ? next.maneuver.type === 'arrive' && next.distance >= 15
-        ? { headline: walk.target.isStop ? `Jdi na zastávku ${walk.target.name}` : `Jdi do budovy ${walk.target.name}`, detail: `${formatDistance(next.distance)}${walk.target.platform ? ` · nástupiště ${walk.target.platform}` : ''}` }
+        ? { headline: walk.target.isStop ? `Jděte na zastávku ${walk.target.name}` : `Jděte do budovy ${walk.target.name}`, detail: `${formatDistance(next.distance)}${walk.target.platform ? ` · nástupiště ${walk.target.platform}` : ''}` }
         : instructionText(next.maneuver, next.distance, walk.target.name)
       : null;
   const bearingToTarget = walk && fix ? bearing(fix.coords, walk.target.coords) : null;
@@ -472,10 +472,10 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     slack === null
       ? null
       : slack >= 1.5
-        ? { text: `Stíháš s rezervou ${Math.floor(slack)} min`, tone: 'bg-emerald-700 text-white' }
+        ? { text: `Stíháte s rezervou ${Math.floor(slack)} min`, tone: 'bg-emerald-700 text-white' }
         : slack >= -0.5
-          ? { text: 'Je to těsné – přidej do kroku', tone: 'bg-amber-600 text-white' }
-          : { text: walk?.target.isStop ? 'Tenhle spoj asi nestihneš' : 'Na začátek to asi nestihneš', tone: 'bg-red-600 text-white' };
+          ? { text: 'Je to těsné – přidejte do kroku', tone: 'bg-amber-600 text-white' }
+          : { text: walk?.target.isStop ? 'Tenhle spoj asi nestihnete' : 'Na začátek to asi nestihnete', tone: 'bg-red-600 text-white' };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] bg-[var(--surface)]" role="dialog" aria-modal="true" aria-label="Navigace">
@@ -501,7 +501,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
                   <Check className="size-7" aria-hidden />
                 </span>
                 <div className="min-w-0">
-                  <p className="font-display text-[26px] leading-none">Jsi tam</p>
+                  <p className="font-display text-[26px] leading-none">Jste tam</p>
                   <p className="mt-1 text-[14px] text-white/80">{target.event ? `Výuka začíná v ${formatTime(new Date(target.event.start))}.` : 'Navigace je u konce.'}</p>
                 </div>
               </>
@@ -512,7 +512,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
                     <ArrowUp className="size-7 transition-transform" style={{ transform: `rotate(${relative}deg)` }} aria-hidden />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-[19px] font-bold leading-tight">Jsi mimo trasu</p>
+                    <p className="text-[19px] font-bold leading-tight">Jste mimo trasu</p>
                     <p className="mt-0.5 text-[14px] text-white/80">
                       {walk.target.name} je {formatDistance(directDistance ?? 0)} směrem, kam ukazuje šipka.
                     </p>
@@ -524,9 +524,9 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
                     <Icon className="size-7" aria-hidden />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-[21px] font-bold leading-tight">{offRoute && bearingToTarget !== null ? `Jdi ${compassWord(bearingToTarget)}` : instruction?.headline}</p>
+                    <p className="text-[21px] font-bold leading-tight">{offRoute && bearingToTarget !== null ? `Jděte ${compassWord(bearingToTarget)}` : instruction?.headline}</p>
                     {instruction?.detail && <p className="mt-0.5 truncate text-[14px] text-white/80">{instruction.detail}</p>}
-                    {!fix && gpsStatus !== 'ok' && <p className="mt-0.5 text-[13px] text-amber-200">{gpsStatus === 'denied' ? 'Poloha je zakázaná – pokyny jsou jen podle mapy.' : 'Hledám tvoji polohu…'}</p>}
+                    {!fix && gpsStatus !== 'ok' && <p className="mt-0.5 text-[13px] text-amber-200">{gpsStatus === 'denied' ? 'Poloha je zakázaná – pokyny jsou jen podle mapy.' : 'Hledám vaši polohu…'}</p>}
                   </div>
                 </>
               )
@@ -538,10 +538,10 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
                 <div className="min-w-0">
                   <p className="text-[20px] font-bold leading-tight">
                     {rideState.left <= 1
-                      ? 'Na příští zastávce vystupuješ!'
+                      ? 'Na příští zastávce vystupujete!'
                       : rideState.left === 99
-                        ? `Vystupuješ za ${Math.max(1, Math.round(rideState.minutesToArrival))} min`
-                        : `Vystupuješ za ${rideState.left} ${plural(rideState.left, ['zastávku', 'zastávky', 'zastávek'])}`}
+                        ? `Vystupujete za ${Math.max(1, Math.round(rideState.minutesToArrival))} min`
+                        : `Vystupujete za ${rideState.left} ${plural(rideState.left, ['zastávku', 'zastávky', 'zastávek'])}`}
                   </p>
                   <p className="mt-0.5 truncate text-[14px] text-white/80">
                     {ride.ride.toStop} · {formatTime(new Date(ride.ride.predictedArrival))}
@@ -595,7 +595,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
             <>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="eyebrow text-subtle">{walk.target.isStop ? 'Jdeš na zastávku' : 'Jdeš do budovy'}</p>
+                  <p className="eyebrow text-subtle">{walk.target.isStop ? 'Jdete na zastávku' : 'Jdete do budovy'}</p>
                   <p className="mt-0.5 truncate text-[19px] font-bold leading-tight">
                     {walk.target.name}
                     {walk.target.platform && <span className="text-muted"> · nástupiště {walk.target.platform}</span>}
@@ -664,7 +664,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
                       <span className={cn('size-2.5 rounded-full ring-2', isLast ? 'bg-clay ring-clay/30' : 'bg-surface ring-line-strong')} />
                       <span className="min-w-0 flex-1 truncate">{s.name}</span>
                       {s.at && <span className="tabular">{formatTime(new Date(s.at))}</span>}
-                      {isLast && <span className="rounded-full bg-clay px-2 py-px text-[11px] font-black text-white">vystup</span>}
+                      {isLast && <span className="rounded-full bg-clay px-2 py-px text-[11px] font-black text-white">vystupte</span>}
                     </li>
                   );
                 })}

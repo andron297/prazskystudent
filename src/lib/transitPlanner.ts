@@ -322,24 +322,24 @@ export function routeSteps(it: Itinerary, eventStart: Date, buildingName: string
   const leave = ms(it.leaveAt);
   const rides = rideLegs(it);
   if (rides.length === 0) {
-    steps.push({ kind: 'leave', time: new Date(leave), title: 'Vyraz', detail: m.prep ? `${m.prep} min na odchod z domu` : undefined });
+    steps.push({ kind: 'leave', time: new Date(leave), title: 'Vyrazte', detail: m.prep ? `${m.prep} min na odchod z domu` : undefined });
     steps.push({ kind: 'walk', time: new Date(leave + m.prep * MIN_MS), title: `Pěšky do budovy ${buildingName}`, detail: `${it.walkToStopMinutes} min` });
     steps.push({ kind: 'arrive', time: new Date(it.arriveAt), title: `Na místě · ${buildingName}` });
     return steps;
   }
   const first = rides[0];
   const estimate = it.source === 'estimate';
-  steps.push({ kind: 'leave', time: new Date(leave), title: m.prep ? 'Obuj se a vyraz' : 'Vyraz', detail: m.prep ? `${m.prep} min na odchod z domu` : undefined });
+  steps.push({ kind: 'leave', time: new Date(leave), title: m.prep ? 'Obujte se a vyrazte' : 'Vyrazte', detail: m.prep ? `${m.prep} min na odchod z domu` : undefined });
   const platform = first.platform ?? platformFor?.(first);
   steps.push({
     kind: 'walk',
     time: new Date(leave + m.prep * MIN_MS),
-    title: `Jdi na zastávku ${first.fromStop}`,
+    title: `Jděte na zastávku ${first.fromStop}`,
     detail: [`${it.walkToStopMinutes} min pěšky`, platform ? `nástupiště ${platform}` : null].filter(Boolean).join(' · '),
   });
   if (m.entry > 0) {
     const depMs = new Date(first.predictedDeparture).getTime();
-    steps.push({ kind: 'platform', time: new Date(depMs - (m.entry + m.early) * MIN_MS), title: 'Sejdi na nástupiště metra', detail: `${m.entry} min eskalátory` });
+    steps.push({ kind: 'platform', time: new Date(depMs - (m.entry + m.early) * MIN_MS), title: 'Sejděte na nástupiště metra', detail: `${m.entry} min eskalátory` });
   }
   rides.forEach((r, i) => {
     if (i > 0) {
@@ -347,15 +347,15 @@ export function routeSteps(it: Itinerary, eventStart: Date, buildingName: string
       steps.push({
         kind: 'transfer',
         time: new Date(rides[i - 1].predictedArrival),
-        title: `Přestup na ${modeNoun(r.mode)} ${r.line}`,
-        detail: [r.fromStop, r.platform ? `nástupiště ${r.platform}` : null, transferWalk && transferWalk.kind === 'walk' ? `${transferWalk.minutes} min na přestup` : null].filter(Boolean).join(' · '),
+        title: `Přestupte na ${modeNoun(r.mode)} ${r.line}`,
+        detail: [r.fromStop, r.platform ? `nástupiště ${r.platform}` : null, transferWalk && transferWalk.kind === 'walk' ? `${transferWalk.minutes} min na přestupte` : null].filter(Boolean).join(' · '),
       });
     }
     const rideMin = Math.round((ms(r.predictedArrival) - ms(r.predictedDeparture)) / MIN_MS);
     steps.push({
       kind: 'ride',
       time: new Date(r.predictedDeparture),
-      title: estimate ? 'Jeď MHD (odhad bez jízdního řádu)' : `${capitalizeFirst(modeNoun(r.mode))} ${r.line} směr ${r.headsign}`,
+      title: estimate ? 'Jeďte MHD (odhad bez jízdního řádu)' : `${capitalizeFirst(modeNoun(r.mode))} ${r.line} směr ${r.headsign}`,
       detail: estimate ? `asi ${rideMin} min` : [`${rideMin} min jízdy`, r.stopCount ? `${r.stopCount} ${r.stopCount === 1 ? 'zastávka' : r.stopCount < 5 ? 'zastávky' : 'zastávek'}` : null].filter(Boolean).join(' · '),
       ride: r,
     });
@@ -364,7 +364,7 @@ export function routeSteps(it: Itinerary, eventStart: Date, buildingName: string
   steps.push({
     kind: 'exit',
     time: new Date(last.predictedArrival),
-    title: `Vystup: ${last.toStop}`,
+    title: `Vystupte: ${last.toStop}`,
     detail: [m.exit ? `${m.exit} min z metra na ulici` : null, `${it.walkFromStopMinutes} min pěšky do budovy`].filter(Boolean).join(' · '),
   });
   const slack = Math.round((eventStart.getTime() - ms(it.arriveAt)) / MIN_MS);

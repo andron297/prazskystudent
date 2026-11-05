@@ -167,22 +167,22 @@ function MoodleSection() {
           <p className="flex items-center gap-2 text-[14px] font-bold text-accent">
             <Zap className="size-4" aria-hidden /> Doporučeno: kalendář Moodlu – žádný token
           </p>
-          <p className="mt-1 text-[13px] text-muted">Klíč z Moodlu nepotřebuješ. Moodle umí sdílet všechny termíny jako odkaz na kalendář – Stihnu z něj průběžně vytáhne úkoly, testy a odevzdávárny. Odevzdání a známky pak přeneseš záložkou „→ Stihnu“, nebo je aplikace stáhne sama s klíčem z Moodlu (níže).</p>
+          <p className="mt-1 text-[13px] text-muted">Klíč z Moodlu nepotřebujete. Moodle umí sdílet všechny termíny jako odkaz na kalendář – Stihnu z něj průběžně vytáhne úkoly, testy a odevzdávárny. Odevzdání a známky pak přenesete záložkou „→ Stihnu“, nebo je aplikace stáhne sama s klíčem z Moodlu (níže).</p>
         </div>
         <Steps
           items={[
             <>
-              V Moodlu otevři{' '}
+              V Moodlu otevřete{' '}
               <a className="font-semibold text-accent hover:underline" href={`${base}/calendar/export.php`} target="_blank" rel="noreferrer">
                 Kalendář → Exportovat kalendář
               </a>
               .
             </>,
             <>
-              U <strong>Exportovat</strong> zvol <strong>Všechny události</strong> a období <strong>Nedávné a příštích 60 dní</strong>.
+              U <strong>Exportovat</strong> zvolte <strong>Všechny události</strong> a období <strong>Nedávné a příštích 60 dní</strong>.
             </>,
             <>
-              Klikni <strong>Získat URL kalendáře</strong>, zkopíruj odkaz a vlož ho sem.
+              Klikněte <strong>Získat URL kalendáře</strong>, zkopírujte odkaz a vložte ho sem.
             </>,
           ]}
         />
@@ -201,7 +201,7 @@ function MoodleSection() {
               <a className="font-semibold text-accent hover:underline" href={`${base}/user/managetoken.php`} target="_blank" rel="noreferrer">
                 Bezpečnostních klíčích
               </a>{' '}
-              neukazuje – ukáže ho <strong>jen jednou, hned po kliknutí na Reset</strong> u „Moodle mobile web service“. Pak ho zkopíruj sem (aplikace Moodle v mobilu tě jen znovu přihlásí).
+              neukazuje – ukáže ho <strong>jen jednou, hned po kliknutí na Reset</strong> u „Moodle mobile web service“. Pak ho zkopírujte sem (aplikace Moodle v mobilu vás jen znovu přihlásí).
             </p>
             {moodle && (
               <div className="flex flex-wrap items-center gap-2">
@@ -255,7 +255,7 @@ function SisFileUpload() {
         <Button variant="primary" icon={Upload} loading={busy} onClick={() => fileRef.current?.click()}>
           Nahrát rozvrh (.ics)
         </Button>
-        <span className="text-[12.5px] text-muted">nebo soubor přetáhni sem</span>
+        <span className="text-[12.5px] text-muted">nebo soubor přetáhněte sem</span>
         <input
           ref={fileRef}
           type="file"
@@ -271,7 +271,7 @@ function SisFileUpload() {
       {last && (
         <p className="mt-2 text-[12.5px] text-muted">
           Načteno {last.events} akcí{last.online ? ` (${last.online} online – bez cesty MHD)` : ''}.
-          {last.unresolved.length > 0 && ` Neznámá místa: ${last.unresolved.slice(0, 3).join(', ')} – přiřadíš je v kartě cesty.`}
+          {last.unresolved.length > 0 && ` Neznámá místa: ${last.unresolved.slice(0, 3).join(', ')} – přiřadíte je v Dopravě.`}
         </p>
       )}
     </div>
@@ -329,17 +329,17 @@ function SisSection() {
           <Steps
             items={[
               <>
-                V SISu otevři <strong>Rozvrh NG</strong> → svůj rozvrh.
+                V SISu otevřete <strong>Rozvrh NG</strong> → svůj rozvrh.
               </>,
               <>
-                Klikni na <strong>Export → iCalendar</strong> – stáhne se soubor <em>rozvrh.ics</em>.
+                Klikněte na <strong>Export → iCalendar</strong> – stáhne se soubor <em>rozvrh.ics</em>.
               </>,
-              <>Nahraj ho sem. Když se rozvrh změní (zápis, výměna semináře), nahraj nový – starý se nahradí.</>,
+              <>Nahrajte ho sem. Když se rozvrh změní (zápis, výměna semináře), nahrajte nový – starý se nahradí.</>,
             ]}
           />
           <SisFileUpload />
           <details className="mt-3 text-[13px]">
-            <summary className="cursor-pointer font-semibold text-muted hover:text-fg">Máš místo souboru odkaz na kalendář (iCal)?</summary>
+            <summary className="cursor-pointer font-semibold text-muted hover:text-fg">Máte místo souboru odkaz na kalendář (iCal)?</summary>
             <div className="mt-2">
               <AddSource kind="sis" placeholder="https://is.cuni.cz/…/rozvrh.ics" />
             </div>
@@ -376,13 +376,13 @@ function SisSection() {
           <p className="flex items-center gap-2 text-[14px] font-bold">
             <BookMarked className="size-4 text-moss" aria-hidden /> Termíny zkoušek a stránky z Moodlu jedním klikem
           </p>
-          <p className="mt-1 text-[13px] text-muted">Přetáhni tlačítko do lišty záložek. Pak klikni na záložku v SISu (termíny zkoušek, stránka předmětu) nebo v Moodlu (úkol, kurz) – Stihnu si stránku přečte tvým přihlášením: odevzdané úkoly odškrtne, známky a termíny doplní. Nic se neposílá jinam.</p>
+          <p className="mt-1 text-[13px] text-muted">Přetáhněte tlačítko do lišty záložek. Pak klikněte na záložku v SISu (termíny zkoušek, stránka předmětu) nebo v Moodlu (úkol, kurz) – Stihnu si stránku přečte vaším přihlášením: odevzdané úkoly odškrtne, známky a termíny doplní. Nic se neposílá jinam.</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <a
               ref={linkRef}
               onClick={(e) => {
                 e.preventDefault();
-                toast.info('Tlačítko přetáhni myší do lišty záložek prohlížeče.');
+                toast.info('Tlačítko přetáhněte myší do lišty záložek prohlížeče.');
               }}
               className="inline-flex cursor-grab items-center gap-2 rounded-full bg-forest px-4 py-2 text-[13px] font-bold text-forest-fg shadow-md active:cursor-grabbing"
               draggable
@@ -440,7 +440,7 @@ function TransitSection() {
       <div className="space-y-5">
         <div className="flex flex-wrap items-center gap-3 rounded-[22px] bg-surface-2 p-3.5">
           <MapPin className="size-5 text-moss" aria-hidden />
-          <p className="min-w-0 flex-1 text-[13.5px]">{stop ? <>Jezdíš ze zastávky <strong>{stop.name}</strong></> : 'Výchozí zastávka: automaticky nejbližší'}</p>
+          <p className="min-w-0 flex-1 text-[13.5px]">{stop ? <>Jezdíte ze zastávky <strong>{stop.name}</strong></> : 'Výchozí zastávka: automaticky nejbližší'}</p>
           {stop && (
             <Button size="sm" variant="ghost" onClick={() => setOriginStop(settings.mode, null)}>
               Automaticky
@@ -550,7 +550,7 @@ function WeatherSection() {
     <Card id="pocasi" className="scroll-mt-24" eyebrow="Open-Meteo" title={<>Počasí <em className="italic text-moss">a oblečení</em></>}>
       <div className="space-y-4">
         <Toggle checked={weather.enabled} onChange={(enabled) => updateSettings({ weather: { ...weather, enabled } })} label="Rada na cestu do školy" description="Co si obléct a jestli bude pršet cestou tam a zpátky." />
-        <Field label="Jak snadno ti je zima?">
+        <Field label="Jak snadno vám je zima?">
           <Segmented
             value={weather.feel}
             onChange={(feel) => updateSettings({ weather: { ...weather, feel } })}
@@ -602,7 +602,7 @@ function AppSection() {
     <Card id="aplikace" className="scroll-mt-24" eyebrow="Vzhled, režim, data" title={<>Aplikace</>}>
       <div className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Data" hint="Ukázka = vymyšlené předměty na vyzkoušení. Moje data = jen to tvoje.">
+          <Field label="Data" hint="Ukázka = vymyšlené předměty na vyzkoušení. Moje data = jen to vaše.">
             <Segmented
               value={settings.mode}
               onChange={(m) => {
@@ -632,7 +632,7 @@ function AppSection() {
             />
           </Field>
         </div>
-        <Field label="Jak tě oslovit" hint="Zobrazí se v pozdravu na hlavní stránce.">
+        <Field label="Jak vás oslovit" hint="Zobrazí se v pozdravu na hlavní stránce.">
           <TextInput value={settings.displayName} onChange={(e) => updateSettings({ displayName: e.target.value })} placeholder="např. Ondro" maxLength={24} className="max-w-xs" />
         </Field>
         {settings.mode === 'demo' && (
@@ -666,7 +666,7 @@ function AppSection() {
             })}
           </div>
         </div>
-        <SecretField label="Vlastní AI klíč (volitelné)" value={settings.anthropicApiKey} onChange={(anthropicApiKey) => updateSettings({ anthropicApiKey })} placeholder="Claude sk-ant-…, ChatGPT sk-… nebo Gemini AIza…" hint={providerForKey(settings.anthropicApiKey) ? `Používáš ${AI_NAMES[providerForKey(settings.anthropicApiKey)!]}.` : 'Claude, ChatGPT i Gemini – poznám podle klíče.'} />
+        <SecretField label="Vlastní AI klíč (volitelné)" value={settings.anthropicApiKey} onChange={(anthropicApiKey) => updateSettings({ anthropicApiKey })} placeholder="Claude sk-ant-…, ChatGPT sk-… nebo Gemini AIza…" hint={providerForKey(settings.anthropicApiKey) ? `Používáte ${AI_NAMES[providerForKey(settings.anthropicApiKey)!]}.` : 'Claude, ChatGPT i Gemini – poznám podle klíče.'} />
         <div className="flex flex-wrap gap-2">
           <Button icon={Download} onClick={exportBackup}>
             Záloha
@@ -679,7 +679,7 @@ function AppSection() {
             variant="ghost"
             icon={RotateCcw}
             onClick={async () => {
-              if (await confirmAction({ title: 'Zobrazit ukázku?', message: 'Přidám vymyšlené předměty na vyzkoušení. Tvoje data zůstanou; ukázka zmizí, jakmile se vrátíš k vlastním datům.', confirmLabel: 'Zobrazit ukázku' })) {
+              if (await confirmAction({ title: 'Zobrazit ukázku?', message: 'Přidám vymyšlené předměty na vyzkoušení. Vaše data zůstanou; ukázka zmizí, jakmile se vrátíte k vlastním datům.', confirmLabel: 'Zobrazit ukázku' })) {
                 useAppStore.getState().startDemo();
                 toast.success('Ukázka je zpátky.');
               }
@@ -691,7 +691,7 @@ function AppSection() {
             variant="ghost"
             icon={Trash}
             onClick={async () => {
-              if (await confirmAction({ title: 'Smazat ukázková data?', message: 'Tvoje vlastní data zůstanou.', confirmLabel: 'Smazat ukázku', tone: 'danger' })) {
+              if (await confirmAction({ title: 'Smazat ukázková data?', message: 'Vaše vlastní data zůstanou.', confirmLabel: 'Smazat ukázku', tone: 'danger' })) {
                 const removed = useAppStore.getState().purgeSampleData();
                 toast.info(removed ? 'Ukázková data smazána.' : 'Žádná ukázková data tu nejsou.');
               }
@@ -750,7 +750,7 @@ export function ConnectionsView({ section }: { section?: string }) {
           <SerifTitle as="h1" className="mt-2 text-[48px] text-white sm:text-[64px] [&_em]:text-[#e7d6b5]">
             Všechno <em>na jednom</em> místě
           </SerifTitle>
-          <p className="mt-3 max-w-lg text-[15px] text-white/85">Počasí a doprava fungují samy. Rozvrh, Moodle a Google propojíš v průvodci za pár minut – pak se o to stará Stihnu.</p>
+          <p className="mt-3 max-w-lg text-[15px] text-white/85">Počasí a doprava fungují samy. Rozvrh, Moodle a Google propojíte v průvodci za pár minut – pak se o to stará Stihnu.</p>
         </div>
       </header>
 
@@ -770,7 +770,7 @@ export function ConnectionsView({ section }: { section?: string }) {
         <AppSection />
       </div>
       <p className="flex items-center justify-center gap-2 pb-4 text-xs text-subtle">
-        <Database className="size-3.5" aria-hidden /> Data jsou v tomto zařízení{gs.connectedAt && settings.google.drive.enabled ? ' a ve tvém Google Disku' : ''}. Fotky: Unsplash.
+        <Database className="size-3.5" aria-hidden /> Data jsou v tomto zařízení{gs.connectedAt && settings.google.drive.enabled ? ' a ve vašem Google Disku' : ''}. Fotky: Unsplash.
       </p>
     </div>
   );

@@ -87,8 +87,8 @@ export function MoodleConnect() {
   return (
     <div className="space-y-5">
       <ol className="grid gap-3 sm:grid-cols-3">
-        <GuideStep n={1} icon={LogIn} title="Otevři Moodle">
-          Přihlas se do Moodlu své fakulty (na UK typicky{' '}
+        <GuideStep n={1} icon={LogIn} title="Otevřete Moodle">
+          Přihlaste se do Moodlu své fakulty (na UK typicky{' '}
           <a href={normalized} target="_blank" rel="noreferrer" className="font-medium text-accent underline-offset-2 hover:underline">
             {normalized.replace(/^https:\/\//, '')}
           </a>
@@ -100,14 +100,14 @@ export function MoodleConnect() {
             Otevřít přímo <ExternalLink className="size-3" />
           </a>
         </GuideStep>
-        <GuideStep n={3} icon={Copy} title="Reset → zkopíruj nový klíč">
-          Nový Moodle klíče v tabulce neukazuje. U služby <strong>Moodle mobile web service</strong> klikni na <strong>Reset</strong> a potvrď – Moodle nahoře <strong>jednou</strong> ukáže nový klíč (32 znaků) s tlačítkem Kopírovat. Aplikace Moodle v mobilu tě pak požádá o nové přihlášení, to je v pořádku. <em>RSS klíč</em> na to nefunguje.
+        <GuideStep n={3} icon={Copy} title="Reset → zkopírujte nový klíč">
+          Nový Moodle klíče v tabulce neukazuje. U služby <strong>Moodle mobile web service</strong> klikněte na <strong>Reset</strong> a potvrďte – Moodle nahoře <strong>jednou</strong> ukáže nový klíč (32 znaků) s tlačítkem Kopírovat. Aplikace Moodle v mobilu vás pak požádá o nové přihlášení, to je v pořádku. <em>RSS klíč</em> na to nefunguje.
         </GuideStep>
       </ol>
 
       {settings.mode === 'demo' && (
         <p className="rounded-2xl bg-sand/15 px-3.5 py-2.5 text-[13px] text-clay">
-          Ukázka: odpovědi Moodlu jsou jen simulované, takže si celý postup vyzkoušíš bez účtu.
+          Ukázka: odpovědi Moodlu jsou jen simulované, takže si celý postup vyzkoušíte bez účtu.
         </p>
       )}
 
@@ -168,7 +168,7 @@ export function MoodleConnect() {
 
       {result && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-4">
-          <p className="font-semibold">Hotovo – vítej, {result.site.firstname ?? result.site.fullname}! 🎓</p>
+          <p className="font-semibold">Hotovo – propojeno s účtem {result.site.fullname ?? result.site.firstname}. 🎓</p>
           <div className="mt-3 grid grid-cols-3 gap-3 text-center">
             {[
               { n: result.stats.courses, label: 'předmětů', extra: result.stats.newSubjects ? `${result.stats.newSubjects} nový` : 'spárováno' },

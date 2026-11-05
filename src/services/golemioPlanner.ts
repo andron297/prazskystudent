@@ -354,7 +354,7 @@ async function transferJourneys(ctx: TransferContext): Promise<Itinerary[]> {
           legs: [
             { kind: 'walk', minutes: walk.minutes, from: params.originLabel, to: d1.stopName },
             ride1,
-            { kind: 'walk', minutes: best.transfer, from: ride1.toStop, to: `${ride2.fromStop} (přestup)` },
+            { kind: 'walk', minutes: best.transfer, from: ride1.toStop, to: `${ride2.fromStop} (přestupte)` },
             ride2,
             { kind: 'walk', minutes: best.c.alight.candidate.walk, from: ride2.toStop, to: params.building.name },
           ],

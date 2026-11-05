@@ -385,9 +385,9 @@ const BASE_OUTFIT: Record<ComfortLevel, OutfitId[]> = {
 };
 
 const LEVEL_HEADLINE: Record<ComfortLevel, string> = {
-  freezing: 'Mrzne – pořádně se obleč',
+  freezing: 'Mrzne – pořádně se oblečte',
   cold: 'Zima – čepice a rukavice',
-  cool: 'Chladno – vezmi si bundu',
+  cool: 'Chladno – vezměte si bundu',
   mild: 'Příjemně – stačí lehká bunda',
   warm: 'Teplo – tričko a mikina na večer',
   hot: 'Horko – nalehko a s vodou',
@@ -422,7 +422,7 @@ export function weatherAdvice(forecast: WeatherForecast, plan: CommutePlan, now:
   if (umbrella) {
     if (maxGusts >= 50) {
       outfit.add('raincoat');
-      tips.push(`Nárazy větru až ${Math.round(maxGusts)} km/h – deštník by nepřežil, vezmi kapuci`);
+      tips.push(`Nárazy větru až ${Math.round(maxGusts)} km/h – deštník by nepřežil, vezměte kapuci`);
     } else outfit.add('umbrella');
     if (heavy) outfit.add('boots');
   } else if (maxGusts >= 55) {

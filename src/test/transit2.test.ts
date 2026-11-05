@@ -59,10 +59,10 @@ describe('realistické časy a výběr spoje', () => {
     const it = applyMargins(trip('c', 'tram', [13, 30], [13, 51]), DEFAULT_MARGINS);
     const steps = routeSteps(it, new Date(2026, 10, 2, 14, 0), 'Hollar');
     expect(steps.map((s) => s.kind)).toEqual(['leave', 'walk', 'ride', 'exit', 'arrive']);
-    expect(steps[1].title).toBe('Jdi na zastávku Drinopol');
+    expect(steps[1].title).toBe('Jděte na zastávku Drinopol');
     expect(steps[1].detail).toContain('nástupiště A');
     expect(steps[2].title).toBe('Tramvaj 22 směr Nádraží Hostivař');
-    expect(steps[3].title).toBe('Vystup: Národní divadlo');
+    expect(steps[3].title).toBe('Vystupte: Národní divadlo');
     expect(steps[4].detail).toBe('5 min do začátku');
   });
 });

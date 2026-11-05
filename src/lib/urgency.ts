@@ -125,8 +125,8 @@ export const TRANSIT_STYLES: Record<TransitStatus, TransitStyle> = {
     glass: 'bg-emerald-300/25 text-emerald-50 ring-1 ring-inset ring-emerald-200/40',
   },
   prepare: {
-    label: 'Připrav se',
-    short: 'Připrav se',
+    label: 'Připravte se',
+    short: 'Připravte se',
     text: 'text-orange-700 dark:text-orange-300',
     chip: 'bg-orange-500/15 text-orange-800 ring-1 ring-inset ring-orange-500/30 dark:text-orange-200',
     dot: 'bg-orange-500',
@@ -149,7 +149,7 @@ export const TRANSIT_STYLES: Record<TransitStatus, TransitStyle> = {
     glass: 'bg-red-500/45 text-white ring-1 ring-inset ring-red-300/60',
   },
   missed: {
-    label: 'Nestihneš MHD',
+    label: 'Nestihnete MHD',
     short: 'Ujelo to',
     text: 'text-red-700 dark:text-red-300',
     chip: 'bg-zinc-800/90 text-white ring-1 ring-inset ring-white/10 dark:bg-white/10',
@@ -161,7 +161,7 @@ export const TRANSIT_STYLES: Record<TransitStatus, TransitStyle> = {
     glass: 'bg-zinc-900/50 text-white ring-1 ring-inset ring-white/20',
   },
   'on-site': {
-    label: 'Jsi na místě',
+    label: 'Jste na místě',
     short: 'Na místě',
     text: 'text-sky-700 dark:text-sky-300',
     chip: 'bg-sky-500/15 text-sky-800 ring-1 ring-inset ring-sky-500/30 dark:text-sky-200',

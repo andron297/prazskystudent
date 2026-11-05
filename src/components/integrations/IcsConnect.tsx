@@ -122,13 +122,13 @@ export function IcsConnect() {
 
       {source === 'sis' && (
         <ol className="grid gap-3 sm:grid-cols-3">
-          <GuideStep n={1} icon={School} title="Otevři rozvrh v SISu">
-            V modulu <strong>Rozvrh</strong> najdi export do kalendáře (iCal / .ics).
+          <GuideStep n={1} icon={School} title="Otevřete rozvrh v SISu">
+            V modulu <strong>Rozvrh</strong> najděte export do kalendáře (iCal / .ics).
           </GuideStep>
-          <GuideStep n={2} icon={Link2} title="Zkopíruj soukromý odkaz">
+          <GuideStep n={2} icon={Link2} title="Zkopírujte soukromý odkaz">
             Odkaz je osobní a funguje bez přihlášení – nikomu ho neposílej.
           </GuideStep>
-          <GuideStep n={3} icon={MapPin} title="Vlož ho sem">
+          <GuideStep n={3} icon={MapPin} title="Vložte ho sem">
             Z lístků vytáhnu předměty, časy a místnosti (H212 → Hollar, J3014 → Jinonice).
           </GuideStep>
         </ol>
@@ -136,12 +136,12 @@ export function IcsConnect() {
       {source === 'google' && (
         <ol className="grid gap-3 sm:grid-cols-3">
           <GuideStep n={1} icon={CalendarDays} title="Nastavení kalendáře">
-            Google Kalendář → ozubené kolo → Nastavení → vyber kalendář s rozvrhem.
+            Google Kalendář → ozubené kolo → Nastavení → vyberte kalendář s rozvrhem.
           </GuideStep>
           <GuideStep n={2} icon={Link2} title="Integrovat kalendář">
-            Zkopíruj <strong>Tajnou adresu ve formátu iCal</strong>.
+            Zkopírujte <strong>Tajnou adresu ve formátu iCal</strong>.
           </GuideStep>
-          <GuideStep n={3} icon={MapPin} title="Vlož odkaz">
+          <GuideStep n={3} icon={MapPin} title="Vložte odkaz">
             Události s místem se namapují na budovy pro dopravní navigátor.
           </GuideStep>
         </ol>
@@ -160,7 +160,7 @@ export function IcsConnect() {
         <div>
           <button type="button" onClick={() => fileRef.current?.click()} className="flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-line-strong px-4 py-7 text-center hover:bg-surface-2">
             <FileUp className="mb-2 size-7 text-subtle" aria-hidden />
-            <span className="text-sm font-medium">Vyber exportovaný soubor .ics</span>
+            <span className="text-sm font-medium">Vyberte exportovaný soubor .ics</span>
             <span className="mt-1 text-xs text-muted">Zpracuje se přímo v prohlížeči – nikam se neodesílá.</span>
           </button>
           <input ref={fileRef} type="file" accept=".ics,text/calendar" className="hidden" onChange={(e) => e.target.files?.[0] && void loadFile(e.target.files[0])} />

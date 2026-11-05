@@ -26,7 +26,7 @@ const STOP = new Set(
 );
 /** Slova, která nic neříkají o předmětu (obecné školní pojmy). */
 const GENERIC = new Set(
-  'ukol ukoly domaci napsat dodelat udelat precist nastudovat pripravit odevzdat poslat zkontrolovat projit opakovat ucit naucit zapsat esej eseje referat prezentace prace test testu zkouska zkousku zapocet zapoctu seminar seminare seminarni prednaska prednasku cviceni hodina hodinu hodiny tyden tydne zitra dnes pondeli utery streda stredu ctvrtek patek patku sobota nedele kapitola kapitolu kapitoly clanek clanky text texty otazky otazka projekt projektu vystup ukazka reflexe reserse reserze materialy material podklady poznamky'.split(
+  'ukol ukoly domaci napsat dodelat udelat precist nastudovat pripravit odevzdat poslat zkontrolovat projit opakovat ucit naucit zapsat esej eseje referat prezentace prace test testu zkouska zkousku zapocet zapoctu seminar seminare seminarni prednaska prednasku cviceni hodina hodinu hodiny tyden tydne zitra dnes pondeli utery streda stredu ctvrtek patek patku sobota nedele kapitola kapitolu kapitoly clanek clanky text texty otazky otazka projekt projektu vystupte ukazka reflexe reserse reserze materialy material podklady poznamky'.split(
     ' ',
   ),
 );
@@ -226,7 +226,7 @@ export function guessSubject(input: MatchInput, ctx: MatchContext, opts: { exclu
     }
     add(Math.min(5, kw), 'podle sylabu a termínů předmětu');
 
-    if (dueDate && p.weekdays.has(dueDate.getDay())) add(classHint ? 3 : 0.6, `máš ho ${['v neděli', 'v pondělí', 'v úterý', 've středu', 've čtvrtek', 'v pátek', 'v sobotu'][dueDate.getDay()]}`);
+    if (dueDate && p.weekdays.has(dueDate.getDay())) add(classHint ? 3 : 0.6, `máte ho ${['v neděli', 'v pondělí', 'v úterý', 've středu', 've čtvrtek', 'v pátek', 'v sobotu'][dueDate.getDay()]}`);
     if (created && p.classes.some((c) => created >= c.start - 5 * 60_000 && created <= c.end + 20 * 60_000)) add(classHint ? 3.5 : 2, 'zapsáno během jeho výuky');
 
     if (score > 0) {

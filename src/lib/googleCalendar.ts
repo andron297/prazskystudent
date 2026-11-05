@@ -53,7 +53,7 @@ export async function insertGoogleEvents(clientId: string, items: CalendarItem[]
     });
     if (response.status === 401) {
       invalidateToken();
-      throw new Error('Platnost přihlášení Google vypršela – zkus to prosím znovu.');
+      throw new Error('Platnost přihlášení Google vypršela – zkuste to prosím znovu.');
     }
     if (!response.ok) throw new Error(`Google Kalendář odmítl událost „${item.title}“ (HTTP ${response.status}).`);
     inserted++;

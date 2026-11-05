@@ -174,7 +174,7 @@ export function TransitPanel({
               {event.location && (
                 <Select className="mt-3 max-w-xs" defaultValue="" onChange={(e) => e.target.value && setLocationAlias(event.location!, e.target.value)} aria-label="Přiřadit budovu">
                   <option value="" disabled>
-                    Vyber budovu…
+                    Vyberte budovu…
                   </option>
                   {settings.buildings.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -192,18 +192,18 @@ export function TransitPanel({
             </p>
           )}
 
-          {status === 'on-site' && <p className="rounded-[22px] bg-surface-2 p-4 text-sm text-muted">Jsi u budovy – žádná MHD potřeba.</p>}
+          {status === 'on-site' && <p className="rounded-[22px] bg-surface-2 p-4 text-sm text-muted">Jste u budovy – žádná MHD potřeba.</p>}
 
           {active && selected && eventStart && plan && building && (
             <div className="grid gap-4 lg:grid-cols-[1.05fr_1fr]">
               {/* Vybraná cesta krok za krokem */}
               <div>
                 <p className="eyebrow mb-2 text-subtle">
-                  {selected.id === plan.recommended?.id && plan.bufferMet ? 'Doporučený spoj' : selected.id === plan.lastCall?.id ? 'Poslední možný spoj' : 'Tvůj spoj'}
+                  {selected.id === plan.recommended?.id && plan.bufferMet ? 'Doporučený spoj' : selected.id === plan.lastCall?.id ? 'Poslední možný spoj' : 'Váš spoj'}
                 </p>
                 {!plan.bufferMet && (
                   <p className="mb-2 rounded-[14px] bg-clay/12 px-3 py-2 text-[12.5px] font-semibold text-clay">
-                    S rezervou {settings.bufferMinutes} min už to nestihneš – tohle jsou poslední spoje, které to ještě zvládnou.
+                    S rezervou {settings.bufferMinutes} min už to nestihnete – tohle jsou poslední spoje, které to ještě zvládnou.
                   </p>
                 )}
                 <ol className="relative space-y-0.5 before:absolute before:bottom-3 before:left-[3.55rem] before:top-3 before:w-px before:bg-line">
@@ -258,7 +258,7 @@ export function TransitPanel({
 
               {/* Výběr spoje */}
               <div>
-                <p className="eyebrow mb-2 text-subtle">Vyber spoj</p>
+                <p className="eyebrow mb-2 text-subtle">Vyberte spoj</p>
                 <ul className="space-y-1.5" role="radiogroup" aria-label="Spoje">
                   {options.map((it) => (
                     <li key={it.id}>
@@ -283,10 +283,10 @@ export function TransitPanel({
                   </>
                 )}
                 <p className="mt-2 text-[11.5px] leading-snug text-subtle">
-                  Doporučený = nejpozdější spoj, se kterým jsi v budově aspoň {settings.bufferMinutes} min předem. Poslední možný = v budově aspoň {minMargin} min předem.
+                  Doporučený = nejpozdější spoj, se kterým jste v budově aspoň {settings.bufferMinutes} min předem. Poslední možný = v budově aspoň {minMargin} min předem.
                 </p>
                 {options.length <= 1 && selected.source === 'estimate' && (
-                  <p className="mt-2 rounded-[18px] bg-surface-2 p-3 text-[12.5px] text-muted">Bez dat PID je tohle jen odhad podle vzdálenosti. S živými daty tu uvidíš konkrétní spoje na výběr.</p>
+                  <p className="mt-2 rounded-[18px] bg-surface-2 p-3 text-[12.5px] text-muted">Bez dat PID je tohle jen odhad podle vzdálenosti. S živými daty tu uvidíte konkrétní spoje na výběr.</p>
                 )}
               </div>
             </div>
@@ -410,7 +410,7 @@ function ConnectionOption({
         </span>
         <span className="mt-0.5 block truncate text-[12.5px] text-muted">
           {first ? `${first.fromStop} ${formatTime(new Date(first.predictedDeparture))}` : 'pěšky'}
-          {rides.length > 1 ? ` · přestup ${rides.slice(1).map((r) => r.fromStop).join(', ')}` : ''} → v budově {formatTime(new Date(it.arriveAt))}
+          {rides.length > 1 ? ` · přestupte ${rides.slice(1).map((r) => r.fromStop).join(', ')}` : ''} → v budově {formatTime(new Date(it.arriveAt))}
         </span>
       </span>
       <span className="flex shrink-0 flex-col items-end gap-1">

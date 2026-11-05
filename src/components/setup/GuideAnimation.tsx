@@ -69,7 +69,7 @@ const SIS_FRAMES: Frame[] = [
   {
     caption: (
       <>
-        V SISu otevři <strong>Rozvrh NG</strong>
+        V SISu otevřete <strong>Rozvrh NG</strong>
       </>
     ),
     x: 33,
@@ -90,7 +90,7 @@ const SIS_FRAMES: Frame[] = [
   {
     caption: (
       <>
-        Nahoře klikni na <strong>Export</strong> → <strong>iCalendar</strong>
+        Nahoře klikněte na <strong>Export</strong> → <strong>iCalendar</strong>
       </>
     ),
     x: 80,
@@ -147,7 +147,7 @@ const SIS_FRAMES: Frame[] = [
   {
     caption: (
       <>
-        Ve Stihnu klikni na <strong>Nahrát soubor</strong> a vyber ho
+        Ve Stihnu klikněte na <strong>Nahrát soubor</strong> a vyberte ho
       </>
     ),
     x: 50,
@@ -178,7 +178,7 @@ const MOODLE_FRAMES: Frame[] = [
   {
     caption: (
       <>
-        Otevři <strong>Export kalendáře</strong> (odkaz výše)
+        Otevřete <strong>Export kalendáře</strong> (odkaz výše)
       </>
     ),
     x: 30,
@@ -199,7 +199,7 @@ const MOODLE_FRAMES: Frame[] = [
   {
     caption: (
       <>
-        Vyber <strong>Všechny události</strong> a <strong>Nedávné a příštích 60 dní</strong>
+        Vyberte <strong>Všechny události</strong> a <strong>Nedávné a příštích 60 dní</strong>
       </>
     ),
     x: 22,
@@ -234,7 +234,7 @@ const MOODLE_FRAMES: Frame[] = [
   {
     caption: (
       <>
-        Klikni <strong>Získat URL kalendáře</strong> a odkaz zkopíruj
+        Klikněte <strong>Získat URL kalendáře</strong> a odkaz zkopírujte
       </>
     ),
     x: 30,
@@ -264,7 +264,7 @@ const MOODLE_FRAMES: Frame[] = [
   {
     caption: (
       <>
-        Ve Stihnu ho vlož do pole a dej <strong>Uložit</strong>
+        Ve Stihnu ho vložte do pole a dejte <strong>Uložit</strong>
       </>
     ),
     x: 82,
@@ -298,7 +298,7 @@ const GOOGLE_FRAMES: Frame[] = [
   {
     caption: (
       <>
-        Klikni na <strong>Propojit s Googlem</strong>
+        Klikněte na <strong>Propojit s Googlem</strong>
       </>
     ),
     x: 50,
@@ -315,7 +315,7 @@ const GOOGLE_FRAMES: Frame[] = [
     ),
   },
   {
-    caption: <>Vyber svůj účet Google</>,
+    caption: <>Vyberte svůj účet Google</>,
     x: 48,
     y: 52,
     screen: (c) => (
@@ -335,7 +335,7 @@ const GOOGLE_FRAMES: Frame[] = [
   {
     caption: (
       <>
-        Když uvidíš varování, klikni <strong>Pokročilé</strong> → <strong>Přejít do aplikace</strong>
+        Když uvidíte varování, klikněte <strong>Pokročilé</strong> → <strong>Přejít do aplikace</strong>
       </>
     ),
     x: 30,
@@ -365,7 +365,7 @@ const GOOGLE_FRAMES: Frame[] = [
   {
     caption: (
       <>
-        Povol kalendář a úkoly a dej <strong>Pokračovat</strong>
+        Povolte kalendář a úkoly a dejte <strong>Pokračovat</strong>
       </>
     ),
     x: 76,

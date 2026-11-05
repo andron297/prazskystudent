@@ -523,7 +523,7 @@ export async function planLiveTransit(params: LivePlanParams): Promise<TransitRe
     try {
       const its = await planWithGolemio(params);
       if (its.length > 0) return { itineraries: its, source: 'golemio', fetchedAt, warnings, originLabel: params.originLabel };
-      warnings.push('V okolí není přímý spoj k budově – přidej Google Maps klíč pro trasy s přestupem.');
+      warnings.push('V okolí není přímý spoj k budově – přidejte Google Maps klíč pro trasy s přestupem.');
     } catch (error) {
       warnings.push(`Golemio: ${errorMessage(error)}`);
     }

@@ -249,7 +249,7 @@ function EventForm({ event, onClose }: { event?: ScheduleEvent; onClose: () => v
         <Field label="Místo">
           <TextInput value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Adresa nebo místo" />
         </Field>
-        <Field label="Budova (pro MHD)" hint="Vyber, a Stihnu spočítá cestu.">
+        <Field label="Budova (pro MHD)" hint="Vyberte, a Stihnu spočítá cestu.">
           <Select value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
             <option value="">Žádná</option>
             {buildings.map((b) => (
@@ -340,7 +340,7 @@ export function ItemEditor() {
       {mode === 'quick' && !editing && (
         <div className="space-y-4">
           <QuickAdd key={example?.n ?? 0} autoFocus variant="hero" initial={example?.text ?? (editor?.type === 'quick' ? (editor.text ?? '') : '')} onSaved={close} />
-          <p className="eyebrow text-subtle">Zkus třeba</p>
+          <p className="eyebrow text-subtle">Zkuste třeba</p>
           <ul className="grid gap-1.5 text-[13px] text-muted sm:grid-cols-2">
             {['zítra 18:00 trénink @Strahov', 'esej do pátku #JSB065 !', 'pá 10–12 konzultace na Hollaru', 'koupit lítačku za 3 dny'].map((ex, i) => (
               <li key={ex}>

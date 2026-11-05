@@ -40,7 +40,7 @@ function SubjectChip({ row, subjects, byId }: { row: TaskRow; subjects: Subject[
   if (row.kind !== 'task' || !row.task || subjects.length === 0) return subject ? chip : null;
   const task = row.task;
   return (
-    <label className="relative inline-flex cursor-pointer" title={task.subjectAuto ? 'Předmět odhadla aplikace – klepnutím ho změníš' : 'Změnit předmět'}>
+    <label className="relative inline-flex cursor-pointer" title={task.subjectAuto ? 'Předmět odhadla aplikace – klepnutím ho změníte' : 'Změnit předmět'}>
       {chip}
       <select
         value={task.subjectId ?? ''}

@@ -46,7 +46,7 @@ export function AccountView() {
           Účet
         </SerifTitle>
         <Section icon={Cloud} title="Účty zatím nejsou zapnuté">
-          <p className="text-muted">Data jsou teď jen v tomto zařízení. Jakmile správce aplikace zapne účty, přihlásíš se a data se budou bezpečně synchronizovat mezi zařízeními.</p>
+          <p className="text-muted">Data jsou teď jen v tomto zařízení. Jakmile správce aplikace zapne účty, přihlásíte se a data se budou bezpečně synchronizovat mezi zařízeními.</p>
           <a href="#/propojeni/spravce" className="mt-3 inline-block font-semibold text-accent hover:underline">
             Návod pro správce
           </a>
@@ -93,18 +93,18 @@ export function AccountView() {
         <p className={cn(syncError ? 'text-red-700 dark:text-red-300' : 'text-muted')}>
           {syncError ?? (lastSyncAt ? `Všechno uložené v účtu – naposledy ${formatRelative(new Date(lastSyncAt), appNow())}.` : 'Ukládám…')}
         </p>
-        <p className="mt-1 text-[13px] text-subtle">Rozvrh, úkoly, předměty, propojení a nastavení. Soubory nahrané z počítače zůstávají jen v zařízení, kde je máš.</p>
+        <p className="mt-1 text-[13px] text-subtle">Rozvrh, úkoly, předměty, propojení a nastavení. Soubory nahrané z počítače zůstávají jen v zařízení, kde je máte.</p>
         <button type="button" onClick={() => void forceSync()} disabled={syncing} className={cn(btn, 'mt-3 bg-accent text-accent-fg hover:brightness-110 disabled:opacity-60')}>
           <RefreshCw className={cn('size-4', syncing && 'animate-spin')} aria-hidden /> Synchronizovat teď
         </button>
       </Section>
 
       <Section icon={MonitorSmartphone} title="Přidat další zařízení">
-        <p className="text-muted">Na novém telefonu nebo počítači se přihlas stejným účtem. Odemkneš ho záchranným kódem – nebo tady vytvoř QR kód a naskenuj ho fotoaparátem nového zařízení.</p>
+        <p className="text-muted">Na novém telefonu nebo počítači se přihlaste stejným účtem. Odemknete ho záchranným kódem – nebo tady vytvořte QR kód a naskenujte ho fotoaparátem nového zařízení.</p>
         {qr && qrFor ? (
           <div className="mt-4 flex flex-col items-center gap-3 rounded-[22px] bg-white p-5 text-center text-[#1b3626]">
             <img src={qr} alt="QR kód pro odemknutí nového zařízení" className="size-56" />
-            <p className="text-[13px] font-semibold">Naskenuj fotoaparátem nového zařízení. Kód platí, dokud nevytvoříš jiný.</p>
+            <p className="text-[13px] font-semibold">Naskenujte fotoaparátem nového zařízení. Kód platí, dokud nevytvoříte jiný.</p>
             <button type="button" onClick={() => setQrFor(null)} className="text-[13px] font-bold underline">
               Skrýt
             </button>
@@ -113,7 +113,7 @@ export function AccountView() {
           <button
             type="button"
             onClick={async () => {
-              if (!(await confirmAction({ title: 'Vytvořit nový kód?', message: 'Starý záchranný kód přestane platit. Nový uvidíš hned jako QR i jako text.', confirmLabel: 'Vytvořit' }))) return;
+              if (!(await confirmAction({ title: 'Vytvořit nový kód?', message: 'Starý záchranný kód přestane platit. Nový uvidíte hned jako QR i jako text.', confirmLabel: 'Vytvořit' }))) return;
               void run('qr', async () => {
                 const code = await regenerateRecoveryCode();
                 setQrFor(code);
@@ -133,7 +133,7 @@ export function AccountView() {
           <RecoveryCodeCard code={newCode} onDone={() => setNewCode(null)} doneLabel="Hotovo" />
         ) : (
           <>
-            <p className="text-muted">Jediný náhradní klíč k datům. Když ho ztratíš (nebo máš podezření, že ho někdo viděl), vytvoř nový – starý přestane platit.</p>
+            <p className="text-muted">Jediný náhradní klíč k datům. Když ho ztratíte (nebo máte podezření, že ho někdo viděl), vytvořte nový – starý přestane platit.</p>
             <button
               type="button"
               onClick={async () => {
@@ -157,7 +157,7 @@ export function AccountView() {
               disabled={password.length < 10 || busy === 'pw'}
               onClick={() =>
                 void run('pw', async () => {
-                  if (await passwordLeaked(password)) throw new Error('Tohle heslo se objevilo v únicích dat z jiných služeb. Zvol prosím jiné.');
+                  if (await passwordLeaked(password)) throw new Error('Tohle heslo se objevilo v únicích dat z jiných služeb. Zvolte prosím jiné.');
                   await setNewPassword(password);
                   setPassword('');
                   toast.success('Heslo je změněné.');
@@ -180,7 +180,7 @@ export function AccountView() {
           <button
             type="button"
             onClick={async () => {
-              if (await confirmAction({ title: 'Odhlásit všude?', message: 'Odhlásí tě na všech telefonech a počítačích. Hodí se třeba při ztrátě telefonu.', confirmLabel: 'Odhlásit všude' })) void run('all', () => signOutAccount(true));
+              if (await confirmAction({ title: 'Odhlásit všude?', message: 'Odhlásí vás na všech telefonech a počítačích. Hodí se třeba při ztrátě telefonu.', confirmLabel: 'Odhlásit všude' })) void run('all', () => signOutAccount(true));
             }}
             className={cn(btn, 'bg-surface-2 hover:bg-line')}
           >
@@ -190,7 +190,7 @@ export function AccountView() {
       </Section>
 
       <Section icon={Download} title="Moje data">
-        <p className="text-muted">Stáhni si kopii všeho, co je v účtu (rozšifrovanou, jako soubor JSON).</p>
+        <p className="text-muted">Stáhněte si kopii všeho, co je v účtu (rozšifrovanou, jako soubor JSON).</p>
         <button
           type="button"
           onClick={() =>
@@ -221,7 +221,7 @@ export function AccountView() {
       <Section icon={Trash2} title="Smazat účet" tone="danger">
         <p className="text-muted">Smaže účet a všechna data v něm. Nejde to vrátit.{!server.accountDelete && ' (Data se smažou hned; samotný účet smaže správce.)'}</p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <input value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} placeholder={`Pro potvrzení napiš ${user.email}`} className="h-11 flex-1 rounded-full bg-surface px-4 ring-1 ring-inset ring-line-strong outline-none focus:ring-2 focus:ring-red-500" />
+          <input value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} placeholder={`Pro potvrzení napište ${user.email}`} className="h-11 flex-1 rounded-full bg-surface px-4 ring-1 ring-inset ring-line-strong outline-none focus:ring-2 focus:ring-red-500" />
           <button
             type="button"
             disabled={confirmEmail.trim().toLowerCase() !== user.email.toLowerCase() || busy === 'delete'}

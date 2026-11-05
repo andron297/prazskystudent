@@ -368,7 +368,7 @@ export function TransitMapView() {
     const map = mapRef.current;
     if (map && originStop && map.getSource('stops')) map.setFeatureState({ source: 'stops', id: originStop.name }, { origin: false });
     setOriginStop(mode, { name: stop.name, coords: stop.coords });
-    toast.success(`Jedeš ze zastávky ${stop.name}`);
+    toast.success(`Jedete ze zastávky ${stop.name}`);
   };
 
   const selectedWalk = selected ? walkingMinutes(origin.coords, selected.coords, walkSpeed) : 0;
@@ -483,7 +483,7 @@ export function TransitMapView() {
                   {originStop?.name === selected.name ? (
                     <>
                       <Button size="sm" variant="soft" icon={Check}>
-                        Jedeš odsud
+                        Jedete odsud
                       </Button>
                       <Button size="sm" variant="ghost" icon={Sparkles} onClick={() => setOriginStop(mode, null)}>
                         Automaticky
@@ -515,7 +515,7 @@ export function TransitMapView() {
                   <div className="mt-3 flex items-center gap-2 rounded-2xl bg-accent-soft px-3 py-2 text-[13px]">
                     <MapPin className="size-4 text-accent" aria-hidden />
                     <span className="min-w-0 flex-1 truncate">
-                      Jedeš ze zastávky <strong>{originStop.name}</strong>
+                      Jedete ze zastávky <strong>{originStop.name}</strong>
                     </span>
                     <button type="button" onClick={() => setOriginStop(mode, null)} className="text-xs font-bold text-accent hover:underline">
                       Automaticky

@@ -86,7 +86,7 @@ export function QuickAdd({ autoFocus = false, onSaved, variant = 'card', initial
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKey}
           autoFocus={autoFocus}
-          placeholder="Napiš úkol nebo událost… „zítra 18:00 trénink“"
+          placeholder="Napište úkol nebo událost… „zítra 18:00 trénink“"
           className={cn('min-w-0 flex-1 bg-transparent outline-none placeholder:text-subtle focus-visible:outline-none', hero ? 'text-[16px]' : 'text-[14.5px]')}
           aria-label="Rychle přidat úkol nebo událost"
           enterKeyHint="done"

@@ -40,7 +40,7 @@ async function upstream<T>(path: string, query: Record<string, string>): Promise
   const url = new URL(path, API);
   for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
   const response = await fetch(url, { headers: { 'user-agent': USER_AGENT, accept: 'application/json' }, signal: AbortSignal.timeout(15_000) });
-  if (response.status === 429) throw new HttpError(429, 'transit_rate_limited', 'Plánovač je teď přetížený – zkus to za chvíli.');
+  if (response.status === 429) throw new HttpError(429, 'transit_rate_limited', 'Plánovač je teď přetížený – zkuste to za chvíli.');
   if (!response.ok) throw new HttpError(502, 'transit_error', `Plánovač odpověděl chybou HTTP ${response.status}.`);
   return JSON.parse(await readTextLimited(response, 4_000_000)) as T;
 }

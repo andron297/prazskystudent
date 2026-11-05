@@ -30,7 +30,7 @@ async function doFetch(input: string, options: RequestOptions): Promise<Response
     if (controller.signal.aborted) {
       throw new ApiError(0, init.signal?.aborted ? 'aborted' : 'timeout', init.signal?.aborted ? 'Požadavek byl zrušen.' : 'Služba neodpověděla včas.');
     }
-    throw new ApiError(0, 'network', 'Nepodařilo se spojit se serverem. Jsi online?');
+    throw new ApiError(0, 'network', 'Nepodařilo se spojit se serverem. Jste online?');
   } finally {
     clearTimeout(timer);
   }

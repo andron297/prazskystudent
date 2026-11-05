@@ -99,23 +99,23 @@ function SetupGuide() {
       <p className="font-display text-[22px] leading-tight">
         Jednorázové <em className="text-moss">nastavení</em>
       </p>
-      <p className="mt-1 text-[13px] text-muted">Google potřebuje vědět, že aplikace patří tobě. Dělá se jen jednou.</p>
+      <p className="mt-1 text-[13px] text-muted">Google potřebuje vědět, že aplikace patří vám. Dělá se jen jednou.</p>
       <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-[13px] leading-relaxed">
-        <li>{link('https://console.cloud.google.com/projectcreate', 'Založ projekt')} v Google Cloud (třeba „Stihnu“).</li>
+        <li>{link('https://console.cloud.google.com/projectcreate', 'Založte projekt')} v Google Cloud (třeba „Stihnu“).</li>
         <li>
-          Zapni API: {link('https://console.cloud.google.com/apis/library/calendar-json.googleapis.com', 'Kalendář')}, {link('https://console.cloud.google.com/apis/library/tasks.googleapis.com', 'Úkoly')} a{' '}
+          Zapněte API: {link('https://console.cloud.google.com/apis/library/calendar-json.googleapis.com', 'Kalendář')}, {link('https://console.cloud.google.com/apis/library/tasks.googleapis.com', 'Úkoly')} a{' '}
           {link('https://console.cloud.google.com/apis/library/drive.googleapis.com', 'Disk')} (u každého „Enable“).
         </li>
         <li>
-          {link('https://console.cloud.google.com/auth/overview', 'Google Auth Platform')} → <em>Get started</em>: název aplikace, tvůj e-mail, Audience <em>External</em>.
+          {link('https://console.cloud.google.com/auth/overview', 'Google Auth Platform')} → <em>Get started</em>: název aplikace, váš e-mail, Audience <em>External</em>.
         </li>
         <li>
-          {link('https://console.cloud.google.com/auth/audience', 'Audience')} → <strong>Test users → Add users</strong> → tvůj Gmail. <span className="text-subtle">(Bez toho Google hlásí „Přístup zablokován“.)</span>
+          {link('https://console.cloud.google.com/auth/audience', 'Audience')} → <strong>Test users → Add users</strong> → váš Gmail. <span className="text-subtle">(Bez toho Google hlásí „Přístup zablokován“.)</span>
         </li>
         <li>
           {link('https://console.cloud.google.com/auth/clients', 'Clients')} → <em>Create client</em> → Web application → Authorized JavaScript origins: <code className="rounded bg-surface px-1">{origin}</code>.
         </li>
-        <li>Zkopíruj Client ID sem:</li>
+        <li>Zkopírujte Client ID sem:</li>
       </ol>
       <Field label="OAuth Client ID" className="mt-3">
         <TextInput value={g.clientId} onChange={(e) => updateGoogleSettings({ clientId: e.target.value.trim() })} placeholder="1234567890-abc….apps.googleusercontent.com" className="font-mono text-[13px]" />
@@ -131,22 +131,22 @@ function BlockedHelp() {
       <p className="flex items-center gap-2 text-[14px] font-bold">
         <CircleAlert className="size-4 text-amber-700 dark:text-amber-300" aria-hidden /> Google napsal „Přístup zablokován“ (Chyba 403: access_denied)?
       </p>
-      <p className="mt-1 text-[13px] text-muted">Aplikace je v testovacím režimu a tvůj účet zatím není mezi testery. Oprava na minutu:</p>
+      <p className="mt-1 text-[13px] text-muted">Aplikace je v testovacím režimu a váš účet zatím není mezi testery. Oprava na minutu:</p>
       <ol className="mt-2 list-decimal space-y-1 pl-5 text-[13px] leading-relaxed">
         <li>
-          Otevři{' '}
+          Otevřete{' '}
           <a className="font-semibold text-accent hover:underline" href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noreferrer">
             Google Auth Platform → Audience
           </a>{' '}
-          (vpravo nahoře musí být vybraný tvůj projekt).
+          (vpravo nahoře musí být vybraný váš projekt).
         </li>
         <li>
-          V části <strong>Test users</strong> klikni na <strong>Add users</strong>, napiš Gmail, kterým se přihlašuješ, a ulož.
+          V části <strong>Test users</strong> klikněte na <strong>Add users</strong>, napište Gmail, kterým se přihlašujete, a uložte.
         </li>
-        <li>Vrať se sem a klikni znovu na „Propojit s Googlem“.</li>
+        <li>Vraťte se sem a klikněte znovu na „Propojit s Googlem“.</li>
       </ol>
       <p className="mt-2 text-xs text-subtle">
-        Pokud ti po přihlášení Google ukáže „Aplikace nebyla ověřena“, klikni na <em>Pokročilé → Přejít do aplikace</em> – aplikace je tvoje vlastní.
+        Pokud vám po přihlášení Google ukáže „Aplikace nebyla ověřena“, klikněte na <em>Pokročilé → Přejít do aplikace</em> – aplikace je vaše vlastní.
       </p>
     </div>
   );
@@ -175,7 +175,7 @@ function DemoGooglePreview() {
     if (open && list) backend.editTask(list.id, open.id, { status: 'completed' });
     await backend.insertTask('@default', { title: 'Vyzvednout balík', status: 'needsAction', due: `${toDateKey(addDays(today, 2))}T00:00:00.000Z` });
     setData(backend.peek());
-    toast.info('V simulovaném Googlu přibyla událost a úkol a jeden úkol je hotový. Synchronizuj!');
+    toast.info('V simulovaném Googlu přibyla událost a úkol a jeden úkol je hotový. Synchronizujte!');
   };
   if (!data) return null;
   return (
@@ -302,7 +302,7 @@ export function GoogleSection() {
           <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
             <div>
               <p className="text-[15px] leading-relaxed">
-                Rozvrh, termíny i tvoje vlastní události se objeví v <strong>Google Kalendáři</strong>, úkoly v <strong>Google Úkolech</strong> a data se zálohují na <strong>Disk</strong>. Co změníš v Googlu, propíše se zpátky sem.
+                Rozvrh, termíny i vaše vlastní události se objeví v <strong>Google Kalendáři</strong>, úkoly v <strong>Google Úkolech</strong> a data se zálohují na <strong>Disk</strong>. Co změníte v Googlu, propíše se zpátky sem.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <ChipToggle active={g.calendar.enabled} onClick={() => patchCal({ enabled: !g.calendar.enabled })}>
@@ -319,7 +319,7 @@ export function GoogleSection() {
                 {mode === 'demo' ? 'Propojit (simulace)' : 'Propojit s Googlem'}
               </Button>
               {mode === 'demo' ? (
-                <p className="mt-2 text-xs text-subtle">V ukázce se propojí jen simulovaný Google – do tvého účtu se nic nezapíše. Naostro to funguje s vlastními daty.</p>
+                <p className="mt-2 text-xs text-subtle">V ukázce se propojí jen simulovaný Google – do vašeho účtu se nic nezapíše. Naostro to funguje s vlastními daty.</p>
               ) : (
                 <p className="mt-2 text-xs text-subtle">
                   Aplikace žádá jen o přístup k Kalendáři, Úkolům a vlastním souborům na Disku.{server.googleServerFlow ? ' Přihlášení se drží i na pozadí.' : ''}

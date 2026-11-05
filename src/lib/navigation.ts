@@ -184,17 +184,17 @@ export function nextManeuver(maneuvers: Maneuver[], along: number): { maneuver: 
 }
 
 const ACTION: Record<ManeuverType, string> = {
-  depart: 'Vyraz',
-  straight: 'Pokračuj rovně',
+  depart: 'Vyrazte',
+  straight: 'Pokračujte rovně',
   'slight-left': 'Mírně vlevo',
-  left: 'Odboč vlevo',
+  left: 'Odbočte vlevo',
   'sharp-left': 'Ostře vlevo',
   'slight-right': 'Mírně vpravo',
-  right: 'Odboč vpravo',
+  right: 'Odbočte vpravo',
   'sharp-right': 'Ostře vpravo',
-  uturn: 'Otoč se',
+  uturn: 'Otočte se',
   stairs: 'Schody',
-  arrive: 'Jsi u cíle',
+  arrive: 'Jste u cíle',
 };
 
 export function formatDistance(m: number): string {
@@ -206,7 +206,7 @@ export function formatDistance(m: number): string {
 /** Text pokynu: „Za 80 m odboč vlevo do ulice Vinohradská“. */
 export function instructionText(m: Maneuver, distance: number, targetName?: string): { headline: string; detail?: string } {
   if (m.type === 'arrive') {
-    return { headline: distance < 15 ? `Jsi na místě${targetName ? ` – ${targetName}` : ''}` : `${formatDistance(distance)} do cíle`, detail: targetName };
+    return { headline: distance < 15 ? `Jste na místě${targetName ? ` – ${targetName}` : ''}` : `${formatDistance(distance)} do cíle`, detail: targetName };
   }
   const action = ACTION[m.type];
   const street = m.street ? (m.type === 'stairs' ? m.street : `do ulice ${m.street}`) : undefined;

@@ -131,7 +131,7 @@ export async function handleMenza(request: Request): Promise<Response> {
       return json({ canteens: Object.entries(CANTEENS).map(([id, name]) => ({ id: Number(id), name })) }, 200, { 'cache-control': 'public, max-age=86400' });
     }
     const ids = [...new Set((url.searchParams.get('ids') ?? '').split(',').map(Number))].filter((id) => Number.isInteger(id) && CANTEENS[id]).slice(0, 4);
-    if (ids.length === 0) throw new HttpError(400, 'bad_canteen', 'Vyber aspoň jednu menzu.');
+    if (ids.length === 0) throw new HttpError(400, 'bad_canteen', 'Vyberte aspoň jednu menzu.');
     const today = new Date().toISOString().slice(0, 10);
     const from = DATE.test(url.searchParams.get('from') ?? '') ? url.searchParams.get('from')! : today;
     const days = Math.min(7, Math.max(1, Number(url.searchParams.get('days') ?? '6') || 6));

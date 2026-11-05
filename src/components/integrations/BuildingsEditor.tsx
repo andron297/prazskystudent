@@ -65,7 +65,7 @@ export function BuildingsEditor() {
               size="sm"
               tone="danger"
               onClick={async () => {
-                if (await confirmAction({ title: `Smazat budovu ${b.name}?`, message: 'Rozvrhové lístky v této budově ztratí dopravní navigaci, dokud je nepřiřadíš jinam.', confirmLabel: 'Smazat', tone: 'danger' })) removeBuilding(b.id);
+                if (await confirmAction({ title: `Smazat budovu ${b.name}?`, message: 'Rozvrhové lístky v této budově ztratí dopravní navigaci, dokud je nepřiřadíte jinam.', confirmLabel: 'Smazat', tone: 'danger' })) removeBuilding(b.id);
               }}
             />
           </li>
@@ -91,7 +91,7 @@ function BuildingModal({ open, onClose, building }: { open: boolean; onClose: ()
   const save = () => {
     const coords = { lat: Number(lat.replace(',', '.')), lng: Number(lng.replace(',', '.')) };
     if (!name.trim() || !isValidLatLng(coords)) {
-      toast.error('Vyplň název a platné souřadnice (např. 50.0843, 14.4136).');
+      toast.error('Vyplňte název a platné souřadnice (např. 50.0843, 14.4136).');
       return;
     }
     if (roomPattern.trim()) {

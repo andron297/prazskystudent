@@ -120,7 +120,7 @@ export function SetupWizard() {
               ))}
             </div>
           </div>
-          <button type="button" onClick={() => finish(false)} className="inline-flex size-10 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-fg" aria-label="Zavřít průvodce (dokončíš později)">
+          <button type="button" onClick={() => finish(false)} className="inline-flex size-10 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-fg" aria-label="Zavřít průvodce (dokončíte později)">
             <X className="size-5" />
           </button>
         </div>
@@ -241,7 +241,7 @@ function StartStep({ onOwn, onDemo }: { onOwn: () => void; onDemo: () => void })
     const account = useAccount.getState().status;
     if (useAppStore.getState().settings.mode === 'demo') {
       const removed = useAppStore.getState().startOwnData();
-      if (removed > 0) toast.success('Ukázková data jsou pryč – teď tu bude jen to tvoje.');
+      if (removed > 0) toast.success('Ukázková data jsou pryč – teď tu bude jen to vaše.');
     }
     // S účty: nejdřív přihlášení, pak průvodce pokračuje sám.
     if (account !== 'off' && account !== 'ready') {
@@ -256,15 +256,15 @@ function StartStep({ onOwn, onDemo }: { onOwn: () => void; onDemo: () => void })
   };
   return (
     <div>
-      <StepHead icon={Sparkles} kicker="Vítej" title={<>Nastavíme to <em className="text-moss">spolu</em></>}>
-        Pár jednoduchých kroků a Stihnu bude znát tvůj rozvrh, úkoly i cestu do školy. Každý krok jde přeskočit a doplnit později.
+      <StepHead icon={Sparkles} kicker="Vítejte" title={<>Nastavíme to <em className="text-moss">spolu</em></>}>
+        Pár jednoduchých kroků a Stihnu bude znát váš rozvrh, úkoly i cestu do školy. Každý krok jde přeskočit a doplnit později.
       </StepHead>
       <div className="grid gap-3">
         <button type="button" onClick={own} data-autofocus className="group flex items-start gap-4 rounded-[24px] bg-accent p-5 text-left text-accent-fg shadow-[0_16px_36px_-18px_var(--accent)] transition hover:brightness-110">
           <ShieldCheck className="mt-0.5 size-7 shrink-0" aria-hidden />
           <span>
             <span className="block text-[19px] font-bold">Nastavit moje studium</span>
-            <span className="mt-1 block text-[14.5px] opacity-90">{mode === 'demo' ? 'Ukázková data se smažou a začneme s tvými.' : 'Pokračovat v nastavení tvých dat.'}</span>
+            <span className="mt-1 block text-[14.5px] opacity-90">{mode === 'demo' ? 'Ukázková data se smažou a začneme s vašimi.' : 'Pokračovat v nastavení vašich dat.'}</span>
           </span>
           <ArrowRight className="ml-auto mt-1 size-6 shrink-0 transition group-hover:translate-x-0.5" aria-hidden />
         </button>
@@ -272,13 +272,13 @@ function StartStep({ onOwn, onDemo }: { onOwn: () => void; onDemo: () => void })
           <FlaskConical className="mt-0.5 size-7 shrink-0 text-clay" aria-hidden />
           <span>
             <span className="block text-[19px] font-bold">Jen se podívat na ukázku</span>
-            <span className="mt-1 block text-[14.5px] text-muted">Vymyšlené předměty a rozvrh, ať vidíš, co aplikace umí. Poznáš ji podle pruhovaného pásu nahoře.</span>
+            <span className="mt-1 block text-[14.5px] text-muted">Vymyšlené předměty a rozvrh, ať vidíte, co aplikace umí. Poznáte ji podle pruhovaného pásu nahoře.</span>
           </span>
         </button>
       </div>
       <p className="mt-5 flex items-start gap-2 text-[13.5px] text-muted">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
-        Tvoje data zůstávají v tomhle prohlížeči. Nikam je neprodáváme a nic se nesdílí bez tvého kliknutí.
+        Vaše data zůstávají v tomhle prohlížeči. Nikam je neprodáváme a nic se nesdílí bez vašeho kliknutí.
       </p>
     </div>
   );
@@ -292,8 +292,8 @@ function AutoStep() {
   ];
   return (
     <div>
-      <StepHead icon={Check} kicker="Hotovo bez tebe" title={<>Tohle už <em className="text-moss">funguje samo</em></>}>
-        Nemusíš nic zadávat ani se nikam přihlašovat.
+      <StepHead icon={Check} kicker="Hotovo bez vás" title={<>Tohle už <em className="text-moss">funguje samo</em></>}>
+        Nemusíte nic zadávat ani se nikam přihlašovat.
       </StepHead>
       <ul className="grid gap-3">
         {items.map((it) => (
@@ -343,19 +343,19 @@ function LocationStep({ onDone }: { onDone: () => void }) {
   };
   return (
     <div>
-      <StepHead icon={LocateFixed} kicker="Cesta do školy" title={<>Odkud obvykle <em className="text-moss">vyrážíš?</em></>}>
+      <StepHead icon={LocateFixed} kicker="Cesta do školy" title={<>Odkud obvykle <em className="text-moss">vyrážíte?</em></>}>
         Podle toho spočítám, kdy vyrazit a na jakou zastávku jít.
       </StepHead>
       <BigButton icon={LocateFixed} onClick={useGps} busy={busy} autoFocus>
         Použít polohu telefonu
       </BigButton>
-      {gpsOk === true && <Success>Poloha funguje – cesta se bude počítat odtud, kde zrovna jsi.</Success>}
+      {gpsOk === true && <Success>Poloha funguje – cesta se bude počítat odtud, kde zrovna jste.</Success>}
       {gpsOk === false && (
         <p className="mt-3 rounded-[18px] bg-clay/12 p-3.5 text-[14.5px] font-semibold text-clay">
-          Polohu se nepodařilo zjistit (možná je zakázaná). Nevadí – vyber místo níže.
+          Polohu se nepodařilo zjistit (možná je zakázaná). Nevadí – vyberte místo níže.
         </p>
       )}
-      <p className="mb-2.5 mt-6 text-[15px] font-bold">Nebo vyber místo</p>
+      <p className="mb-2.5 mt-6 text-[15px] font-bold">Nebo vyberte místo</p>
       <div className="grid gap-2 sm:grid-cols-2">
         {LOCATION_PRESETS.map((p) => {
           const active = origin.source === 'preset' && origin.presetId === p.id;
@@ -376,7 +376,7 @@ function LocationStep({ onDone }: { onDone: () => void }) {
           );
         })}
       </div>
-      <p className="mt-3 text-[13.5px] text-muted">Přesnou zastávku si později můžeš vybrat i na mapě v Dopravě.</p>
+      <p className="mt-3 text-[13.5px] text-muted">Přesnou zastávku si později můžete vybrat i na mapě v Dopravě.</p>
     </div>
   );
 }
@@ -400,18 +400,18 @@ function SisStep({ onDone }: { onDone: () => void }) {
   return (
     <div>
       <StepHead icon={GraduationCap} kicker="Univerzita" title={<>Rozvrh ze <em className="text-moss">SISu</em></>}>
-        Jeden soubor a máš tu všechny předměty, místnosti i sylaby. Zabere to asi minutu.
+        Jeden soubor a máte tu všechny předměty, místnosti i sylaby. Zabere to asi minutu.
       </StepHead>
       <GuideAnimation guide="sis" className="mb-4" />
       <NumberedSteps
         items={[
           <>
-            Otevři <ExternalStep href="https://is.cuni.cz/studium/rozvrhng/">Rozvrh NG v SISu</ExternalStep> a přihlas se.
+            Otevřete <ExternalStep href="https://is.cuni.cz/studium/rozvrhng/">Rozvrh NG v SISu</ExternalStep> a přihlaste se.
           </>,
           <>
-            Nahoře klikni na <strong>Export</strong> → <strong>iCalendar</strong>. Stáhne se soubor <em>rozvrh.ics</em>.
+            Nahoře klikněte na <strong>Export</strong> → <strong>iCalendar</strong>. Stáhne se soubor <em>rozvrh.ics</em>.
           </>,
-          <>Nahraj ho sem tlačítkem níže – najdeš ho ve Stažených souborech.</>,
+          <>Nahrajte ho sem tlačítkem níže – najdete ho ve Stažených souborech.</>,
         ]}
       />
       <div
@@ -426,7 +426,7 @@ function SisStep({ onDone }: { onDone: () => void }) {
         <BigButton icon={FileUp} onClick={() => fileRef.current?.click()} busy={busy} autoFocus>
           Nahrát soubor rozvrh.ics
         </BigButton>
-        <p className="mt-2 text-[13px] text-muted">nebo ho sem přetáhni myší</p>
+        <p className="mt-2 text-[13px] text-muted">nebo ho sem přetáhněte myší</p>
         <input
           ref={fileRef}
           type="file"
@@ -477,25 +477,25 @@ function MoodleStep({ onDone }: { onDone: () => void }) {
       setUrl(text);
       if (isMoodleCalendarUrl(text.trim())) void save(text);
     } catch {
-      toast.info('Vlož odkaz do pole ručně (podrž prst / Ctrl+V).');
+      toast.info('Vložte odkaz do pole ručně (podržte prst / Ctrl+V).');
     }
   };
   return (
     <div>
       <StepHead icon={BookOpenCheck} kicker="Úkoly a termíny" title={<>Termíny z <em className="text-moss">Moodlu</em></>}>
-        Odevzdávárny a testy se ti samy objeví v kalendáři. Bez hesla – jen jeden odkaz.
+        Odevzdávárny a testy se vám samy objeví v kalendáři. Bez hesla – jen jeden odkaz.
       </StepHead>
       <GuideAnimation guide="moodle" className="mb-4" />
       <NumberedSteps
         items={[
           <>
-            Otevři <ExternalStep href={`${base}/calendar/export.php`}>export kalendáře v Moodlu</ExternalStep>.
+            Otevřete <ExternalStep href={`${base}/calendar/export.php`}>export kalendáře v Moodlu</ExternalStep>.
           </>,
           <>
-            Vyber <strong>Všechny události</strong> a <strong>Nedávné a příštích 60 dní</strong>.
+            Vyberte <strong>Všechny události</strong> a <strong>Nedávné a příštích 60 dní</strong>.
           </>,
           <>
-            Klikni <strong>Získat URL kalendáře</strong> a odkaz zkopíruj.
+            Klikněte <strong>Získat URL kalendáře</strong> a odkaz zkopírujte.
           </>,
         ]}
       />
@@ -503,7 +503,7 @@ function MoodleStep({ onDone }: { onDone: () => void }) {
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="Sem vlož zkopírovaný odkaz"
+          placeholder="Sem vložte zkopírovaný odkaz"
           inputMode="url"
           className="h-14 flex-1 rounded-[18px] bg-surface px-4 text-[15px] ring-1 ring-inset ring-line-strong outline-none focus:ring-2 focus:ring-accent"
           aria-label="Odkaz na kalendář Moodlu"
@@ -520,8 +520,8 @@ function MoodleStep({ onDone }: { onDone: () => void }) {
         <summary className="cursor-pointer font-bold">Chci i odevzdání a známky automaticky (klíč)</summary>
         <div className="mt-3 space-y-2 text-muted">
           <p>
-            V Moodlu otevři <ExternalStep href={`${base}/user/managetoken.php`}>Bezpečnostní klíče</ExternalStep>, u „Moodle mobile web service“ klikni na <strong>Reset</strong> a potvrď. Moodle klíč
-            ukáže <strong>jen jednou</strong> – zkopíruj ho a vlož v Propojení → Moodle. Aplikace Moodle v mobilu tě pak jen znovu přihlásí.
+            V Moodlu otevřete <ExternalStep href={`${base}/user/managetoken.php`}>Bezpečnostní klíče</ExternalStep>, u „Moodle mobile web service“ klikněte na <strong>Reset</strong> a potvrďte. Moodle klíč
+            ukáže <strong>jen jednou</strong> – zkopírujte ho a vložte v Propojení → Moodle. Aplikace Moodle v mobilu vás pak jen znovu přihlásí.
           </p>
         </div>
       </details>
@@ -542,12 +542,12 @@ function GoogleStep({ onDone }: { onDone: () => void }) {
   return (
     <div>
       <StepHead icon={CalendarDays} tone="sky" kicker="Nepovinné" title={<>Google Kalendář <em className="text-moss">a Úkoly</em></>}>
-        Rozvrh a termíny se objeví i v kalendáři v telefonu a tvoje úkoly v Google Úkolech. Změny se propisují oběma směry.
+        Rozvrh a termíny se objeví i v kalendáři v telefonu a vaše úkoly v Google Úkolech. Změny se propisují oběma směry.
       </StepHead>
       {status.state === 'unavailable' ? (
         <div className="rounded-[20px] bg-surface-2 p-4 text-[15px]">
           <p className="font-bold">Tohle musí jednou zapnout správce aplikace.</p>
-          <p className="mt-1 text-muted">Návod pro správce je v Propojení → Pro správce aplikace. Klidně tento krok přeskoč – vše ostatní funguje i bez Googlu.</p>
+          <p className="mt-1 text-muted">Návod pro správce je v Propojení → Pro správce aplikace. Klidně tento krok přeskočte – vše ostatní funguje i bez Googlu.</p>
         </div>
       ) : status.state === 'connected' ? (
         <Success>Propojeno – {status.detail}</Success>
@@ -558,13 +558,13 @@ function GoogleStep({ onDone }: { onDone: () => void }) {
             {status.state === 'attention' ? 'Znovu potvrdit Google' : 'Propojit s Googlem'}
           </BigButton>
           <p className="mt-3 text-[13.5px] text-muted">
-            Otevře se okno Googlu. Pokud uvidíš „Google tuto aplikaci neověřil“, klikni na <strong>Pokročilé → Přejít do aplikace</strong> – je to normální u školních projektů.
+            Otevře se okno Googlu. Pokud uvidíte „Google tuto aplikaci neověřil“, klikněte na <strong>Pokročilé → Přejít do aplikace</strong> – je to normální u školních projektů.
           </p>
         </>
       )}
       <p className="mt-5 flex items-start gap-2 text-[13.5px] text-muted">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
-        Stihnu vidí jen kalendáře a úkoly, které mu povolíš. Propojení můžeš kdykoli zrušit.
+        Stihnu vidí jen kalendáře a úkoly, které mu povolíte. Propojení můžete kdykoli zrušit.
       </p>
     </div>
   );
@@ -584,13 +584,13 @@ function ExtrasStep({ onDone }: { onDone: (ids: ServiceId[]) => void }) {
       onDone(['notifications']);
       toast.success('Upozornění zapnutá – ozvu se 5 minut před odchodem.');
     } else {
-      toast.info('Upozornění jsou v prohlížeči zakázaná. Povolit je můžeš v nastavení prohlížeče.');
+      toast.info('Upozornění jsou v prohlížeči zakázaná. Povolit je můžete v nastavení prohlížeče.');
     }
   };
   return (
     <div>
       <StepHead icon={Music2} tone="sand" kicker="Nepovinné" title={<>Hudba a <em className="text-moss">upozornění</em></>}>
-        Vyber si hudbu na učení a na cestu a nech si říct, kdy vyrazit.
+        Vyberte si hudbu na učení a na cestu a nechte si říct, kdy vyrazit.
       </StepHead>
       <p className="mb-2.5 text-[15px] font-bold">Hudba ze Spotify (bez přihlašování)</p>
       <div className="grid grid-cols-2 gap-2">
@@ -617,7 +617,7 @@ function ExtrasStep({ onDone }: { onDone: (ids: ServiceId[]) => void }) {
         <input
           value={link}
           onChange={(e) => setLink(e.target.value)}
-          placeholder="…nebo vlož odkaz na svůj playlist"
+          placeholder="…nebo vložte odkaz na svůj playlist"
           className="h-12 flex-1 rounded-[16px] bg-surface px-4 text-[14.5px] ring-1 ring-inset ring-line-strong outline-none focus:ring-2 focus:ring-accent"
           aria-label="Odkaz na playlist Spotify"
         />
@@ -625,7 +625,7 @@ function ExtrasStep({ onDone }: { onDone: (ids: ServiceId[]) => void }) {
           type="button"
           onClick={() => {
             if (!isSpotifyUrl(link)) {
-              toast.error('Vlož odkaz ze Spotify (Sdílet → Kopírovat odkaz).');
+              toast.error('Vložte odkaz ze Spotify (Sdílet → Kopírovat odkaz).');
               return;
             }
             updateSettings({ music: { url: link.trim(), title: 'Můj playlist' } });
@@ -641,7 +641,7 @@ function ExtrasStep({ onDone }: { onDone: (ids: ServiceId[]) => void }) {
         <p className="flex items-center gap-2 text-[16px] font-bold">
           <BellRing className="size-5 text-accent" aria-hidden /> Upozornit mě, kdy vyrazit
         </p>
-        <p className="mt-1 text-[14px] text-muted">5 minut před odchodem a ve chvíli, kdy je čas vyrazit – s číslem linky a zastávkou. Funguje, když máš Stihnu otevřené (i na pozadí).</p>
+        <p className="mt-1 text-[14px] text-muted">5 minut před odchodem a ve chvíli, kdy je čas vyrazit – s číslem linky a zastávkou. Funguje, když máte Stihnu otevřené (i na pozadí).</p>
         {notify && notifySupported && Notification.permission === 'granted' ? (
           <Success>Zapnuto.</Success>
         ) : (
@@ -676,18 +676,18 @@ function AiStep({ onDone }: { onDone: () => void }) {
   return (
     <div>
       <StepHead icon={Sparkles} kicker="Nepovinné" title={<>Chytré čtení <em className="text-moss">s AI</em></>}>
-        AI přečte sylaby, stránky z Moodlu i PDF harmonogram a vytáhne z nich úkoly, váhy a termíny přesněji. Můžeš použít svoji AI – Claude, ChatGPT nebo Gemini.
+        AI přečte sylaby, stránky z Moodlu i PDF harmonogram a vytáhne z nich úkoly, váhy a termíny přesněji. Můžete použít svoji AI – Claude, ChatGPT nebo Gemini.
       </StepHead>
-      {serverAi && !saved && <Success>AI už ti zapnul správce aplikace – nemusíš nic dělat.</Success>}
-      {saved && <Success>Používáš {AI_NAMES[saved]} (tvůj klíč).</Success>}
+      {serverAi && !saved && <Success>AI už vám zapnul správce aplikace – nemusíte nic dělat.</Success>}
+      {saved && <Success>Používáte {AI_NAMES[saved]} (váš klíč).</Success>}
       <NumberedSteps
         items={[
           <>
-            Vytvoř si klíč:{' '}
+            Vytvořte si klíč:{' '}
             <ExternalStep href={AI_KEY_PAGES.gemini}>Gemini (má i verzi zdarma)</ExternalStep>, <ExternalStep href={AI_KEY_PAGES.openai}>ChatGPT</ExternalStep> nebo{' '}
             <ExternalStep href={AI_KEY_PAGES.anthropic}>Claude</ExternalStep>.
           </>,
-          <>Klíč zkopíruj a vlož sem. Poznám sám, od které AI je.</>,
+          <>Klíč zkopírujte a vložte sem. Aplikace sama pozná, od které AI je.</>,
         ]}
       />
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -696,7 +696,7 @@ function AiStep({ onDone }: { onDone: () => void }) {
           onChange={(e) => setKey(e.target.value)}
           type="password"
           autoComplete="off"
-          placeholder="Vlož klíč (sk-ant-…, sk-… nebo AIza…)"
+          placeholder="Vložte klíč (sk-ant-…, sk-… nebo AIza…)"
           className="h-14 flex-1 rounded-[18px] bg-surface px-4 font-mono text-[14px] ring-1 ring-inset ring-line-strong outline-none focus:ring-2 focus:ring-accent"
           aria-label="Klíč k AI"
         />
@@ -706,7 +706,7 @@ function AiStep({ onDone }: { onDone: () => void }) {
       </div>
       <p className="mt-4 flex items-start gap-2 text-[13.5px] text-muted">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
-        Klíč zůstává jen v tvém prohlížeči a posílá se jen při čtení textu. AI platíš u svého poskytovatele (Gemini má bezplatnou úroveň).
+        Klíč zůstává jen ve vašem prohlížeči a posílá se jen při čtení textu. AI platíte u svého poskytovatele (Gemini má bezplatnou úroveň).
       </p>
     </div>
   );
@@ -717,8 +717,8 @@ function DoneStep({ onClose, onGo }: { onClose: () => void; onGo: (s: StepId) =>
   const stepFor: Partial<Record<ServiceId, StepId>> = { location: 'location', sis: 'sis', moodle: 'moodle', google: 'google', music: 'extras', notifications: 'extras', ai: 'ai' };
   return (
     <div>
-      <StepHead icon={PartyPopper} kicker="Hotovo" title={<>Máš <em className="text-moss">nastaveno</em></>}>
-        Tady je přehled. Cokoli doplníš kdykoli v Propojení.
+      <StepHead icon={PartyPopper} kicker="Hotovo" title={<>Máte <em className="text-moss">nastaveno</em></>}>
+        Tady je přehled. Cokoli doplníte kdykoli v Propojení.
       </StepHead>
       <ul className="space-y-2">
         {services.map((s) => (

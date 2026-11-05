@@ -123,7 +123,7 @@ export async function handleGoogle(request: Request): Promise<Response> {
         return json({ access_token: data.access_token, expires_in: data.expires_in ?? 3600, scope: data.scope ?? '', persistent: true });
       } catch (error) {
         if (error instanceof HttpError && error.code === 'google_reauth') {
-          return json({ error: 'google_reauth', message: 'Přístup byl odvolán – přihlas se znovu.' }, 401, { 'set-cookie': cookieHeader('', 0, request) });
+          return json({ error: 'google_reauth', message: 'Přístup byl odvolán – přihlaste se prosím znovu.' }, 401, { 'set-cookie': cookieHeader('', 0, request) });
         }
         throw error;
       }

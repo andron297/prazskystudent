@@ -22,7 +22,7 @@ export function WelcomeCard() {
         <p className="font-display text-[24px] leading-tight">
           Tohle je <em className="text-moss">ukázka</em>
         </p>
-        <p className="mt-0.5 text-[13.5px] text-muted">Simulovaná doprava, Moodle i Google. Klikej a zkoušej – nic se nikam neodešle.</p>
+        <p className="mt-0.5 text-[13.5px] text-muted">Simulovaná doprava, Moodle i Google. Klikejte a zkoušejte – nic se nikam neodešle.</p>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="secondary" icon={Check} onClick={dismiss}>
@@ -58,8 +58,8 @@ export function TourOffer() {
         <Play className="size-5" aria-hidden />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="font-display text-[22px] leading-tight">Ukázat, co kde najdeš?</p>
-        <p className="mt-0.5 text-[13.5px] text-muted">Krátká prohlídka zabere minutu. Kdykoli ji spustíš i z Průvodce (ikona otazníku nahoře).</p>
+        <p className="font-display text-[22px] leading-tight">Ukázat, co kde najdete?</p>
+        <p className="mt-0.5 text-[13.5px] text-muted">Krátká prohlídka zabere minutu. Kdykoli ji spustíte i z Průvodce (ikona otazníku nahoře).</p>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="secondary" onClick={markTourSeen}>

@@ -55,7 +55,7 @@ export async function handleSis(request: Request): Promise<Response> {
     let code = (params.get('kod') ?? '').trim().toUpperCase();
     const name = (params.get('nazev') ?? '').trim();
     if (code && !/^[A-Z0-9]{3,12}$/.test(code)) throw new HttpError(400, 'bad_code', 'Neplatný kód předmětu.');
-    if (!code && (name.length < 3 || name.length > 120)) throw new HttpError(400, 'missing_subject', 'Zadej kód předmětu nebo jeho název.');
+    if (!code && (name.length < 3 || name.length > 120)) throw new HttpError(400, 'missing_subject', 'Zadejte kód předmětu nebo jeho název.');
 
     let candidates: string[] = [];
     if (!code) {

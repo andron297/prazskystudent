@@ -78,7 +78,7 @@ export async function importDek(raw: Uint8Array<ArrayBuffer>, extractable = true
 /** Klíč k zabalení DEK ze záchranného kódu (kód má dost náhody, stačí HKDF). */
 export async function recoveryWrapKey(code: string): Promise<CryptoKey> {
   const normalized = normalizeRecoveryCode(code);
-  if (!normalized) throw new Error('Záchranný kód má 25 znaků (písmena a číslice). Zkontroluj ho prosím.');
+  if (!normalized) throw new Error('Záchranný kód má 25 znaků (písmena a číslice). Zkontrolujte ho prosím.');
   const ikm = await subtle.importKey('raw', enc.encode(normalized), 'HKDF', false, ['deriveKey']);
   return subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: enc.encode('stihnu/recovery/v1'), info: enc.encode('dek-wrap') }, ikm, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 }

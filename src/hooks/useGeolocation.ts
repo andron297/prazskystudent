@@ -42,7 +42,7 @@ export function useGeolocation(enabled: boolean): GeoState & { retry: () => void
             status: error.code === error.PERMISSION_DENIED ? 'denied' : 'error',
             message:
               error.code === error.PERMISSION_DENIED
-                ? 'Přístup k poloze je zakázaný – povol ho v prohlížeči, nebo zvol výchozí místo.'
+                ? 'Přístup k poloze je zakázaný – povolte ho v prohlížeči, nebo zvolte výchozí místo.'
                 : 'Polohu se nepodařilo zjistit.',
           })),
         { enableHighAccuracy: false, maximumAge: 60_000, timeout: 20_000 },

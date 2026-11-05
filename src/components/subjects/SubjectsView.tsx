@@ -314,7 +314,7 @@ function SubjectHub({ subject }: { subject: Subject }) {
           </div>
           {requirements.length === 0 ? (
             <EmptyState icon={GraduationCap} title="Žádné povinnosti">
-              Přidej je ručně, nebo vlož text sylabu – parser rozpozná testy, seminárky a jejich váhy.
+              Přidejte je ručně, nebo vložte text sylabu – parser rozpozná testy, seminárky a jejich váhy.
             </EmptyState>
           ) : (
             requirements.map((r) => <RequirementCard key={r.id} requirement={r} subject={subject} materials={materials} now={now} defaultOpen={r.id === firstOpen} onOpenMaterial={openMaterial} />)

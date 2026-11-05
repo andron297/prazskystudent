@@ -436,7 +436,7 @@ export async function syncCalendar(ctx: SyncContext): Promise<ServiceResult> {
     }
   }
   if (droppedContainer > 0 && targetId) result.notes.push(`Cílový kalendář se změnil – ${droppedContainer} starých vazeb rozpojeno.`);
-  if (removedCopies > 0) result.notes.push(`Zdvojené hodiny odstraněny z Google Kalendáře: ${removedCopies} (máš je ve vlastním kalendáři).`);
+  if (removedCopies > 0) result.notes.push(`Zdvojené hodiny odstraněny z Google Kalendáře: ${removedCopies} (máte je ve vlastním kalendáři).`);
 
   // 5) Nové lokální položky → Google
   for (const [key, local] of candidates) {

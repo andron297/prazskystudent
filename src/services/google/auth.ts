@@ -133,7 +133,7 @@ export function loadIdentityScript(): Promise<void> {
       script.onload = () => resolve();
       script.onerror = () => {
         scriptPromise = null;
-        reject(new Error('Nepodařilo se načíst přihlášení Google (jsi online?).'));
+        reject(new Error('Nepodařilo se načíst přihlášení Google (jste online?).'));
       };
       document.head.appendChild(script);
     });
@@ -175,7 +175,7 @@ export interface SignInOptions {
 
 /** Interaktivní přihlášení (musí být vyvolané kliknutím – otevírá okno Googlu). */
 export async function signIn(options: SignInOptions): Promise<TokenInfo> {
-  if (!options.clientId) throw new Error('Chybí OAuth Client ID – nastav ho v Propojení → Google.');
+  if (!options.clientId) throw new Error('Chybí OAuth Client ID – nastavte ho v Propojení → Google.');
   await loadIdentityScript();
   const oauth2 = window.google?.accounts?.oauth2;
   if (!oauth2) throw new Error('Google Identity Services nejsou dostupné.');
@@ -225,7 +225,7 @@ export async function getAccessToken(serverFlow: boolean): Promise<string> {
     const data = await serverCall<{ access_token: string; expires_in: number; scope: string }>('refresh');
     return setToken(data.access_token, data.expires_in, data.scope, true).token;
   }
-  throw new GoogleAuthError('Přihlášení ke Googlu vypršelo – klikni na „Přihlásit znovu“.');
+  throw new GoogleAuthError('Přihlášení ke Googlu vypršelo – klikněte na „Přihlásit znovu“.');
 }
 
 export function invalidateToken(): void {

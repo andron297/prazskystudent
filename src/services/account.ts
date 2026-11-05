@@ -179,12 +179,12 @@ export async function renderGoogleButton(parent: HTMLElement, onError: (message:
 export function friendlyAuthError(message: string): string {
   const m = message.toLowerCase();
   if (m.includes('invalid login credentials')) return 'E-mail nebo heslo nesedí.';
-  if (m.includes('email not confirmed')) return 'Nejdřív potvrď e-mail – odkaz ti přišel do schránky.';
-  if (m.includes('already registered') || m.includes('already been registered')) return 'Tenhle e-mail už má účet – přihlas se.';
-  if (m.includes('rate limit') || m.includes('too many')) return 'Moc pokusů za sebou. Zkus to prosím za chvíli.';
+  if (m.includes('email not confirmed')) return 'Nejdřív potvrďte e-mail – odkaz vám přišel do schránky.';
+  if (m.includes('already registered') || m.includes('already been registered')) return 'Tenhle e-mail už má účet – přihlaste se.';
+  if (m.includes('rate limit') || m.includes('too many')) return 'Moc pokusů za sebou. Zkuste to prosím za chvíli.';
   if (m.includes('provider is not enabled') || m.includes('unsupported provider')) return 'Přihlášení přes Google ještě správce nezapnul.';
-  if (m.includes('nonce')) return 'Přihlášení přes Google se nepovedlo ověřit. Zkus to prosím znovu.';
-  return 'Přihlášení se nepovedlo. Zkus to prosím znovu.';
+  if (m.includes('nonce')) return 'Přihlášení přes Google se nepovedlo ověřit. Zkuste to prosím znovu.';
+  return 'Přihlášení se nepovedlo. Zkuste to prosím znovu.';
 }
 
 export async function signUpWithEmail(email: string, password: string): Promise<'confirm' | 'done'> {
@@ -264,7 +264,7 @@ async function afterSignIn(session: Session): Promise<void> {
       const code = generateRecoveryCode();
       const passwordWrap = pendingWrapKey?.userId === user.id ? await wrapDek(newDek, pendingWrapKey.key) : null;
       const { error: insertError } = await client.from('stihnu_keys').insert({ user_id: user.id, recovery_wrap: await wrapDek(newDek, await recoveryWrapKey(code)), password_wrap: passwordWrap });
-      if (insertError) throw new Error('Účet se nepodařilo založit. Zkus to prosím znovu.');
+      if (insertError) throw new Error('Účet se nepodařilo založit. Zkuste to prosím znovu.');
       pendingWrapKey = null;
       dek = newDek;
       await rememberDek(user.id, newDek);
@@ -312,9 +312,9 @@ async function finishUnlock(userId: string, keys: KeysRow): Promise<void> {
 /** Odemknutí na novém zařízení záchranným kódem. */
 export async function unlockWithRecoveryCode(code: string): Promise<void> {
   const user = useAccount.getState().user;
-  if (!client || !user) throw new Error('Nejdřív se přihlas.');
+  if (!client || !user) throw new Error('Nejdřív se přihlaste.');
   const { data: keys } = await client.from('stihnu_keys').select('user_id, recovery_wrap, password_wrap').eq('user_id', user.id).single<KeysRow>();
-  if (!keys) throw new Error('Účet se nepodařilo načíst. Zkus to prosím znovu.');
+  if (!keys) throw new Error('Účet se nepodařilo načíst. Zkuste to prosím znovu.');
   dek = await unwrapDek(keys.recovery_wrap, await recoveryWrapKey(code));
   await rememberDek(user.id, dek);
   await finishUnlock(user.id, keys);
@@ -323,10 +323,10 @@ export async function unlockWithRecoveryCode(code: string): Promise<void> {
 /** Nový záchranný kód (starý přestane platit). */
 export async function regenerateRecoveryCode(): Promise<string> {
   const user = useAccount.getState().user;
-  if (!client || !user || !dek) throw new Error('Nejdřív se přihlas.');
+  if (!client || !user || !dek) throw new Error('Nejdřív se přihlaste.');
   const code = generateRecoveryCode();
   const { error } = await client.from('stihnu_keys').update({ recovery_wrap: await wrapDek(dek, await recoveryWrapKey(code)), updated_at: new Date().toISOString() }).eq('user_id', user.id);
-  if (error) throw new Error('Kód se nepodařilo uložit. Zkus to prosím znovu.');
+  if (error) throw new Error('Kód se nepodařilo uložit. Zkuste to prosím znovu.');
   return code;
 }
 
@@ -357,7 +357,7 @@ export async function signOutAccount(everywhere = false): Promise<void> {
 
 export async function deleteAccount(confirmEmail: string): Promise<void> {
   const user = useAccount.getState().user;
-  if (!client || !user) throw new Error('Nejdřív se přihlas.');
+  if (!client || !user) throw new Error('Nejdřív se přihlaste.');
   stopSync();
   // 1) Smazat zašifrovaná data (i kdyby smazání účtu na serveru nebylo zapnuté).
   await client.from('stihnu_vaults').delete().eq('user_id', user.id);

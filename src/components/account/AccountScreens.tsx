@@ -72,10 +72,10 @@ function Trust() {
   return (
     <ul className="mt-6 space-y-2 border-t border-line pt-5 text-[13.5px] text-muted">
       <li className="flex gap-2">
-        <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Data se šifrují přímo ve tvém zařízení. Nepřečte je nikdo jiný – ani správce aplikace.
+        <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Data se šifrují přímo ve vašem zařízení. Nepřečte je nikdo jiný – ani správce aplikace.
       </li>
       <li className="flex gap-2">
-        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Účet i všechna data smažeš kdykoli jedním tlačítkem.
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Účet i všechna data smažete kdykoli jedním tlačítkem.
       </li>
     </ul>
   );
@@ -125,13 +125,13 @@ export function SignInScreen() {
         return;
       }
       if (!consent) {
-        setMessage({ tone: 'error', text: 'Pro vytvoření účtu potvrď souhlas s podmínkami.' });
+        setMessage({ tone: 'error', text: 'Pro vytvoření účtu potvrďte souhlas s podmínkami.' });
         return;
       }
       setBusy(true);
       if (await passwordLeaked(password)) {
         setBusy(false);
-        setMessage({ tone: 'error', text: 'Tohle heslo se objevilo v únicích dat z jiných služeb. Zvol prosím jiné.' });
+        setMessage({ tone: 'error', text: 'Tohle heslo se objevilo v únicích dat z jiných služeb. Zvolte prosím jiné.' });
         return;
       }
     }
@@ -140,7 +140,7 @@ export function SignInScreen() {
       if (tab === 'register') {
         const result = await signUpWithEmail(email, password);
         if (result === 'confirm') {
-          setMessage({ tone: 'ok', text: 'Hotovo! Poslali jsme ti e-mail s odkazem. Klikni na něj a pak se tady přihlas.' });
+          setMessage({ tone: 'ok', text: 'Hotovo! Poslali jsme vám e-mail s odkazem. Klikněte na něj a pak se tady přihlaste.' });
           setTab('login');
         }
       } else {
@@ -155,13 +155,13 @@ export function SignInScreen() {
 
   return (
     <Frame>
-      <h1 className="font-display text-[34px] leading-[1.05]">{tab === 'register' ? <>Vytvoř si <em className="text-moss">účet</em></> : tab === 'forgot' ? <>Nové <em className="text-moss">heslo</em></> : <>Vítej <em className="text-moss">zpátky</em></>}</h1>
-      <p className="mt-2 text-[15px] text-muted">{tab === 'forgot' ? 'Pošleme ti odkaz, přes který si nastavíš nové heslo.' : 'S účtem máš rozvrh, úkoly i propojení na všech svých zařízeních.'}</p>
+      <h1 className="font-display text-[34px] leading-[1.05]">{tab === 'register' ? <>Vytvořte si <em className="text-moss">účet</em></> : tab === 'forgot' ? <>Nové <em className="text-moss">heslo</em></> : <>Vítejte <em className="text-moss">zpět</em></>}</h1>
+      <p className="mt-2 text-[15px] text-muted">{tab === 'forgot' ? 'Pošleme vám odkaz, přes který si nastavíte nové heslo.' : 'S účtem máte rozvrh, úkoly i propojení na všech svých zařízeních.'}</p>
 
       {tab !== 'forgot' && (
         <>
           <div className="mt-6 flex min-h-11 justify-center" ref={googleRef} aria-label="Pokračovat přes Google" />
-          {!googleReady && <p className="mt-2 text-center text-[13px] text-muted">Přihlášení přes Google zatím není zapnuté – použij e-mail.</p>}
+          {!googleReady && <p className="mt-2 text-center text-[13px] text-muted">Přihlášení přes Google zatím není zapnuté – použijte e-mail.</p>}
           <div className="my-5 flex items-center gap-3 text-[13px] font-semibold text-subtle">
             <span className="h-px flex-1 bg-line" /> nebo e-mailem <span className="h-px flex-1 bg-line" />
           </div>
@@ -173,7 +173,7 @@ export function SignInScreen() {
           <input type="email" autoComplete="email" inputMode="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} placeholder="jmeno@email.cz" />
         </Field>
         {tab !== 'forgot' && (
-          <Field label="Heslo" hint={tab === 'register' ? 'Aspoň 10 znaků. Heslo se nikam neposílá – slouží i jako klíč k tvým datům.' : undefined}>
+          <Field label="Heslo" hint={tab === 'register' ? 'Aspoň 10 znaků. Heslo se nikam neposílá – slouží i jako klíč k vašim datům.' : undefined}>
             <div className="relative">
               <input type={show ? 'text' : 'password'} autoComplete={tab === 'register' ? 'new-password' : 'current-password'} required value={password} onChange={(e) => setPassword(e.target.value)} className={cn(inputClass, 'pr-12')} />
               <button type="button" onClick={() => setShow((v) => !v)} className="absolute right-2 top-1/2 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-muted hover:text-fg" aria-label={show ? 'Skrýt heslo' : 'Zobrazit heslo'}>
@@ -247,7 +247,7 @@ export function SignInScreen() {
 export function RecoveryCodeCard({ code, onDone, doneLabel = 'Kód mám uložený – pokračovat' }: { code: string; onDone: () => void; doneLabel?: string }) {
   const [saved, setSaved] = useState(false);
   const email = useAccount((s) => s.user?.email ?? '');
-  const text = `Stihnu – záchranný kód k účtu ${email}\n\n${code}\n\nKód odemkne tvá data na novém zařízení. Nikomu ho nedávej.`;
+  const text = `Stihnu – záchranný kód k účtu ${email}\n\n${code}\n\nKód odemkne vaše data na novém zařízení. Nikomu ho nedávejte.`;
   const download = () => {
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const a = document.createElement('a');
@@ -269,7 +269,7 @@ export function RecoveryCodeCard({ code, onDone, doneLabel = 'Kód mám uložen�
   return (
     <div>
       <div className="rounded-[22px] bg-forest p-5 text-center text-white">
-        <p className="eyebrow text-white/70">Tvůj záchranný kód</p>
+        <p className="eyebrow text-white/70">Váš záchranný kód</p>
         <p className="mt-2 select-all break-all font-mono text-[22px] font-bold tracking-wider sm:text-[26px]">{code}</p>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2">
@@ -284,9 +284,9 @@ export function RecoveryCodeCard({ code, onDone, doneLabel = 'Kód mám uložen�
         </button>
       </div>
       <ul className="mt-4 space-y-1.5 text-[14px] text-muted">
-        <li>• Ulož si ho do správce hesel, vytiskni nebo vyfoť a schovej.</li>
-        <li>• Potřebuješ ho jen na novém zařízení{useAccount.getState().user?.provider === 'email' ? ' nebo když zapomeneš heslo' : ''}.</li>
-        <li>• Bez kódu nikdo – ani správce aplikace – tvoje data neotevře. Proto je v bezpečí.</li>
+        <li>• Uložte si ho do správce hesel, vytiskněte nebo vyfoťte a schovejte.</li>
+        <li>• Potřebujete ho jen na novém zařízení{useAccount.getState().user?.provider === 'email' ? ' nebo když zapomenete heslo' : ''}.</li>
+        <li>• Bez kódu nikdo – ani správce aplikace – vaše data neotevře. Proto je v bezpečí.</li>
       </ul>
       <label className="mt-4 flex items-center gap-3 text-[15px] font-semibold">
         <input type="checkbox" checked={saved} onChange={(e) => setSaved(e.target.checked)} className="size-5 accent-[var(--accent)]" />
@@ -307,9 +307,9 @@ export function RecoveryScreen() {
   return (
     <Frame>
       <h1 className="font-display text-[32px] leading-[1.05]">
-        Ulož si <em className="text-moss">záchranný kód</em>
+        Uložte si <em className="text-moss">záchranný kód</em>
       </h1>
-      <p className="mt-2 mb-5 text-[15px] text-muted">Tvůj účet je založený a data jsou zašifrovaná. Tenhle kód je jediný náhradní klíč k nim.</p>
+      <p className="mt-2 mb-5 text-[15px] text-muted">Váš účet je založený a data jsou zašifrovaná. Tenhle kód je jediný náhradní klíč k nim.</p>
       <RecoveryCodeCard code={code} onDone={acknowledgeRecovery} />
     </Frame>
   );
@@ -348,16 +348,16 @@ export function UnlockScreen() {
   return (
     <Frame>
       <h1 className="font-display text-[32px] leading-[1.05]">
-        Odemkni svá <em className="text-moss">data</em>
+        Odemkněte svá <em className="text-moss">data</em>
       </h1>
       <p className="mt-2 text-[15px] text-muted">
-        Na tomhle zařízení jsi poprvé. Zadej záchranný kód, který sis uložil(a) při založení účtu{user ? ` (${user.email})` : ''}.
+        Na tomhle zařízení jste poprvé. Zadejte záchranný kód z doby založení účtu{user ? ` (${user.email})` : ''}.
       </p>
       <div className="mt-5 rounded-[20px] bg-surface-2/80 p-4 text-[14px]">
         <p className="flex items-center gap-2 font-bold">
-          <Smartphone className="size-4.5 text-accent" aria-hidden /> Máš Stihnu otevřené na jiném zařízení?
+          <Smartphone className="size-4.5 text-accent" aria-hidden /> Máte Stihnu otevřené na jiném zařízení?
         </p>
-        <p className="mt-1 text-muted">Tam otevři Účet → Přidat zařízení a naskenuj QR kód fotoaparátem. Odemkne se samo.</p>
+        <p className="mt-1 text-muted">Tam otevřete Účet → Přidat zařízení a naskenujte QR kód fotoaparátem. Odemkne se samo.</p>
       </div>
       <form
         className="mt-5 space-y-4"
@@ -377,7 +377,7 @@ export function UnlockScreen() {
       <details className="mt-5 text-[14px]">
         <summary className="cursor-pointer font-semibold text-muted hover:text-fg">Kód nemám</summary>
         <p className="mt-2 text-muted">
-          Bez kódu data v účtu otevřít nejde – ani my to neumíme, proto jsou v bezpečí. Pokud máš Stihnu přihlášené na jiném zařízení, tam si vytvoř nový kód (Účet → Záchranný kód). Rozvrh, Moodle i Google si případně jen znovu propojíš.
+          Bez kódu data v účtu otevřít nejde – ani my to neumíme, proto jsou v bezpečí. Pokud máte Stihnu přihlášené na jiném zařízení, tam si vytvořte nový kód (Účet → Záchranný kód). Rozvrh, Moodle i Google si případně jen znovu propojíte.
         </p>
       </details>
       <button type="button" onClick={() => void signOutAccount()} className="mt-5 text-[14px] font-semibold text-muted hover:text-fg">
@@ -398,9 +398,9 @@ export function ResetPasswordScreen() {
   return (
     <Frame>
       <h1 className="font-display text-[32px] leading-[1.05]">
-        Nastav si <em className="text-moss">nové heslo</em>
+        Nastavte si <em className="text-moss">nové heslo</em>
       </h1>
-      <p className="mt-2 text-[15px] text-muted">Aspoň 10 znaků. Pokud tohle zařízení data ještě nezná, po uložení tě poprosíme o záchranný kód.</p>
+      <p className="mt-2 text-[15px] text-muted">Aspoň 10 znaků. Pokud tohle zařízení data ještě nezná, po uložení vás poprosíme o záchranný kód.</p>
       <form
         className="mt-5 space-y-4"
         onSubmit={(e) => {
@@ -413,7 +413,7 @@ export function ResetPasswordScreen() {
           setError(null);
           void passwordLeaked(password)
             .then((leaked) => {
-              if (leaked) throw new Error('Tohle heslo se objevilo v únicích dat z jiných služeb. Zvol prosím jiné.');
+              if (leaked) throw new Error('Tohle heslo se objevilo v únicích dat z jiných služeb. Zvolte prosím jiné.');
               return setNewPassword(password);
             })
             .then(() => toast.success('Heslo je změněné.'))
@@ -440,7 +440,7 @@ export function LoadingScreen() {
         <BrandMark className="size-14 animate-pulse" />
         <p className="flex items-center gap-2 text-[15px] font-semibold text-muted">
           <Mail className="hidden" aria-hidden />
-          <LoaderCircle className="size-4.5 animate-spin" aria-hidden /> Načítám tvůj účet…
+          <LoaderCircle className="size-4.5 animate-spin" aria-hidden /> Načítám váš účet…
         </p>
       </div>
     </div>

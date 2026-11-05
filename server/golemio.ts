@@ -28,7 +28,7 @@ export async function handleGolemio(request: Request): Promise<Response> {
       throw new HttpError(
         401,
         'missing_golemio_key',
-        'Chybí Golemio API klíč. Zadej ho v Nastavení (zdarma na api.golemio.cz) nebo ho nastav na serveru jako GOLEMIO_API_KEY.',
+        'Chybí Golemio API klíč. Zadejte ho v Propojení (zdarma na api.golemio.cz) nebo ho nastavte na serveru jako GOLEMIO_API_KEY.',
       );
     }
     const upstream = new URL(path, GOLEMIO_BASE);
@@ -41,10 +41,10 @@ export async function handleGolemio(request: Request): Promise<Response> {
     });
     const body = await response.text();
     if (response.status === 401 || response.status === 403) {
-      throw new HttpError(401, 'invalid_golemio_key', 'Golemio odmítlo API klíč – zkontroluj ho v Nastavení.');
+      throw new HttpError(401, 'invalid_golemio_key', 'Golemio odmítlo API klíč – zkontrolujte ho v Propojení.');
     }
     if (response.status === 429) {
-      throw new HttpError(429, 'golemio_rate_limited', 'Golemio dočasně omezilo počet dotazů. Zkus to za chvíli.');
+      throw new HttpError(429, 'golemio_rate_limited', 'Golemio dočasně omezilo počet dotazů. Zkuste to za chvíli.');
     }
     return new Response(body, {
       status: response.status,

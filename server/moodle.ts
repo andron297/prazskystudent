@@ -95,7 +95,7 @@ export async function handleMoodle(request: Request): Promise<Response> {
       throw new HttpError(
         502,
         'moodle_not_json',
-        'Moodle nevrátil JSON – zkontroluj adresu (např. https://dl1.cuni.cz) a že má zapnuté webové služby.',
+        'Moodle nevrátil JSON – zkontrolujte adresu (např. https://dl1.cuni.cz) a že má zapnuté webové služby.',
       );
     }
     if (payload && typeof payload === 'object' && 'exception' in payload) {

@@ -33,7 +33,7 @@ function Departure({ itinerary }: { itinerary: Itinerary }) {
   const ride = rideLegs(itinerary)[0] as RideLeg | undefined;
   return (
     <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px]">
-      <span className="font-bold">Vyraz v {formatTime(new Date(itinerary.leaveAt))}</span>
+      <span className="font-bold">Vyrazte v {formatTime(new Date(itinerary.leaveAt))}</span>
       {ride ? (
         <>
           <span className="opacity-60">·</span>
@@ -147,7 +147,7 @@ export function DayBrief({ now, target, itinerary }: { now: Date; target: Schedu
   }
 
   const evening = mode !== 'today';
-  const title = mode === 'today' ? 'Dnes tě čeká' : mode === 'ahead' ? `${dayLabel(day, now)} tě čeká` : 'Pár dní bez výuky';
+  const title = mode === 'today' ? 'Dnes vás čeká' : mode === 'ahead' ? `${dayLabel(day, now)} vás čeká` : 'Pár dní bez výuky';
 
   return (
     <motion.section
@@ -184,7 +184,7 @@ export function DayBrief({ now, target, itinerary }: { now: Date; target: Schedu
               <ListTodo className="size-4" aria-hidden /> Úkoly na další dny
             </p>
             {aheadByDay.size === 0 ? (
-              <p className="mt-2 text-[14px] opacity-85">Na nejbližší tři dny nic. Užij si volno.</p>
+              <p className="mt-2 text-[14px] opacity-85">Na nejbližší tři dny nic. Užijte si volno.</p>
             ) : (
               <div className="mt-2 space-y-2.5">
                 {[...aheadByDay.entries()].map(([key, list]) => {
@@ -230,7 +230,7 @@ export function DayBrief({ now, target, itinerary }: { now: Date; target: Schedu
       )}
       {classes.length === 0 && mode === 'free' && (
         <p className="mt-3 flex items-center gap-2 px-1 text-[13.5px] opacity-80">
-          <Building2 className="size-4" aria-hidden /> V nejbližších dnech nemáš v rozvrhu žádnou výuku.
+          <Building2 className="size-4" aria-hidden /> V nejbližších dnech nemáte v rozvrhu žádnou výuku.
         </p>
       )}
     </motion.section>
