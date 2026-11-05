@@ -215,7 +215,7 @@ export function SignInScreen() {
               Ještě nemám účet
             </button>
             <button type="button" onClick={() => setTab('forgot')} className="font-semibold text-muted hover:text-fg">
-              Zapomněl(a) jsem heslo
+              Zapomenuté heslo
             </button>
           </>
         ) : (
