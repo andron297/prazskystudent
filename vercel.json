@@ -91,5 +91,15 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/soukromi",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/podminky",
+      "destination": "/index.html"
+    }
   ]
 }
