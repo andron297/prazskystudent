@@ -25,10 +25,14 @@ komunitní služby jako [Transitous](https://transitous.org).
 - **Fotka podle denní doby** a pozdrav; skleněná karta „**Vyraz nejpozději za 19 min**“ s linkou, zastávkou, zpožděním a časem příchodu.
 - **Rada na cestu**: co si obléct (bunda, čepice, deštník…) podle pocitové teploty a toho, jestli bude pršet **cestou tam
   a cestou zpět** – okna cest se počítají z rozvrhu a z plánu MHD. Graf teploty a srážek na 12 hodin. Data z [Open-Meteo](https://open-meteo.com).
-- **Časová osa dne**: výuka, vlastní události, události z Google Kalendáře, úkoly a termíny s ukazatelem „teď“.
-- **Úkoly a termíny** s rychlým zadáním přirozenou češtinou:
-  `zítra 18:00 trénink @Strahov`, `esej do pátku #JSB065 !`, `pá 10–12 konzultace na Hollaru`, `koupit lítačku za 3 dny`.
-- Pás s čísly (dnes na tobě, termíny do 3 dnů, hodiny ve škole, hotový semestr), předměty s prstenci, harmonogram.
+- **Dnes tě čeká**: místo statistik praktické věci – budova, učebna, kdy a odkud ti to jede a úkoly k dnešním
+  předmětům. Večer se přepne na zítřek a úkoly na další dny.
+- **Živá navigace** jako v Mapách: pěšky na správnou zastávku (i nástupiště), upozornění „na příští zastávce vystupuješ“
+  a pěšky do budovy; pokyny z tvaru trasy, odpočet do odjezdu, hlasové pokyny, displej nezhasne.
+- **Celý den**: výuka, vlastní události, události z Google Kalendáře, úkoly a termíny s ukazatelem „teď“.
+  Hodina, která je ve SISu i ve vlastním kalendáři, se ukáže jen jednou (ta obsáhlejší).
+- **Jídelníček menzy** (Koleje a menzy UK) – menza nejblíž výuce, studentské ceny, alergeny.
+- **Ikona s odpočtem** minut do odchodu (záložka prohlížeče, odznak nainstalované aplikace) a zkratky na ikoně.
 
 ### Doprava
 - **Mapa všech 1 483 pražských zastávek** (MapLibre + OpenFreeMap, přebarvená do palety aplikace), hledání bez diakritiky,
@@ -38,9 +42,19 @@ komunitní služby jako [Transitous](https://transitous.org).
 - Zpětný výpočet trasy: `začátek − rezerva − chůze ze zastávky − jízda (se zpožděním) − chůze na zastávku`, doporučený a poslední možný spoj,
   plán B při zpoždění.
 
+### Úkoly
+- **Všechno na jednom místě**: vlastní úkoly, Google Úkoly i termíny ze SISu a Moodlu, podle termínu nebo předmětu.
+- **Chytré přiřazení k předmětu** přímo v zařízení (kód, název i se skloňováním, zkratka, vyučující, sylabus, rozvrh);
+  jistý odhad se přiřadí hned, nejistý se nabídne, odmítnutý se už nenabízí.
+- Rychlé zadání přirozenou češtinou: `zítra 18:00 trénink @Strahov`, `esej do pátku #JSB065 !`, `koupit lítačku za 3 dny`.
+
 ### Předměty a kalendář
-- Předměty s váženým progressem, povinnosti s checklisty, materiály (Moodle, vlastní soubory, poznámky), **sylabus ze SISu**.
-- Kalendář: časová osa akademického roku, agenda (termíny, úkoly, harmonogram) a týden včetně vlastních událostí.
+- Předměty s váženým progressem, povinnosti s checklisty, materiály (Moodle, vlastní soubory, poznámky,
+  **soubory a složky z Google Disku**), **sylabus ze SISu**. Zdvojené předměty se sloučí.
+- Kalendář: akademický rok na jednom řádku (kde v semestru jsem, co přijde, termíny po týdnech), agenda a týden.
+
+### Průvodce
+- Krátká prohlídka přímo v aplikaci, podrobný průvodce všemi funkcemi a animované návody k propojení SISu, Moodlu a Googlu.
 
 ### Propojení
 | Služba | Jak | Co přinese |
@@ -108,7 +122,10 @@ Propojení → Pro správce aplikace.
    | `GOOGLE_TOKEN_SECRET` | volitelný vlastní klíč pro šifrování cookie (jinak se odvodí z client secret) |
    | `GOLEMIO_API_KEY` | nepovinné – PID Golemio přidá klimatizaci a bezbariérovost vozů ([api.golemio.cz](https://api.golemio.cz/api-keys)); trasy a zpoždění fungují i bez něj přes Transitous |
    | `GOOGLE_MAPS_API_KEY` | Google Routes API – trasy s přestupy |
-   | `ANTHROPIC_API_KEY` | AI zpřesnění parseru harmonogramu a sylabů |
+   | `GEMINI_API_KEY` | **AI zdarma pro všechny přihlášené** (klíč z [Google AI Studia](https://aistudio.google.com/apikey)); model Gemini 3.8 Flash se záložními modely, jde změnit v `GEMINI_MODEL` |
+   | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | AI od jiného poskytovatele (správce); studenti mohou zadat i vlastní klíč |
+   | `GOOGLE_PICKER_API_KEY` | výběr souborů a složek z Google Disku k předmětům (Google Picker API, klíč omezený na adresu aplikace) |
+   | `PUBLIC_CONTACT_EMAIL` | kontakt v zásadách ochrany osobních údajů a v podmínkách |
    | `PROXY_ALLOWED_HOSTS` | allowlist domén pro Moodle/iCal proxy, např. `*.cuni.cz,calendar.google.com` |
 
 3. Deploy. PWA jde nainstalovat (Přidat na plochu) a funguje offline.
@@ -191,6 +208,7 @@ Podrobně v [ARCHITECTURE.md](ARCHITECTURE.md).
 ## Zdroje dat a poděkování
 Trasy a odjezdy: [Transitous](https://transitous.org) ([zdroje dat](https://transitous.org/sources/)) – komunitní plánovač
 nad jízdními řády PID; Stihnu ho používá podle jeho pravidel (open source, nekomerčně, s cache a identifikací v User-Agent).
+Jídelníčky menz: [Koleje a menzy UK](https://kam.cuni.cz) (veřejné rozhraní systému Septim, jen čtení, s cache).
 Zastávky: [PID – data.pid.cz](https://data.pid.cz) · mapové podklady: [OpenFreeMap](https://openfreemap.org), © přispěvatelé
 [OpenStreetMap](https://www.openstreetmap.org/copyright) · počasí: [Open-Meteo](https://open-meteo.com) (CC BY 4.0) ·
 fotografie: [Unsplash](https://unsplash.com) · písma: Instrument Serif, Manrope (SIL OFL).
@@ -202,6 +220,9 @@ fotografie: [Unsplash](https://unsplash.com) · písma: Instrument Serif, Manrop
 - Transitous je komunitní služba bez záruky; když neodpovídá, plánovač použije Golemio (s klíčem) nebo odhad podle vzdálenosti.
   Při větším počtu uživatelů (stovky dotazů denně) je slušné se ozvat v jejich Matrix kanálu.
 - Rozpoznání stránek SISu stojí na jejich textu – při změně vzhledu SISu může být potřeba parser doladit.
+- Jídelníčky menz používají veřejné rozhraní, které KaM UK nedokumentuje; když ho změní, karta se skryje, dokud se neupraví.
+- Widgety na plochu telefonu umí jen nativní aplikace; PWA místo nich nabízí odznak s odpočtem, zkratky a upozornění.
+- Navigace v budově (patro, učebna) není – vede ke vchodu podle souřadnic budovy.
 
 ## Licence
 [MIT](LICENSE) · bezpečnost: [SECURITY.md](SECURITY.md)

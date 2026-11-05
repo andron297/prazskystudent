@@ -68,7 +68,7 @@ export function PrivacyView() {
             <strong className="text-fg">Technické záznamy:</strong> poskytovatelé hostingu krátce uchovávají záznamy o přístupech (např. IP adresu) kvůli bezpečnosti a provozu (oprávněný zájem, čl. 6 odst. 1 písm. f) GDPR).
           </li>
           <li>
-            <strong className="text-fg">Údaje jen na chvíli, když použiješ funkci:</strong> souřadnice startu a cíle při plánování cesty, přibližná poloha pro počasí, text, který necháš přečíst AI, a stránky SIS a Moodlu, které načítáme přes náš server. Nic z toho neukládáme.
+            <strong className="text-fg">Údaje jen na chvíli, když použiješ funkci:</strong> souřadnice startu a cíle při plánování cesty, přibližná poloha pro počasí, text, který necháš přečíst AI, a stránky SIS a Moodlu, které načítáme přes náš server. Nic z toho neukládáme. Poloha během navigace se nikam neposílá – zpracovává se jen v zařízení.
           </li>
         </ul>
       </section>
@@ -79,6 +79,7 @@ export function PrivacyView() {
           <li>Google – jen pokud si Kalendář, Úkoly nebo Disk sám propojíš.</li>
           <li>Poskytovatel AI (Google Gemini, OpenAI nebo Anthropic) – jen text, který necháš přečíst. U bezplatné AI může poskytovatel text použít ke zlepšování svých služeb, proto do ní neposílej citlivé údaje.</li>
           <li>Transitous a PID Golemio (trasy a odjezdy), Open-Meteo (počasí) – dostanou jen souřadnice, ne tvoji identitu.</li>
+          <li>Koleje a menzy UK (jídelníček) a OpenFreeMap (mapové podklady) – nedostanou o tobě nic, jen dotaz na jídelníček nebo mapu.</li>
         </ul>
         <p className="mt-2">Někteří poskytovatelé sídlí v USA; předání je chráněné standardními smluvními doložkami nebo rámcem EU–USA pro ochranu údajů.</p>
       </section>

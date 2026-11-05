@@ -160,7 +160,9 @@ function speak(text: string) {
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'cs-CZ';
-    const voice = synth.getVoices().find((v) => v.lang.toLowerCase().startsWith('cs'));
+    // Přednost má hlas přímo v zařízení (text se pak nikam neposílá).
+    const czech = synth.getVoices().filter((v) => v.lang.toLowerCase().startsWith('cs'));
+    const voice = czech.find((v) => v.localService) ?? czech[0];
     if (voice) u.voice = voice;
     u.rate = 1.02;
     synth.speak(u);
