@@ -1,32 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import {
-  BookMarked,
-  CalendarDays,
-  ChevronDown,
-  Database,
-  Download,
-  ExternalLink,
-  FlaskConical,
-  GraduationCap,
-  KeyRound,
-  LoaderCircle,
-  MapPin,
-  Monitor,
-  Moon,
-  MousePointerClick,
-  Plus,
-  RefreshCw,
-  RotateCcw,
-  ScrollText,
-  ServerCog,
-  Sparkles,
-  Sun,
-  TramFront,
-  Trash,
-  Upload,
-  Zap,
-} from 'lucide-react';
+import { BookMarked, CalendarDays, ChevronDown, Database, Download, ExternalLink, FlaskConical, GraduationCap, KeyRound, LoaderCircle, MapPin, Monitor, Moon, MousePointerClick, Palette, Plus, RefreshCw, RotateCcw, ScrollText, ServerCog, Sparkles, Sun, TramFront, Trash, Upload, Zap } from 'lucide-react';
 import type { IcsSource, WalkSpeed } from '../../types';
 import { formatReminder, downloadTextFile } from '../../lib/calendarExport';
 import { formatRelative } from '../../lib/dates';
@@ -630,6 +604,9 @@ function AppSection() {
                 { value: 'dark', label: 'Tmavý', icon: Moon },
               ]}
             />
+            <a href="#/vzhled" className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-bold text-accent hover:underline">
+              <Palette className="size-4" aria-hidden /> Barvy, fotky, pozadí a písmo
+            </a>
           </Field>
         </div>
         <Field label="Jak vás oslovit" hint="Zobrazí se v pozdravu na hlavní stránce.">

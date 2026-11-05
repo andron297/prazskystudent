@@ -256,7 +256,7 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
         <div className={cn('mx-auto flex h-14 items-center gap-3 px-4 sm:px-6 lg:h-16 lg:px-8', !fullBleed && 'max-w-[1320px]')}>
           <a href="#/dnes" className="flex shrink-0 items-center gap-2.5">
             <BrandMark className="size-8 lg:size-9" />
-            <span className="font-display text-[24px] leading-none tracking-tight lg:text-[26px]">
+            <span className="font-display wordmark text-[24px] leading-none tracking-tight lg:text-[26px]">
               Stih<em className="text-moss">nu</em>
             </span>
           </a>

@@ -32,7 +32,7 @@ function Frame({ children, wide = false }: { children: ReactNode; wide?: boolean
       <motion.main initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className={cn('card relative w-full rounded-[32px] p-6 shadow-2xl sm:p-9', wide ? 'max-w-2xl' : 'max-w-md')}>
         <div className="mb-6 flex items-center gap-2.5">
           <BrandMark className="size-10" />
-          <span className="font-display text-[28px] leading-none">
+          <span className="font-display wordmark text-[28px] leading-none">
             Stih<em className="text-moss">nu</em>
           </span>
         </div>

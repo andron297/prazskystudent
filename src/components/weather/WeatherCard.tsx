@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { ArrowLeftRight, Droplets, Wind } from 'lucide-react';
 import type { WeatherAdvice, WeatherForecast } from '../../lib/weather';
-import { weatherLabel } from '../../lib/weather';
+import { weatherKind, weatherLabel } from '../../lib/weather';
 import { formatTime } from '../../lib/dates';
 import { Card, Chip, cn } from '../ui/primitives';
-import { OUTFIT_EMOJI, WeatherIcon } from './WeatherBits';
+import { WeatherAvatar } from './WeatherAvatar';
+import { WeatherGlyph } from './WeatherGlyph';
 
 /** Teplota (čára) a pravděpodobnost srážek (sloupce) na dalších 12 hodin; okna cest jako pruhy. */
 function HourlyChart({ forecast, now, advice }: { forecast: WeatherForecast; now: Date; advice: WeatherAdvice }) {
@@ -77,20 +78,35 @@ export function WeatherCard({ forecast, advice, now, dayLabel }: { forecast: Wea
       eyebrow={dayLabel}
       action={
         <span className="flex items-center gap-1.5 text-muted">
-          <WeatherIcon code={c.code} isDay={c.isDay} className="size-5 text-clay" />
+          <WeatherGlyph code={c.code} isDay={c.isDay} className="size-8" title={weatherLabel(c.code)} />
           <span className="font-display text-[26px] leading-none text-fg tabular">{Math.round(c.temp)}°</span>
         </span>
       }
     >
-      <p className="text-[15px] font-semibold leading-snug">{advice.headline}</p>
-      <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Doporučené oblečení">
-        {advice.outfit.map((o) => (
-          <li key={o.id} className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-semibold ring-1 ring-inset', o.id === 'umbrella' || o.id === 'raincoat' ? 'bg-sky-500/12 text-sky-800 ring-sky-500/25 dark:text-sky-200' : 'bg-surface-2 ring-line')}>
-            <span aria-hidden>{OUTFIT_EMOJI[o.id]}</span>
-            {o.label}
-          </li>
-        ))}
-      </ul>
+      <div className="flex gap-4">
+        <WeatherAvatar
+          outfit={advice.outfit.map((o) => o.id)}
+          kind={weatherKind(advice.commutes.find((x) => x.wet)?.code ?? c.code)}
+          isDay={c.isDay}
+          feels={advice.basisFeels}
+          windy={advice.tips.some((t) => t.toLowerCase().includes('vítr'))}
+          className="w-[118px] shrink-0 drop-shadow-[0_12px_18px_rgb(0_0_0/0.12)] sm:w-[132px]"
+          label={`Počasník: ${advice.outfit.map((o) => o.label.toLowerCase()).join(', ')}`}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-semibold leading-snug">{advice.headline}</p>
+          <p className="mt-1 text-[12.5px] text-muted">
+            Teď {Math.round(c.temp)}° · {weatherLabel(c.code).toLowerCase()} · pocitově {Math.round(c.feels)}°
+          </p>
+          <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Doporučené oblečení">
+            {advice.outfit.map((o) => (
+              <li key={o.id} className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-[12.5px] font-semibold ring-1 ring-inset', o.id === 'umbrella' || o.id === 'raincoat' ? 'bg-sky-500/12 text-sky-800 ring-sky-500/25 dark:text-sky-200' : 'bg-surface-2 ring-line')}>
+                {o.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
 
       {advice.commutes.length > 0 && (
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -101,7 +117,7 @@ export function WeatherCard({ forecast, advice, now, dayLabel }: { forecast: Wea
                 {cw.window.kind === 'to' ? 'Cesta tam' : 'Cesta zpět'} · {formatTime(cw.window.from)}
               </p>
               <p className="mt-1.5 flex items-center gap-2">
-                <WeatherIcon code={cw.code} className="size-5 text-clay" />
+                <WeatherGlyph code={cw.code} className="size-7" />
                 <span className="font-display text-[24px] leading-none tabular">{cw.temp}°</span>
                 <span className="text-xs text-muted">pocitově {cw.feels}°</span>
               </p>

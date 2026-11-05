@@ -211,7 +211,9 @@ nad jízdními řády PID; Stihnu ho používá podle jeho pravidel (open source
 Jídelníčky menz: [Koleje a menzy UK](https://kam.cuni.cz) (veřejné rozhraní systému Septim, jen čtení, s cache).
 Zastávky: [PID – data.pid.cz](https://data.pid.cz) · mapové podklady: [OpenFreeMap](https://openfreemap.org), © přispěvatelé
 [OpenStreetMap](https://www.openstreetmap.org/copyright) · počasí: [Open-Meteo](https://open-meteo.com) (CC BY 4.0) ·
-fotografie: [Unsplash](https://unsplash.com) · písma: Instrument Serif, Manrope (SIL OFL).
+fotografie Prahy: Wikimedia Commons – Diego Delso, Godot13, Massimo Catarinella, Darwinek, Jacek Halicki
+(CC BY-SA 3.0/4.0, zmenšeno; seznam s odkazy v [public/images/CREDITS.md](public/images/CREDITS.md)) a [Unsplash](https://unsplash.com) ·
+písma: Instrument Serif, Manrope (SIL OFL).
 
 ## Známá omezení
 - Google funkce potřebují vlastní OAuth Client ID (aplikace v režimu *Testing* je jen pro přidané testovací uživatele).

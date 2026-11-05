@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { Droplets } from 'lucide-react';
+import { Palette } from 'lucide-react';
 import type { ScheduleEvent } from '../../types';
 import { capitalize, formatDateLong, formatTime } from '../../lib/dates';
 import { nameDayText, publicHoliday } from '../../lib/czechDays';
+import { autoHeroPhoto, galleryPhoto, photoCredit, photoUrl, resolveAppearance } from '../../lib/appearance';
+import { useLocalImage } from '../../hooks/useLocalImage';
 import { navigateTo } from '../../hooks/useAppShell';
 import { commuteWindows, weatherAdvice, weatherLabel } from '../../lib/weather';
 import { useNow } from '../../hooks/useNow';
@@ -20,7 +22,7 @@ import { OriginSheet } from '../transit/OriginSheet';
 import { TransitGlance } from '../transit/TransitGlance';
 import { KIND_LABEL } from '../transit/transitStatus';
 import { WeatherCard } from '../weather/WeatherCard';
-import { WeatherIcon } from '../weather/WeatherBits';
+import { WeatherGlyph } from '../weather/WeatherGlyph';
 import { TourOffer, WelcomeCard } from './DashboardCards';
 import { CountdownsCard } from './Countdowns';
 import { DayBrief } from './DayBrief';
@@ -32,13 +34,6 @@ function greeting(hour: number): [string, string] {
   if (hour < 12) return ['Dobré', 'dopoledne'];
   if (hour < 18) return ['Dobré', 'odpoledne'];
   return ['Dobrý', 'večer'];
-}
-
-function heroPhoto(hour: number, wet: boolean): string {
-  if (wet || hour < 10) return 'mist';
-  if (hour < 16) return 'forest';
-  if (hour < 20) return 'riverside';
-  return 'prague';
 }
 
 export function DashboardView() {
@@ -92,7 +87,12 @@ export function DashboardView() {
   const [g1, g2] = greeting(now.getHours());
   const name = settings.displayName.trim() || undefined;
   const wetSoon = Boolean(advice?.umbrella);
-  const photo = heroPhoto(now.getHours(), wetSoon && forecast?.current.code !== undefined && forecast.current.code >= 51);
+  // Fotka v úvodu podle Vzhledu: automaticky (denní doba, déšť), z galerie, nebo vlastní
+  const look = resolveAppearance(settings.appearance);
+  const wetNow = wetSoon && forecast?.current.code !== undefined && forecast.current.code >= 51;
+  const heroUpload = useLocalImage('hero', look.heroPhoto === 'upload');
+  const heroId = look.heroPhoto === 'upload' ? (heroUpload === null ? autoHeroPhoto(now, wetNow) : null) : look.heroPhoto === 'auto' || !galleryPhoto(look.heroPhoto) ? autoHeroPhoto(now, wetNow) : look.heroPhoto;
+  const heroCredit = heroId ? galleryPhoto(heroId) : undefined;
   const rainCommute = advice?.commutes.find((c) => c.wet);
 
   const goToTransit = () => navigateTo('doprava');
@@ -103,15 +103,28 @@ export function DashboardView() {
     <div className="space-y-4 sm:space-y-5">
       {/* Hero s fotkou */}
       <section className="grain relative isolate overflow-hidden rounded-[32px] bg-forest text-white shadow-[0_30px_60px_-35px_rgb(0_0_0/0.6)]">
-        <img
-          src={`/images/${photo}-1200.webp`}
-          srcSet={`/images/${photo}-1200.webp 1200w, /images/${photo}.webp 1920w`}
-          sizes="(min-width: 1320px) 1280px, 100vw"
-          alt=""
-          className="absolute inset-0 -z-20 size-full animate-drift object-cover"
-          fetchPriority="high"
-        />
+        {heroId ? (
+          <img
+            key={heroId}
+            src={photoUrl(heroId, 'medium')}
+            srcSet={`${photoUrl(heroId, 'medium')} 1200w, ${photoUrl(heroId, 'full')} 1920w`}
+            sizes="(min-width: 1320px) 1280px, 100vw"
+            alt=""
+            className="absolute inset-0 -z-20 size-full animate-drift object-cover"
+            fetchPriority="high"
+          />
+        ) : heroUpload ? (
+          <img src={heroUpload} alt="" className="absolute inset-0 -z-20 size-full animate-drift object-cover" />
+        ) : null}
         <div className="photo-scrim absolute inset-0 -z-10" />
+        <a href="#/vzhled" className="glass-photo absolute right-4 top-4 z-10 grid size-9 place-items-center rounded-full transition hover:scale-105 sm:right-5 sm:top-5 lg:left-6 lg:right-auto lg:top-6" aria-label="Upravit vzhled – barvy, fotky, pozadí" title="Vzhled">
+          <Palette className="size-4" aria-hidden />
+        </a>
+        {heroCredit && (
+          <a href={heroCredit.source} target="_blank" rel="noreferrer" className="absolute bottom-1.5 right-4 z-10 text-[10px] font-medium text-white/45 transition hover:text-white/85">
+            {photoCredit(heroCredit)}
+          </a>
+        )}
         <div className="grid gap-6 p-5 sm:p-8 lg:grid-cols-[1.15fr_1fr] lg:items-end lg:gap-10 lg:p-10">
           <div className="min-w-0 pt-6 lg:pt-16">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -141,12 +154,13 @@ export function DashboardView() {
             {forecast && (
               <div className="mt-5 flex flex-wrap items-center gap-2">
                 <span className="glass-photo inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-semibold">
-                  <WeatherIcon code={forecast.current.code} isDay={forecast.current.isDay} className="size-4" />
+                  <WeatherGlyph code={forecast.current.code} isDay={forecast.current.isDay} className="-my-1 size-6" />
                   {Math.round(forecast.current.temp)}° · {weatherLabel(forecast.current.code)}
                 </span>
                 {rainCommute ? (
                   <span className="glass-photo inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-semibold">
-                    <Droplets className="size-4" aria-hidden />☂ {rainCommute.precipProb} % {rainCommute.window.kind === 'to' ? 'cestou tam' : 'cestou zpět'}
+                    <WeatherGlyph code={rainCommute.code} className="-my-1 size-6" />
+                    {rainCommute.precipProb} % déšť {rainCommute.window.kind === 'to' ? 'cestou tam' : 'cestou zpět'}
                   </span>
                 ) : (
                   advice && <span className="glass-photo rounded-full px-3.5 py-1.5 text-[13px] font-semibold">{advice.outfit.slice(0, 2).map((o) => o.label).join(' + ')}</span>

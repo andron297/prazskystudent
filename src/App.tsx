@@ -13,6 +13,7 @@ import { toast, useUiStore } from './store/uiStore';
 import { SetupWizard } from './components/setup/SetupWizard';
 import { initAccount, useAccount } from './services/account';
 import { IntroSplash } from './components/intro/IntroSplash';
+import { AppBackdrop, useAppearanceEffect } from './components/appearance/AppBackdrop';
 import { CountdownEditor } from './components/dashboard/Countdowns';
 import { startSubjectAssist } from './services/subjectAssist';
 import { startLeaveBadge } from './services/leaveBadge';
@@ -31,6 +32,7 @@ const PrivacyView = lazy(() => import('./components/legal/LegalViews').then((m) 
 const TermsView = lazy(() => import('./components/legal/LegalViews').then((m) => ({ default: m.TermsView })));
 const AccountGate = lazy(() => import('./components/account/AccountScreens').then((m) => ({ default: m.AccountGate })));
 const LiveNavigation = lazy(() => import('./components/navigation/LiveNavigation').then((m) => ({ default: m.LiveNavigation })));
+const AppearanceView = lazy(() => import('./components/appearance/AppearanceView').then((m) => ({ default: m.AppearanceView })));
 const GuideView = lazy(() => import('./components/tour/GuideView').then((m) => ({ default: m.GuideView })));
 const QuickTour = lazy(() => import('./components/tour/QuickTour').then((m) => ({ default: m.QuickTour })));
 
@@ -59,6 +61,7 @@ export default function App() {
   const [connectMounted, setConnectMounted] = useState(false);
   const [editorMounted, setEditorMounted] = useState(false);
   useThemeEffect(theme);
+  useAppearanceEffect();
   useBackgroundSync();
   useSisBridge();
 
@@ -120,6 +123,7 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
       <IntroSplash />
+      <AppBackdrop />
       {gated ? (
         <>
           <Suspense fallback={null}>
@@ -144,6 +148,7 @@ export default function App() {
                   {view === 'podminky' && <TermsView />}
                   {view === 'soukromi' && <PrivacyView />}
                   {view === 'pruvodce' && <GuideView />}
+                  {view === 'vzhled' && <AppearanceView />}
                 </Suspense>
               </motion.div>
             </AnimatePresence>

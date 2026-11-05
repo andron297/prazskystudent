@@ -46,6 +46,8 @@ interface UiState {
   countdownEditor: boolean;
   /** Po nahrání harmonogramu se zeptat na typ studia. */
   askStudyProfile: boolean;
+  /** Zvýší se, když má úvodní animace proběhnout znovu (ukázka ve Vzhledu). */
+  introTick: number;
   /** Běží krátká prohlídka aplikace. */
   tour: boolean;
   startTour: () => void;
@@ -129,6 +131,7 @@ export const useUiStore = create<UiState>()((set, get) => ({
   },
   countdownEditor: false,
   askStudyProfile: false,
+  introTick: 0,
   tour: false,
   startTour: () => set({ tour: true, setupOpen: false }),
   navigation: null,

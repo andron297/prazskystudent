@@ -12,6 +12,7 @@ import { isRequirementComplete } from '../../lib/progress';
 import { useAppStore } from '../../store/appStore';
 import { appNow } from '../../store/clockStore';
 import { buildingForEvent } from '../../store/selectors';
+import { useUiStore } from '../../store/uiStore';
 
 const GENERIC = [
   'Všechno důležité na jednom místě.',
@@ -85,6 +86,17 @@ export function IntroSplash() {
   const nameDay = useMemo(() => nameDayText(now), [now]);
   const minutesAngle = now.getMinutes() * 6 + 360;
   const hoursAngle = ((now.getHours() % 12) + now.getMinutes() / 60) * 30;
+
+  // Ukázka z nastavení Vzhled
+  const introTick = useUiStore((s) => s.introTick);
+  useEffect(() => {
+    if (introTick > 0) setVisible(true);
+  }, [introTick]);
+  useEffect(() => {
+    if (!visible || introTick === 0) return;
+    const t = setTimeout(() => setVisible(false), reduced ? 900 : 2300);
+    return () => clearTimeout(t);
+  }, [visible, introTick, reduced]);
 
   useEffect(() => {
     document.getElementById('boot-splash')?.remove();
