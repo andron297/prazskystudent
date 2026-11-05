@@ -11,6 +11,7 @@ import { useAppStore } from './store/appStore';
 import { useClockStore } from './store/clockStore';
 import { toast, useUiStore } from './store/uiStore';
 import { SetupWizard } from './components/setup/SetupWizard';
+import { initAccount, useAccount } from './services/account';
 
 // Méně používané sekce se načítají až při otevření (menší první načtení PWA).
 const TransitMapView = lazy(() => import('./components/map/TransitMapView').then((m) => ({ default: m.TransitMapView })));
@@ -20,6 +21,11 @@ const ConnectionsView = lazy(() => import('./components/integrations/Connections
 const ImportView = lazy(() => import('./components/integrations/ImportView').then((m) => ({ default: m.ImportView })));
 const ConnectStudyModal = lazy(() => import('./components/integrations/ConnectStudyModal').then((m) => ({ default: m.ConnectStudyModal })));
 const ItemEditor = lazy(() => import('./components/common/ItemEditor').then((m) => ({ default: m.ItemEditor })));
+const AccountView = lazy(() => import('./components/account/AccountView').then((m) => ({ default: m.AccountView })));
+const PrivacyView = lazy(() => import('./components/legal/LegalViews').then((m) => ({ default: m.PrivacyView })));
+const TermsView = lazy(() => import('./components/legal/LegalViews').then((m) => ({ default: m.TermsView })));
+const TasksView = lazy(() => import('./components/tasks/TasksView').then((m) => ({ default: m.TasksView })));
+const AccountGate = lazy(() => import('./components/account/AccountScreens').then((m) => ({ default: m.AccountGate })));
 
 function ViewFallback() {
   return (
@@ -53,14 +59,30 @@ export default function App() {
     if (editor) setEditorMounted(true);
   }, [editor]);
 
+  const accountStatus = useAccount((s) => s.status);
   useEffect(() => {
-    void useUiStore.getState().refreshServer();
-    // Poprvé (nebo dokud průvodce nikdo nedokončil): provést nastavením krok za krokem.
-    if (!useAppStore.getState().meta.setupDone) {
+    void useUiStore
+      .getState()
+      .refreshServer()
+      .then(() => initAccount())
+      .catch(() => useAccount.setState({ status: 'off' }));
+  }, []);
+
+  // Průvodce: poprvé (bez účtu v ukázce, s účtem po přihlášení), nebo po návratu z přihlášení.
+  useEffect(() => {
+    if (accountStatus === 'loading') return;
+    const ui = useUiStore.getState();
+    const done = useAppStore.getState().meta.setupDone;
+    if (accountStatus === 'ready' && (ui.resumeSetup || !done)) {
+      useUiStore.setState({ resumeSetup: false });
+      const t = setTimeout(() => useUiStore.getState().openSetup('auto'), 500);
+      return () => clearTimeout(t);
+    }
+    if ((accountStatus === 'off' || (accountStatus === 'signedOut' && useAppStore.getState().settings.mode === 'demo')) && !done) {
       const t = setTimeout(() => useUiStore.getState().openSetup('start'), 700);
       return () => clearTimeout(t);
     }
-  }, []);
+  }, [accountStatus]);
 
   // Sandbox: posun ukázkových dat na dnešek a simulované hodiny; Live: reálný čas.
   useEffect(() => {
@@ -79,6 +101,21 @@ export default function App() {
   }, [mode]);
 
   const fullBleed = view === 'doprava';
+  const legal = view === 'podminky' || view === 'soukromi';
+  // Vlastní data jen s účtem: dokud není přihlášený a odemčený, místo aplikace přihlášení.
+  const gated = accountStatus !== 'off' && accountStatus !== 'ready' && (mode !== 'demo' || view === 'ucet' || accountStatus === 'showRecovery' || accountStatus === 'resetPassword') && !legal;
+
+  if (gated) {
+    return (
+      <MotionConfig reducedMotion="user">
+        <Suspense fallback={null}>
+          <AccountGate status={accountStatus} />
+        </Suspense>
+        <ConfirmHost />
+        <Toaster />
+      </MotionConfig>
+    );
+  }
 
   return (
     <MotionConfig reducedMotion="user">
@@ -92,6 +129,10 @@ export default function App() {
               {view === 'kalendar' && <CalendarView />}
               {view === 'propojeni' && <ConnectionsView section={param} />}
               {view === 'import' && <ImportView />}
+              {view === 'ukoly' && <TasksView />}
+              {view === 'ucet' && <AccountView />}
+              {view === 'podminky' && <TermsView />}
+              {view === 'soukromi' && <PrivacyView />}
             </Suspense>
           </motion.div>
         </AnimatePresence>

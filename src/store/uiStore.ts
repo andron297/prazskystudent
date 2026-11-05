@@ -39,6 +39,8 @@ interface UiState {
   /** Průvodce propojením (krok, na kterém se otevře). */
   setupOpen: boolean;
   setupStep: string | null;
+  /** Po přihlášení pokračovat v průvodci. */
+  resumeSetup: boolean;
   openSetup: (step?: string) => void;
   closeSetup: () => void;
   connectOpen: boolean;
@@ -75,6 +77,7 @@ export const useUiStore = create<UiState>()((set, get) => ({
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
   setupOpen: false,
   setupStep: null,
+  resumeSetup: false,
   openSetup: (step) => set({ setupOpen: true, setupStep: step ?? null }),
   closeSetup: () => set({ setupOpen: false }),
   connectOpen: false,

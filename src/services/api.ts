@@ -40,9 +40,31 @@ export interface ServerCapabilities {
   googleClientId: string | null;
   /** Server umí obnovovat přihlášení Google (refresh token v HttpOnly cookie). */
   googleServerFlow: boolean;
+  /** Účty (Supabase): veřejná adresa a veřejný klíč. */
+  account: { url: string; anonKey: string } | null;
+  accountSchema: 'ok' | 'missing' | 'error' | 'off';
+  accountDelete: boolean;
+  /** Veřejný klíč pro výběr souborů z Google Disku (Google Picker). */
+  googlePickerKey: string | null;
+  aiProvider: 'anthropic' | 'openai' | 'gemini' | null;
+  /** Veřejný kontaktní e-mail správce (zásady, podmínky). */
+  contactEmail: string | null;
 }
 
-export const NO_SERVER: ServerCapabilities = { reachable: false, golemio: false, google: false, anthropic: false, googleClientId: null, googleServerFlow: false };
+export const NO_SERVER: ServerCapabilities = {
+  reachable: false,
+  golemio: false,
+  google: false,
+  anthropic: false,
+  googleClientId: null,
+  googleServerFlow: false,
+  account: null,
+  accountSchema: 'off',
+  accountDelete: false,
+  googlePickerKey: null,
+  aiProvider: null,
+  contactEmail: null,
+};
 
 /** Veřejná stránka předmětu ze SISu (text od „Popis předmětu“ po „Kontakty“). */
 export interface SisSubjectPage {
@@ -186,7 +208,13 @@ export async function fetchServerCapabilities(): Promise<ServerCapabilities> {
       ok: boolean;
       serverKeys?: { golemio?: boolean; google?: boolean; anthropic?: boolean };
       google?: { clientId?: string | null; serverFlow?: boolean };
-    }>('/api/health', { timeoutMs: 6000 });
+      account?: { url: string; anonKey: string } | null;
+      accountSchema?: ServerCapabilities['accountSchema'];
+      accountDelete?: boolean;
+      googlePickerKey?: string | null;
+      aiProvider?: ServerCapabilities['aiProvider'];
+      contactEmail?: string | null;
+    }>('/api/health', { timeoutMs: 8000 });
     return {
       reachable: Boolean(data.ok),
       golemio: Boolean(data.serverKeys?.golemio),
@@ -194,6 +222,12 @@ export async function fetchServerCapabilities(): Promise<ServerCapabilities> {
       anthropic: Boolean(data.serverKeys?.anthropic),
       googleClientId: data.google?.clientId ?? null,
       googleServerFlow: Boolean(data.google?.serverFlow),
+      account: data.account?.url && data.account.anonKey ? data.account : null,
+      accountSchema: data.accountSchema ?? 'off',
+      accountDelete: Boolean(data.accountDelete),
+      googlePickerKey: data.googlePickerKey ?? null,
+      aiProvider: data.aiProvider ?? null,
+      contactEmail: data.contactEmail ?? null,
     };
   } catch {
     return NO_SERVER;

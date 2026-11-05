@@ -9,6 +9,7 @@ import {
   ArrowRight,
   FlaskConical,
   House,
+  LogIn,
   ShieldCheck,
   LoaderCircle,
   Monitor,
@@ -28,6 +29,7 @@ import { navigateTo, type View } from '../../hooks/useAppShell';
 import { useNow } from '../../hooks/useNow';
 import { runGoogleSync, useSyncStore } from '../../services/syncCenter';
 import { useAppStore } from '../../store/appStore';
+import { useAccount } from '../../services/account';
 import { useClockStore } from '../../store/clockStore';
 import { useUiStore } from '../../store/uiStore';
 import { Menu } from '../ui/overlays';
@@ -111,6 +113,27 @@ export function DemoRibbon() {
         </button>
       </div>
     </div>
+  );
+}
+
+function AccountButton() {
+  const status = useAccount((s) => s.status);
+  const user = useAccount((s) => s.user);
+  const syncing = useAccount((s) => s.syncing);
+  if (status === 'off' || status === 'loading') return null;
+  if (status !== 'ready' || !user) {
+    return (
+      <a href="#/ucet" className="inline-flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-[12.5px] font-bold text-accent-fg hover:brightness-110">
+        <LogIn className="size-3.5" aria-hidden /> Přihlásit se
+      </a>
+    );
+  }
+  const initials = (user.name ?? user.email).split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('');
+  return (
+    <a href="#/ucet" className="relative inline-flex size-8 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-[12px] font-bold text-accent ring-2 ring-accent/30" title={`Účet: ${user.email}`} aria-label="Účet">
+      {user.avatar ? <img src={user.avatar} alt="" className="size-full object-cover" referrerPolicy="no-referrer" /> : initials}
+      {syncing && <span className="absolute -bottom-0.5 -right-0.5 size-2.5 animate-pulse rounded-full bg-accent ring-2 ring-[var(--surface)]" aria-hidden />}
+    </a>
   );
 }
 
@@ -230,6 +253,7 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
               <DemoClockChip />
               <ModeSwitch />
             </div>
+            <AccountButton />
             <ThemeToggle />
             <button
               type="button"

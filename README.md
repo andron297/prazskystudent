@@ -88,6 +88,14 @@ Dataset zastávek se obnovuje z otevřených dat PID:
 npm run stops
 ```
 
+## Účty (synchronizace mezi zařízeními)
+
+Přihlášení přes Google nebo e-mail, data šifrovaná end-to-end (podrobnosti v [SECURITY.md](SECURITY.md)).
+Zapnutí pro správce: Vercel → Storage → Create Database → **Supabase** (region Frankfurt) → připojit k projektu → Redeploy;
+v Supabase zapnout poskytovatele Google a nastavit Site URL. Tabulky (`stihnu_vaults`, `stihnu_keys`) i jejich
+Row Level Security si aplikace založí sama (SQL je v `server/supabase.ts`). Krok za krokem je to i v aplikaci:
+Propojení → Pro správce aplikace.
+
 ## Nasazení na Vercel
 
 1. Repozitář na GitHubu → ve Vercelu **Add New → Project → Import**. `vercel.json` nastavuje build, hlavičky i funkce v `api/`.

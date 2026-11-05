@@ -4,6 +4,7 @@ import { toDateKey } from '../lib/dates';
 import { uid } from '../lib/id';
 import type { ParseMode, ParsedItem } from '../lib/scheduleTextParser';
 import { requestJson } from './http';
+import { accountAuthHeader } from './authToken';
 
 interface AiItem {
   title: string;
@@ -35,6 +36,7 @@ export async function aiParseText(
     headers: {
       'content-type': 'application/json',
       ...(options.anthropicKey?.trim() ? { 'x-ai-key': options.anthropicKey.trim() } : {}),
+      ...accountAuthHeader(),
     },
     body: JSON.stringify({ text, mode, academicYearStart: options.academicYearStart, today: toDateKey(options.today) }),
     timeoutMs: 75_000,

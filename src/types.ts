@@ -396,6 +396,8 @@ export interface Settings {
   music?: { url: string; title?: string } | null;
   /** Upozornění v telefonu/prohlížeči, kdy vyrazit. */
   notifyLeave?: boolean;
+  /** Propojení s Googlem pro další zařízení (zapečetěné serverem a svázané s účtem). */
+  googleSealed?: string;
   weather: WeatherSettings;
   /** Jméno pro pozdrav (jinak z Moodlu / Googlu). */
   displayName: string;

@@ -5,6 +5,7 @@
  *  - Bez serveru: klientský access token (platí ~1 h, pak stačí jedno kliknutí).
  * Access token se drží jen v paměti, nikdy v localStorage.
  */
+import { accountAuthHeader } from '../authToken';
 import type { GoogleAccount, GoogleSyncSettings } from '../../types';
 import { GoogleAuthError } from '../../lib/sync/remote';
 
@@ -48,6 +49,21 @@ interface GoogleIdentity {
         error_callback?: (error: GisError) => void;
       }) => { requestCode: () => void };
       revoke: (token: string, done?: () => void) => void;
+    };
+    /** Přihlášení „Pokračovat přes Google“ (ID token pro účet Stihnu). */
+    id?: {
+      initialize: (config: {
+        client_id: string;
+        callback: (response: { credential?: string }) => void;
+        nonce?: string;
+        ux_mode?: 'popup' | 'redirect';
+        auto_select?: boolean;
+        itp_support?: boolean;
+        use_fedcm_for_prompt?: boolean;
+        context?: 'signin' | 'signup' | 'use';
+      }) => void;
+      renderButton: (parent: HTMLElement, options: Record<string, string | number | boolean>) => void;
+      disableAutoSelect: () => void;
     };
   };
 }
@@ -96,6 +112,16 @@ export function onAuthChange(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
+/** Zapečetěný (serverem šifrovaný, s účtem svázaný) Google refresh token – ukládá ho účet. */
+let sealedGetter: () => string | undefined = () => undefined;
+let sealedSetter: (sealed: string) => void = () => undefined;
+export function registerSealedGoogleToken(get: () => string | undefined, put: (sealed: string) => void): void {
+  sealedGetter = get;
+  sealedSetter = put;
+}
+const sealedGoogleToken = () => sealedGetter();
+const storeSealedGoogleToken = (sealed: string) => sealedSetter(sealed);
+
 export function loadIdentityScript(): Promise<void> {
   if (window.google?.accounts?.oauth2) return Promise.resolve();
   if (!scriptPromise) {
@@ -127,11 +153,12 @@ function setToken(token: string, expiresIn: number | string | undefined, scope: 
 }
 
 async function serverCall<T>(action: 'exchange' | 'refresh' | 'logout', extra: Record<string, string> = {}): Promise<T> {
+  const sealed = action === 'refresh' ? sealedGoogleToken() : undefined;
   const response = await fetch('/api/google', {
     method: 'POST',
     credentials: 'same-origin',
-    headers: { 'content-type': 'application/json', 'x-stihnu': '1' },
-    body: JSON.stringify({ action, ...extra }),
+    headers: { 'content-type': 'application/json', 'x-stihnu': '1', ...accountAuthHeader() },
+    body: JSON.stringify({ action, ...(sealed ? { sealed } : {}), ...extra }),
   });
   const data = (await response.json().catch(() => ({}))) as T & { message?: string; error?: string };
   if (response.status === 401) throw new GoogleAuthError(data.message ?? 'Přihlášení ke Googlu vypršelo.');
@@ -167,7 +194,9 @@ export async function signIn(options: SignInOptions): Promise<TokenInfo> {
       });
       client.requestCode();
     });
-    const data = await serverCall<{ access_token: string; expires_in: number; scope: string; persistent: boolean }>('exchange', { code });
+    const data = await serverCall<{ access_token: string; expires_in: number; scope: string; persistent: boolean; sealed?: string }>('exchange', { code });
+    // Zapečetěné propojení pro další zařízení (jde do šifrovaného trezoru účtu).
+    if (data.sealed) storeSealedGoogleToken(data.sealed);
     return setToken(data.access_token, data.expires_in, data.scope, data.persistent);
   }
 

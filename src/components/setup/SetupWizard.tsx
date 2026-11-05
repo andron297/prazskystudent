@@ -39,6 +39,7 @@ import { useConnections, type ServiceId, type ServiceStatus } from '../../hooks/
 import { importSisIcsFile } from '../../services/icsFileImport';
 import { connectGoogle, refreshIcsSource } from '../../services/syncCenter';
 import { useAppStore } from '../../store/appStore';
+import { useAccount } from '../../services/account';
 import { toast, useUiStore } from '../../store/uiStore';
 import { cn } from '../ui/primitives';
 
@@ -235,9 +236,15 @@ function ExternalStep({ href, children }: { href: string; children: ReactNode })
 function StartStep({ onOwn, onDemo }: { onOwn: () => void; onDemo: () => void }) {
   const mode = useAppStore((s) => s.settings.mode);
   const own = () => {
+    const account = useAccount.getState().status;
     if (useAppStore.getState().settings.mode === 'demo') {
       const removed = useAppStore.getState().startOwnData();
       if (removed > 0) toast.success('Ukázková data jsem uklidil – teď tu bude jen to tvoje.');
+    }
+    // S účty: nejdřív přihlášení, pak průvodce pokračuje sám.
+    if (account !== 'off' && account !== 'ready') {
+      useUiStore.setState({ resumeSetup: true, setupOpen: false });
+      return;
     }
     onOwn();
   };

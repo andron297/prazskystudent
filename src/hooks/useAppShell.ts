@@ -41,11 +41,11 @@ export function useThemeEffect(pref: ThemePref): 'light' | 'dark' {
 /* Hash routing (#/dnes, #/predmety/<id>, #/harmonogram, #/integrace)  */
 /* ------------------------------------------------------------------ */
 
-export type View = 'dnes' | 'doprava' | 'predmety' | 'kalendar' | 'propojeni' | 'import';
+export type View = 'dnes' | 'ukoly' | 'doprava' | 'predmety' | 'kalendar' | 'propojeni' | 'import' | 'ucet' | 'podminky' | 'soukromi';
 
-const VIEWS: View[] = ['dnes', 'doprava', 'predmety', 'kalendar', 'propojeni', 'import'];
+const VIEWS: View[] = ['dnes', 'ukoly', 'doprava', 'predmety', 'kalendar', 'propojeni', 'import', 'ucet', 'podminky', 'soukromi'];
 /** Staré adresy z první verze. */
-const ALIASES: Record<string, View> = { harmonogram: 'kalendar', integrace: 'propojeni', nastaveni: 'propojeni', mapa: 'doprava' };
+const ALIASES: Record<string, View> = { harmonogram: 'kalendar', integrace: 'propojeni', nastaveni: 'propojeni', mapa: 'doprava', account: 'ucet', prihlaseni: 'ucet', zasady: 'soukromi' };
 
 function parseHash(): { view: View; param?: string } {
   const raw = window.location.hash.replace(/^#\/?/, '');

@@ -7,6 +7,7 @@
  */
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { HttpError, errorResponse, json, methodNotAllowed, readJsonBody } from './http.js';
+import { verifyUser } from './supabase.js';
 
 const COOKIE = 'stihnu_grt';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -89,19 +90,33 @@ export async function handleGoogle(request: Request): Promise<Response> {
     const clientId = googleClientId();
     const secret = process.env.GOOGLE_CLIENT_SECRET?.trim();
     if (!clientId || !secret) throw new HttpError(501, 'google_server_flow_off', 'Serverové přihlášení Google není nastavené (GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET).');
-    const body = await readJsonBody<{ action?: string; code?: string }>(request, 20_000);
+    const body = await readJsonBody<{ action?: string; code?: string; sealed?: string }>(request, 20_000);
 
     if (body.action === 'exchange') {
       if (!body.code) throw new HttpError(400, 'missing_code', 'Chybí autorizační kód.');
       const data = await tokenRequest({ code: body.code, client_id: clientId, client_secret: secret, redirect_uri: 'postmessage', grant_type: 'authorization_code' });
       const headers: Record<string, string> = {};
       if (data.refresh_token) headers['set-cookie'] = cookieHeader(sealToken(data.refresh_token), 180 * 86_400, request);
-      return json({ access_token: data.access_token, expires_in: data.expires_in ?? 3600, scope: data.scope ?? '', persistent: Boolean(data.refresh_token) }, 200, headers);
+      // Přihlášený do účtu Stihnu: zapečetěný token svázaný s účtem, ať propojení funguje i na dalších
+      // zařízeních (uloží se do šifrovaného trezoru). Bez přihlášení k tomu účtu je k ničemu.
+      const user = data.refresh_token ? await verifyUser(request) : null;
+      const sealedForAccount = user && data.refresh_token ? sealToken(JSON.stringify({ rt: data.refresh_token, uid: user.id })) : undefined;
+      return json({ access_token: data.access_token, expires_in: data.expires_in ?? 3600, scope: data.scope ?? '', persistent: Boolean(data.refresh_token), sealed: sealedForAccount }, 200, headers);
     }
 
     if (body.action === 'refresh') {
       const sealed = readCookie(request, COOKIE);
-      const refresh = sealed ? openToken(sealed) : null;
+      let refresh = sealed ? openToken(sealed) : null;
+      if (!refresh && typeof body.sealed === 'string' && body.sealed.length < 4096) {
+        const user = await verifyUser(request);
+        const opened = user ? openToken(body.sealed) : null;
+        try {
+          const parsed = opened ? (JSON.parse(opened) as { rt?: string; uid?: string }) : null;
+          if (parsed?.rt && parsed.uid === user?.id) refresh = parsed.rt;
+        } catch {
+          refresh = null;
+        }
+      }
       if (!refresh) throw new HttpError(401, 'google_reauth', 'Přihlášení ke Googlu vypršelo.');
       try {
         const data = await tokenRequest({ refresh_token: refresh, client_id: clientId, client_secret: secret, grant_type: 'refresh_token' });

@@ -9,6 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { HttpError, errorResponse, json, methodNotAllowed, readJsonBody } from './http.js';
+import { accountConfig, verifyUser } from './supabase.js';
 
 const MODEL = 'claude-opus-5-5';
 const MAX_TEXT_CHARS = 30_000;
@@ -74,17 +75,29 @@ export function serverAiProvider(): AiProvider | null {
   return null;
 }
 
-function resolveKey(request: Request): { provider: AiProvider; key: string } | null {
+/** Ochrana sdíleného klíče správce: nejvýš N dotazů za hodinu na uživatele / adresu. */
+const usage = new Map<string, number[]>();
+function allow(id: string, perHour: number): boolean {
+  const now = Date.now();
+  const list = (usage.get(id) ?? []).filter((t) => now - t < 3_600_000);
+  if (list.length >= perHour) return false;
+  list.push(now);
+  usage.set(id, list);
+  if (usage.size > 5000) usage.clear();
+  return true;
+}
+
+function resolveKey(request: Request): { provider: AiProvider; key: string; shared: boolean } | null {
   const own = (request.headers.get('x-ai-key') ?? request.headers.get('x-anthropic-key') ?? '').trim();
   if (own) {
     const provider = providerForKey(own);
     if (!provider) throw new HttpError(400, 'unknown_ai_key', 'Tenhle klíč nepoznávám. Funguje klíč od Claude (sk-ant-…), ChatGPT (sk-…) nebo Gemini (AIza…).');
-    return { provider, key: own };
+    return { provider, key: own, shared: false };
   }
   const provider = serverAiProvider();
   if (!provider) return null;
   const env = provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : provider === 'openai' ? 'OPENAI_API_KEY' : 'GEMINI_API_KEY';
-  return { provider, key: process.env[env]!.trim() };
+  return { provider, key: process.env[env]!.trim(), shared: true };
 }
 
 /** JSON Schema výstupu (pro OpenAI a Gemini; Claude používá zod přímo). */
@@ -192,6 +205,13 @@ export async function handleAiParse(request: Request): Promise<Response> {
     const resolved = resolveKey(request);
     if (!resolved) {
       throw new HttpError(401, 'missing_ai_key', 'AI není nastavená – vlož vlastní klíč (Claude, ChatGPT nebo Gemini). Lokální parser funguje i bez něj.');
+    }
+    if (resolved.shared) {
+      // AI zdarma od správce: jen pro přihlášené (když jsou účty zapnuté) a s limitem, ať ji nikdo nezneužije.
+      const user = accountConfig() ? await verifyUser(request) : null;
+      if (accountConfig() && !user) throw new HttpError(401, 'login_required', 'AI zdarma je pro přihlášené – přihlas se ke svému účtu.');
+      const who = user?.id ?? request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anon';
+      if (!allow(who, user ? 40 : 15)) throw new HttpError(429, 'ai_rate_limited', 'Na tuto hodinu je limit AI vyčerpaný. Zkus to později.');
     }
     const body = await readJsonBody<AiParseBody>(request, 120_000);
     if (typeof body.text !== 'string' || body.text.trim().length < 5) {

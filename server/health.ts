@@ -2,6 +2,7 @@
 import { googleClientId, googleServerFlowAvailable } from './google.js';
 import { json, methodNotAllowed } from './http.js';
 import { serverAiProvider } from './aiParse.js';
+import { accountConfig, ensureSchema, serviceKey } from './supabase.js';
 
 export async function handleHealth(request: Request): Promise<Response> {
   if (request.method !== 'GET') return methodNotAllowed(['GET']);
@@ -21,5 +22,11 @@ export async function handleHealth(request: Request): Promise<Response> {
       serverFlow: googleServerFlowAvailable(),
     },
     proxyAllowlist: Boolean(process.env.PROXY_ALLOWED_HOSTS?.trim()),
+    /** Veřejná konfigurace účtů (URL a veřejný klíč Supabase – obojí je veřejné z principu). */
+    account: accountConfig(),
+    accountSchema: await ensureSchema(),
+    accountDelete: Boolean(serviceKey()),
+    googlePickerKey: process.env.GOOGLE_PICKER_API_KEY?.trim() || null,
+    contactEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.PUBLIC_CONTACT_EMAIL?.trim() ?? '') ? process.env.PUBLIC_CONTACT_EMAIL!.trim() : null,
   });
 }

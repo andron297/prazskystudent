@@ -232,7 +232,64 @@ function CopyName({ name }: { name: string }) {
 function OwnerCard() {
   const server = useUiStore((s) => s.server);
   const [open, setOpen] = useState(false);
+  const supabaseCallback = server.account ? `${server.account.url}/auth/v1/callback` : null;
   const rows: { ok: boolean; title: string; why: string; vars: string[]; how: React.ReactNode }[] = [
+    {
+      ok: Boolean(server.account) && server.accountSchema === 'ok',
+      title: 'Účty a synchronizace mezi zařízeními (nejdůležitější)',
+      why: server.account
+        ? server.accountSchema === 'ok'
+          ? 'Databáze účtů je připravená.'
+          : 'Supabase je připojené, ale databáze účtů ještě není připravená – zkontroluj krok 1.'
+        : 'Bez toho jsou data jen v jednom zařízení.',
+      vars: ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'POSTGRES_URL'],
+      how: (
+        <ol className="ml-4 list-decimal space-y-1.5">
+          <li>
+            Ve Vercelu otevři projekt <strong>prazskystudent</strong> → záložka <strong>Storage</strong> → <strong>Create Database</strong> → <strong>Supabase</strong> → plán Free, region <strong>Frankfurt</strong> → <strong>Create</strong>. Pak ji připoj k projektu
+            (<strong>Connect</strong>, všechna prostředí). Proměnné se doplní samy, tabulky si aplikace založí sama.
+          </li>
+          <li>
+            Dej <strong>Redeploy</strong> (Deployments → ⋯ → Redeploy).
+          </li>
+          <li>
+            Ze Storage otevři Supabase (<strong>Open in Supabase</strong>) → <strong>Authentication → Sign In / Providers → Google</strong> → zapni, do <strong>Client IDs</strong> vlož Client ID a do <strong>Client Secret</strong> secret
+            (stejné jako u GOOGLE_CLIENT_ID a GOOGLE_CLIENT_SECRET) → <strong>Save</strong>.
+          </li>
+          <li>
+            V Supabase <strong>Authentication → URL Configuration</strong>: Site URL <CopyName name={typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app'} />, do Redirect URLs přidej{' '}
+            <CopyName name={`${typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app'}/**`} />.
+          </li>
+          {supabaseCallback && (
+            <li>
+              V Google Cloud → Clients → tvůj klient → <strong>Authorized redirect URIs</strong> přidej <CopyName name={supabaseCallback} /> a ulož.
+            </li>
+          )}
+        </ol>
+      ),
+    },
+    {
+      ok: server.aiProvider !== null,
+      title: 'AI zdarma pro všechny',
+      why: 'Chytré čtení sylabů, stránek z Moodlu a PDF bez vlastního klíče.',
+      vars: ['GEMINI_API_KEY'],
+      how: (
+        <>
+          V{' '}
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
+            Google AI Studiu
+          </a>{' '}
+          klikni <strong>Create API key</strong> (zdarma, bez platební karty) a klíč vlož do Vercelu jako GEMINI_API_KEY. Používat ji mohou jen přihlášení, s hodinovým limitem.
+        </>
+      ),
+    },
+    {
+      ok: Boolean(server.contactEmail),
+      title: 'Kontaktní e-mail',
+      why: 'Zobrazí se v zásadách ochrany osobních údajů a v podmínkách (vyžaduje to GDPR).',
+      vars: ['PUBLIC_CONTACT_EMAIL'],
+      how: <>Vlož e-mail, na který ti mohou uživatelé psát kvůli svým údajům.</>,
+    },
     {
       ok: server.googleServerFlow,
       title: 'Trvalé přihlášení Googlem',
@@ -249,21 +306,6 @@ function OwnerCard() {
             Audience
           </a>{' '}
           přepni aplikaci na <strong>In production</strong> (jinak Google přihlášení po 7 dnech zruší).
-        </>
-      ),
-    },
-    {
-      ok: server.anthropic,
-      title: 'AI pro všechny (nepovinné)',
-      why: 'Každý si může vložit vlastní klíč v aplikaci. Tady nastavíš AI, kterou dostanou všichni bez vlastního klíče (platíš ji ty).',
-      vars: ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GEMINI_API_KEY'],
-      how: (
-        <>
-          Stačí jedna z nich. Klíč pro Claude, ChatGPT nebo Gemini (Gemini má i bezplatnou úroveň v{' '}
-          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
-            Google AI Studiu
-          </a>
-          ).
         </>
       ),
     },
