@@ -432,6 +432,8 @@ export interface Settings {
   music?: { url: string; title?: string } | null;
   /** Upozornění v telefonu/prohlížeči, kdy vyrazit. */
   notifyLeave?: boolean;
+  /** Upozornění na termíny (večer předem a 3 hodiny před). */
+  notifyDeadlines?: boolean;
   /** Propojení s Googlem pro další zařízení (zapečetěné serverem a svázané s účtem). */
   googleSealed?: string;
   weather: WeatherSettings;

@@ -14,6 +14,8 @@ import { SetupWizard } from './components/setup/SetupWizard';
 import { initAccount, useAccount } from './services/account';
 import { IntroSplash } from './components/intro/IntroSplash';
 import { AppBackdrop, useAppearanceEffect } from './components/appearance/AppBackdrop';
+import { CelebrationHost, ConnectionWatcher } from './components/setup/ConnectionPulse';
+import { AlertsPanel, useDeadlineReminders } from './components/notifications/AlertsCenter';
 import { CountdownEditor } from './components/dashboard/Countdowns';
 import { startSubjectAssist } from './services/subjectAssist';
 import { startLeaveBadge } from './services/leaveBadge';
@@ -63,6 +65,7 @@ export default function App() {
   const [editorMounted, setEditorMounted] = useState(false);
   useThemeEffect(theme);
   useAppearanceEffect();
+  useDeadlineReminders();
   useBackgroundSync();
   useSisBridge();
 
@@ -127,6 +130,9 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <IntroSplash />
       <AppBackdrop />
+      <ConnectionWatcher />
+      <CelebrationHost />
+      <AlertsPanel />
       {gated ? (
         <>
           <Suspense fallback={null}>

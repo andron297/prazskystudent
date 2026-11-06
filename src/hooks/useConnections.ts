@@ -33,7 +33,16 @@ export interface ServiceStatus {
   detail: string;
   /** Volitelné – nepovinné služby se nepočítají do „zbývá“. */
   optional: boolean;
+  /** Od kdy je propojeno (ISO). */
+  since?: string;
+  /** Kdy naposledy přišla/odešla data (ISO). */
+  lastFlow?: string;
+  /** Data proudí průběžně (doprava, počasí). */
+  live?: boolean;
 }
+
+const latest = (...values: (string | undefined)[]) => values.filter((v): v is string => Boolean(v)).sort().pop();
+const earliest = (values: (string | undefined)[]) => values.filter((v): v is string => Boolean(v)).sort()[0];
 
 const ONE_DAY = 86_400_000;
 
@@ -51,6 +60,8 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
   const events = useAppStore((s) => s.events);
   const subjects = useAppStore((s) => s.subjects);
   const server = useUiStore((s) => s.server);
+  const connectedSince = useAppStore((s) => s.meta.connectedSince);
+  const requirements = useAppStore((s) => s.requirements);
   const needsAuth = useSyncStore((s) => s.needsAuth);
   const googleError = useSyncStore((s) => s.lastError);
 
@@ -97,13 +108,14 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
     const notifyGranted = notifySupported && Notification.permission === 'granted';
 
     const services: ServiceStatus[] = [
-      { id: 'weather', title: 'Počasí', state: 'auto', detail: 'Předpověď a rada, co na sebe – funguje samo.', optional: false },
+      { id: 'weather', title: 'Počasí', state: 'auto', detail: 'Předpověď a rada, co na sebe – funguje samo.', optional: false, live: true },
       {
         id: 'transit',
         title: 'Doprava PID',
         state: 'auto',
         detail: server.golemio ? 'Trasy, přestupy, živá zpoždění i klimatizace – funguje samo.' : 'Trasy, přestupy i živá zpoždění – funguje samo.',
         optional: false,
+        live: true,
       },
       {
         id: 'location',
@@ -111,22 +123,34 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
         state: origin.source === 'gps' ? 'connected' : origin.source === 'custom' || origin.presetId ? 'connected' : pending('location'),
         detail: origin.source === 'gps' ? 'Poloha telefonu (GPS)' : origin.source === 'custom' ? (origin.custom?.label ?? 'Vlastní místo') : findPreset(origin.presetId).label,
         optional: false,
+        since: connectedSince?.location,
       },
-      { id: 'sis', title: 'Rozvrh a sylaby (SIS)', state: sisState, detail: sisDetail, optional: false },
+      {
+        id: 'sis',
+        title: 'Rozvrh a sylaby (SIS)',
+        state: sisState,
+        detail: sisDetail,
+        optional: false,
+        since: connectedSince?.sis ?? earliest(sisEvents.map((e) => e.createdAt)),
+        lastFlow: latest(sisSource?.lastSync, lastSisImport || undefined),
+      },
       {
         id: 'moodle',
         title: 'Moodle',
         state: moodleState,
         detail: moodleParts.length ? `Propojeno: ${moodleParts.join(' + ')}` : 'Úkoly, testy a termíny odevzdání.',
         optional: false,
+        since: connectedSince?.moodle ?? earliest(requirements.filter((r) => r.source === 'moodle' && !r.demo).map((r) => r.createdAt)),
+        lastFlow: latest(moodleIcs?.lastSync, moodle?.lastSync),
       },
-      { id: 'google', title: 'Google Kalendář a Úkoly', state: googleState, detail: googleError && googleState === 'attention' ? googleDetail : googleDetail, optional: true },
+      { id: 'google', title: 'Google Kalendář a Úkoly', state: googleState, detail: googleDetail, optional: true, since: google.connectedAt, lastFlow: google.lastSync },
       {
         id: 'music',
         title: 'Hudba (Spotify)',
         state: music?.url ? 'connected' : pending('music'),
         detail: music?.url ? (music.title ?? 'Váš playlist') : 'Playlist na učení a na cestu – bez přihlašování.',
         optional: true,
+        since: connectedSince?.music,
       },
       {
         id: 'notifications',
@@ -134,6 +158,7 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
         state: !notifySupported ? 'unavailable' : notify && notifyGranted ? 'connected' : notify && !notifyGranted ? 'attention' : pending('notifications'),
         detail: !notifySupported ? 'Tento prohlížeč upozornění neumí.' : notify && notifyGranted ? 'Ozvu se 5 minut před odchodem.' : 'Zazvoní, když je čas vyrazit.',
         optional: true,
+        since: connectedSince?.notifications,
       },
       {
         id: 'ai',
@@ -145,13 +170,14 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
             ? 'Sylaby, Moodle i PDF čte AI aplikace.'
             : 'Bez AI čtu sylaby pravidly. Vložte klíč od Claude, ChatGPT nebo Gemini.',
         optional: true,
+        since: ownAiKey ? connectedSince?.ai : undefined,
       },
     ];
     const counted = services.filter((s) => !s.optional);
     const done = counted.filter((s) => s.state === 'auto' || s.state === 'connected').length;
     const attention = services.filter((s) => s.state === 'attention').length;
     return { services, done, total: counted.length, attention };
-  }, [mode, origin, icsSources, moodle, google, googleEnabled, music, notify, ownAiKey, skipped, events, subjects, server, needsAuth, googleError]);
+  }, [mode, origin, icsSources, moodle, google, googleEnabled, music, notify, ownAiKey, skipped, events, subjects, server, needsAuth, googleError, connectedSince, requirements]);
 }
 
 /** Je propojení čerstvé? (pro jemné „před chvílí“) */

@@ -48,6 +48,10 @@ interface UiState {
   askStudyProfile: boolean;
   /** Zvýší se, když má úvodní animace proběhnout znovu (ukázka ve Vzhledu). */
   introTick: number;
+  /** Oslava nového propojení (velké potvrzení nahoře). */
+  celebration: { id: number; title: string; detail: string } | null;
+  /** Centrum upozornění otevřené. */
+  alertsOpen: boolean;
   /** Běží krátká prohlídka aplikace. */
   tour: boolean;
   startTour: () => void;
@@ -132,6 +136,8 @@ export const useUiStore = create<UiState>()((set, get) => ({
   countdownEditor: false,
   askStudyProfile: false,
   introTick: 0,
+  celebration: null,
+  alertsOpen: false,
   tour: false,
   startTour: () => set({ tour: true, setupOpen: false }),
   navigation: null,
@@ -164,3 +170,8 @@ export const toast = {
   error: (message: string) => useUiStore.getState().pushToast(message, 'error'),
   info: (message: string) => useUiStore.getState().pushToast(message, 'info'),
 };
+
+/** Velké potvrzení, že se něco propojilo (zmizí samo). */
+export function celebrate(title: string, detail: string): void {
+  useUiStore.setState({ celebration: { id: Date.now(), title, detail } });
+}

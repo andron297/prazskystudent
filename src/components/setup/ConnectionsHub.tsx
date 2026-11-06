@@ -29,6 +29,7 @@ import { useAppStore } from '../../store/appStore';
 import { confirmAction, toast, useUiStore } from '../../store/uiStore';
 import { cn } from '../ui/primitives';
 import { StateDot } from './SetupWizard';
+import { ConnectionStatusLine, FlowBanner } from './ConnectionPulse';
 
 const ICON: Record<ServiceId, LucideIcon> = {
   weather: CloudSun,
@@ -100,6 +101,8 @@ export function ConnectionsHub() {
         </button>
       </div>
 
+      <FlowBanner icons={ICON} />
+
       <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {services.map((s) => {
           const Icon = ICON[s.id];
@@ -114,6 +117,7 @@ export function ConnectionsHub() {
                 <span className="min-w-0 flex-1">
                   <span className="block text-[15.5px] font-bold leading-tight">{s.title}</span>
                   <span className="mt-1 block text-[13.5px] leading-snug text-muted">{s.detail}</span>
+                  <ConnectionStatusLine s={s} />
                 </span>
                 <StateDot state={s.state} />
               </div>

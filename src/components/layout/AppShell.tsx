@@ -24,6 +24,7 @@ import {
   TramFront,
   type LucideIcon,
 } from 'lucide-react';
+import { AlertsButton } from '../notifications/AlertsCenter';
 import type { ThemePref } from '../../types';
 import { formatRelative, formatTime } from '../../lib/dates';
 import { buildTaskRows, dueGroup } from '../../lib/taskList';
@@ -295,7 +296,8 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
             >
               <Plus className="size-4" aria-hidden /> Přidat
             </button>
-            <a href="#/pruvodce" className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-fg" aria-label="Průvodce aplikací" title="Průvodce aplikací">
+            <AlertsButton />
+            <a href="#/pruvodce" className="hidden size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-fg sm:inline-flex" aria-label="Průvodce aplikací" title="Průvodce aplikací">
               <CircleHelp className="size-[18px]" aria-hidden />
             </a>
             <a href="#/propojeni" data-tour="connections" className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-fg lg:hidden" aria-label="Propojení a nastavení">

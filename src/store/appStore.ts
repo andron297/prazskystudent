@@ -120,6 +120,10 @@ export interface AppMeta {
   /** Krátkou prohlídku aplikace už student viděl (nebo odmítl). */
   tourSeen?: boolean;
   deviceId: string;
+  /** Od kdy je která služba propojená (ID služby → ISO čas). */
+  connectedSince?: Record<string, string>;
+  /** Odložená upozornění (ID → do kdy). */
+  snoozed?: Record<string, string>;
 }
 
 export interface IcsImportPayload {
@@ -242,6 +246,10 @@ export interface AppState extends AppData {
   /** Smaže ukázková data (bezpečné volat kdykoli v režimu „Moje data“). */
   purgeSampleData: () => number;
   setSetup: (patch: { done?: boolean; skipped?: string[] }) => void;
+  /** Zapíše/smaže čas propojení služby. */
+  markConnected: (id: string, connected: boolean) => void;
+  /** Odloží upozornění (null = zrušit odložení). */
+  snoozeAlert: (id: string, until: string | null) => void;
   clearAllData: () => void;
   importBackup: (data: Partial<AppData> & { settings?: Partial<Settings> }) => void;
   dismissWelcome: () => void;
@@ -815,6 +823,27 @@ export const useAppStore = create<AppState>()(
         set((st) => ({ settings: { ...st.settings, mode: 'demo' } }));
       },
       markTourSeen: () => set((s) => ({ meta: { ...s.meta, tourSeen: true } })),
+      markConnected: (id, connected) =>
+        set((s) => {
+          const since = { ...(s.meta.connectedSince ?? {}) };
+          if (connected) {
+            if (since[id]) return s;
+            since[id] = new Date().toISOString();
+          } else {
+            if (!since[id]) return s;
+            delete since[id];
+          }
+          return { meta: { ...s.meta, connectedSince: since } };
+        }),
+      snoozeAlert: (id, until) =>
+        set((s) => {
+          const now = Date.now();
+          // Prošlá odložení rovnou uklidit.
+          const snoozed = Object.fromEntries(Object.entries(s.meta.snoozed ?? {}).filter(([, v]) => new Date(v).getTime() > now));
+          if (until) snoozed[id] = until;
+          else delete snoozed[id];
+          return { meta: { ...s.meta, snoozed } };
+        }),
       setSetup: (patch) =>
         set((s) => ({ meta: { ...s.meta, setupDone: patch.done ?? s.meta.setupDone, setupSkipped: patch.skipped ?? s.meta.setupSkipped } })),
       clearAllData: () => {
