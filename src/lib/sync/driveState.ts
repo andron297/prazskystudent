@@ -32,6 +32,12 @@ export const SHARED_SETTING_KEYS = [
   'locationAliases',
   'weather',
   'displayName',
+  'menza',
+  'studyProfile',
+  'hiddenMilestones',
+  'shownMilestones',
+  'countdowns',
+  'appearance',
 ] as const satisfies readonly (keyof Settings)[];
 
 export type SharedSettings = Partial<Pick<Settings, (typeof SHARED_SETTING_KEYS)[number]>>;

@@ -32,6 +32,7 @@ const PrivacyView = lazy(() => import('./components/legal/LegalViews').then((m) 
 const TermsView = lazy(() => import('./components/legal/LegalViews').then((m) => ({ default: m.TermsView })));
 const AccountGate = lazy(() => import('./components/account/AccountScreens').then((m) => ({ default: m.AccountGate })));
 const LiveNavigation = lazy(() => import('./components/navigation/LiveNavigation').then((m) => ({ default: m.LiveNavigation })));
+const PairClaimView = lazy(() => import('./components/account/PairDevice').then((m) => ({ default: m.PairClaimView })));
 const AppearanceView = lazy(() => import('./components/appearance/AppearanceView').then((m) => ({ default: m.AppearanceView })));
 const GuideView = lazy(() => import('./components/tour/GuideView').then((m) => ({ default: m.GuideView })));
 const QuickTour = lazy(() => import('./components/tour/QuickTour').then((m) => ({ default: m.QuickTour })));
@@ -86,6 +87,8 @@ export default function App() {
   // Průvodce: poprvé (bez účtu v ukázce, s účtem po přihlášení), nebo po návratu z přihlášení.
   useEffect(() => {
     if (accountStatus === 'loading') return;
+    // Propojení přes QR: zařízení přebírá hotový účet, průvodce nastavením nedává smysl.
+    if (window.location.hash.startsWith('#/pripojit')) return;
     const ui = useUiStore.getState();
     const done = useAppStore.getState().meta.setupDone;
     if (accountStatus === 'ready' && (ui.resumeSetup || !done)) {
@@ -116,7 +119,7 @@ export default function App() {
   }, [mode]);
 
   const fullBleed = view === 'doprava';
-  const legal = view === 'podminky' || view === 'soukromi';
+  const legal = view === 'podminky' || view === 'soukromi' || view === 'pripojit';
   // Vlastní data jen s účtem: dokud není přihlášený a odemčený, místo aplikace přihlášení.
   const gated = accountStatus !== 'off' && accountStatus !== 'ready' && (mode !== 'demo' || view === 'ucet' || accountStatus === 'showRecovery' || accountStatus === 'resetPassword') && !legal;
 
@@ -149,6 +152,7 @@ export default function App() {
                   {view === 'soukromi' && <PrivacyView />}
                   {view === 'pruvodce' && <GuideView />}
                   {view === 'vzhled' && <AppearanceView />}
+                  {view === 'pripojit' && <PairClaimView param={param} />}
                 </Suspense>
               </motion.div>
             </AnimatePresence>

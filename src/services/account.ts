@@ -320,6 +320,35 @@ export async function unlockWithRecoveryCode(code: string): Promise<void> {
   await finishUnlock(user.id, keys);
 }
 
+/** Zabalí klíč k datům pro nové zařízení (propojení přes QR); jen když je účet odemčený. */
+export async function wrapDekForPairing(wrapKey: CryptoKey): Promise<string> {
+  if (!dek || useAccount.getState().status !== 'ready') throw new Error('Nejdřív se přihlaste a odemkněte účet.');
+  return wrapDek(dek, wrapKey);
+}
+
+/**
+ * Nové zařízení z QR kódu: odemkne klíč k datům (klíčem z QR), přihlásí se
+ * jednorázovým tokenem a stáhne data. Klíč se uloží dřív než relace, aby
+ * přihlášení rovnou skončilo odemčené.
+ */
+export async function signInWithPairing(userId: string, tokenHash: string, wrapped: string, wrapKey: CryptoKey): Promise<void> {
+  if (!client) throw new Error('Účty teď nejsou dostupné.');
+  const newDek = await unwrapDek(wrapped, wrapKey);
+  const current = useAccount.getState().user;
+  if (current && current.id !== userId) await signOutAccount(false);
+  await rememberDek(userId, newDek);
+  useAccount.setState({ status: 'loading' });
+  let result = await client.auth.verifyOtp({ token_hash: tokenHash, type: 'email' });
+  if (result.error) result = await client.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' });
+  if (result.error || !result.data.session) {
+    await forgetDek(userId);
+    useAccount.setState({ status: 'signedOut' });
+    throw new Error(result.error ? friendlyAuthError(result.error.message) : 'Přihlášení se nepodařilo. Zkuste nový QR kód.');
+  }
+  dek = newDek;
+  await afterSignIn(result.data.session);
+}
+
 /** Nový záchranný kód (starý přestane platit). */
 export async function regenerateRecoveryCode(): Promise<string> {
   const user = useAccount.getState().user;

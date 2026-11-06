@@ -3,7 +3,6 @@
  * heslo, odhlášení, export a smazání účtu.
  */
 import { useState, type ReactNode } from 'react';
-import qrcode from 'qrcode-generator';
 import { Cloud, Download, KeyRound, LogOut, MonitorSmartphone, RefreshCw, ShieldCheck, Trash2, UserRound, type LucideIcon } from 'lucide-react';
 import { formatRelative } from '../../lib/dates';
 import { passwordLeaked } from '../../lib/vaultCrypto';
@@ -12,6 +11,7 @@ import { appNow } from '../../store/clockStore';
 import { confirmAction, toast, useUiStore } from '../../store/uiStore';
 import { cn, SerifTitle } from '../ui/primitives';
 import { RecoveryCodeCard } from './AccountScreens';
+import { PairDeviceDialog, ScanPairButton } from './PairDevice';
 
 function Section({ icon: Icon, title, children, tone }: { icon: LucideIcon; title: string; children: ReactNode; tone?: 'danger' }) {
   return (
@@ -34,7 +34,7 @@ export function AccountView() {
   const syncError = useAccount((s) => s.syncError);
   const server = useUiStore((s) => s.server);
   const [newCode, setNewCode] = useState<string | null>(null);
-  const [qrFor, setQrFor] = useState<string | null>(null);
+  const [pairOpen, setPairOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmEmail, setConfirmEmail] = useState('');
@@ -67,15 +67,6 @@ export function AccountView() {
     }
   };
 
-  const deviceLink = (code: string) => `${window.location.origin}/#/ucet/kod=${code}`;
-  const qr = (() => {
-    if (!qrFor) return null;
-    const q = qrcode(0, 'M');
-    q.addData(deviceLink(qrFor));
-    q.make();
-    return q.createDataURL(6, 2);
-  })();
-
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <header className="flex items-center gap-4">
@@ -99,33 +90,15 @@ export function AccountView() {
         </button>
       </Section>
 
-      <Section icon={MonitorSmartphone} title="Přidat další zařízení">
-        <p className="text-muted">Na novém telefonu nebo počítači se přihlaste stejným účtem. Odemknete ho záchranným kódem – nebo tady vytvořte QR kód a naskenujte ho fotoaparátem nového zařízení.</p>
-        {qr && qrFor ? (
-          <div className="mt-4 flex flex-col items-center gap-3 rounded-[22px] bg-white p-5 text-center text-[#1b3626]">
-            <img src={qr} alt="QR kód pro odemknutí nového zařízení" className="size-56" />
-            <p className="text-[13px] font-semibold">Naskenujte fotoaparátem nového zařízení. Kód platí, dokud nevytvoříte jiný.</p>
-            <button type="button" onClick={() => setQrFor(null)} className="text-[13px] font-bold underline">
-              Skrýt
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={async () => {
-              if (!(await confirmAction({ title: 'Vytvořit nový kód?', message: 'Starý záchranný kód přestane platit. Nový uvidíte hned jako QR i jako text.', confirmLabel: 'Vytvořit' }))) return;
-              void run('qr', async () => {
-                const code = await regenerateRecoveryCode();
-                setQrFor(code);
-                setNewCode(code);
-              });
-            }}
-            disabled={busy === 'qr'}
-            className={cn(btn, 'mt-3 bg-surface-2 hover:bg-line')}
-          >
-            <MonitorSmartphone className="size-4" aria-hidden /> Zobrazit QR kód
+      <Section icon={MonitorSmartphone} title="Propojit telefon nebo jiné zařízení">
+        <p className="text-muted">Ukážu QR kód. Naskenujete ho telefonem a ten se sám přihlásí i odemkne – bez hesla a bez záchranného kódu. Pak se všechno synchronizuje samo.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="button" onClick={() => setPairOpen(true)} className={cn(btn, 'bg-accent text-accent-fg hover:brightness-110')}>
+            <MonitorSmartphone className="size-4" aria-hidden /> Propojit telefon
           </button>
-        )}
+          <ScanPairButton label="Naskenovat kód z jiného zařízení" />
+        </div>
+        <PairDeviceDialog open={pairOpen} onClose={() => setPairOpen(false)} />
       </Section>
 
       <Section icon={KeyRound} title="Záchranný kód">

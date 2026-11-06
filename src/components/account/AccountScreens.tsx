@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, Check, Copy, Download, Eye, EyeOff, FlaskConical, KeyRound, LoaderCircle, Lock, Mail, Printer, ShieldCheck, Smartphone } from 'lucide-react';
+import { ScanPairButton } from './PairDevice';
 import { navigateTo } from '../../hooks/useAppShell';
 import { normalizeRecoveryCode, passwordLeaked } from '../../lib/vaultCrypto';
 import {
@@ -225,13 +226,23 @@ export function SignInScreen() {
         )}
       </div>
 
+      {tab === 'login' && (
+        <div className="mt-6 rounded-[20px] bg-surface-2/80 p-4 text-[14px]">
+          <p className="flex items-center gap-2 font-bold">
+            <Smartphone className="size-4.5 text-accent" aria-hidden /> Už máte Stihnu na počítači?
+          </p>
+          <p className="mt-1 text-muted">Tam otevřete Účet → Propojit telefon a kód naskenujte. Přihlásí se a odemkne samo.</p>
+          <ScanPairButton className="mt-3 w-full bg-surface" />
+        </div>
+      )}
+
       <button
         type="button"
         onClick={() => {
           useAppStore.getState().startDemo();
           navigateTo('dnes');
         }}
-        className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-[18px] bg-surface-2 px-4 py-3 text-[14.5px] font-semibold text-muted transition hover:text-fg"
+        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-[18px] bg-surface-2 px-4 py-3 text-[14.5px] font-semibold text-muted transition hover:text-fg"
       >
         <FlaskConical className="size-4 text-clay" aria-hidden /> Jen se podívat na ukázku (bez účtu)
       </button>
@@ -357,7 +368,8 @@ export function UnlockScreen() {
         <p className="flex items-center gap-2 font-bold">
           <Smartphone className="size-4.5 text-accent" aria-hidden /> Máte Stihnu otevřené na jiném zařízení?
         </p>
-        <p className="mt-1 text-muted">Tam otevřete Účet → Přidat zařízení a naskenujte QR kód fotoaparátem. Odemkne se samo.</p>
+        <p className="mt-1 text-muted">Tam otevřete Účet → Propojit telefon a kód naskenujte. Odemkne se samo.</p>
+        <ScanPairButton className="mt-3 w-full bg-surface" />
       </div>
       <form
         className="mt-5 space-y-4"
