@@ -126,6 +126,7 @@ Propojení → Pro správce aplikace.
    | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | AI od jiného poskytovatele (správce); studenti mohou zadat i vlastní klíč |
    | `GOOGLE_PICKER_API_KEY` | výběr souborů a složek z Google Disku k předmětům (Google Picker API, klíč omezený na adresu aplikace) |
    | `PUBLIC_CONTACT_EMAIL` | kontakt v zásadách ochrany osobních údajů a v podmínkách |
+   | `SPOTIFY_CLIENT_ID` | přihlášení k účtu Spotify na stránce Hudba (co hraje, ovládání, playlisty). Aplikace na [developer.spotify.com](https://developer.spotify.com/dashboard) s Redirect URI `https://<vaše-adresa>/spotify` (lokálně `http://127.0.0.1:5173/spotify`), API „Web API“. Bez tajného klíče (PKCE). Pozor: nové aplikace jsou ve vývojářském režimu – přihlásit se může jen max. 25 účtů, které přidáte v *User Management*. Vložený přehrávač playlistu funguje i bez toho. |
    | `PROXY_ALLOWED_HOSTS` | allowlist domén pro Moodle/iCal proxy, např. `*.cuni.cz,calendar.google.com` |
 
 3. Deploy. PWA jde nainstalovat (Přidat na plochu) a funguje offline.

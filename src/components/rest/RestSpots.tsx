@@ -7,12 +7,12 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { Check, Coffee, Headphones, Pause, Play, RotateCcw, Ticket, Timer } from 'lucide-react';
+import { Check, Coffee, Headphones, Music2, Pause, Play, RotateCcw, Ticket, Timer } from 'lucide-react';
+import { playback, useSpotify, type SpotifyPlayback } from '../../services/spotify';
 import type { Itinerary, ScheduleEvent, Task } from '../../types';
 import { formatTime } from '../../lib/dates';
 import { spotifyEmbedUrl } from '../../lib/music';
 import { useAppStore } from '../../store/appStore';
-import { useUiStore } from '../../store/uiStore';
 import { cn } from '../ui/primitives';
 
 /* ------------------------------------------------------------------ */
@@ -61,13 +61,41 @@ export function BreathingCircle({ size = 132, light = false }: { size?: number; 
 
 function MusicMini({ light = false }: { light?: boolean }) {
   const music = useAppStore((s) => s.settings.music);
-  const openSetup = useUiStore((s) => s.openSetup);
+  const spotify = useSpotify((s) => s.status);
+  const [now, setNow] = useState<SpotifyPlayback | null>(null);
   const embed = spotifyEmbedUrl(music?.url);
+  useEffect(() => {
+    if (spotify !== 'connected') return;
+    let alive = true;
+    const load = () =>
+      playback()
+        .then((p) => alive && setNow(p))
+        .catch(() => undefined);
+    void load();
+    const t = setInterval(() => document.visibilityState === 'visible' && void load(), 15_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [spotify]);
+  const pill = cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold', light ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-surface-2 text-muted hover:text-fg');
+  if (now?.track) {
+    return (
+      <a href="#/hudba" className={cn('flex min-w-0 items-center gap-2.5 rounded-[14px] p-1.5 pr-3 transition', light ? 'bg-white/12 text-white hover:bg-white/20' : 'bg-surface-2 hover:bg-line')}>
+        {now.track.image ? <img src={now.track.image} alt="" className="size-10 shrink-0 rounded-[10px] object-cover" /> : <Music2 className="size-5 shrink-0" aria-hidden />}
+        <span className="min-w-0 text-[12.5px] leading-snug">
+          <span className={cn('block text-[11px] font-bold uppercase tracking-wide', light ? 'text-white/70' : 'text-subtle')}>{now.playing ? 'Právě hraje' : 'Pozastaveno'}</span>
+          <span className="block truncate font-bold">{now.track.name}</span>
+          <span className={cn('block truncate', light ? 'text-white/75' : 'text-muted')}>{now.track.artists}</span>
+        </span>
+      </a>
+    );
+  }
   if (!embed) {
     return (
-      <button type="button" onClick={() => openSetup('extras')} className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold', light ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-surface-2 text-muted hover:text-fg')}>
+      <a href="#/hudba" className={pill}>
         <Headphones className="size-4" aria-hidden /> Přidat hudbu
-      </button>
+      </a>
     );
   }
   return <iframe title="Hudba ze Spotify" src={embed} className="h-[80px] w-full rounded-[14px] border-0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" />;

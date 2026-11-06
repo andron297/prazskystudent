@@ -41,9 +41,9 @@ export function useThemeEffect(pref: ThemePref): 'light' | 'dark' {
 /* Hash routing (#/dnes, #/predmety/<id>, #/harmonogram, #/integrace)  */
 /* ------------------------------------------------------------------ */
 
-export type View = 'dnes' | 'plan' | 'doprava' | 'predmety' | 'propojeni' | 'import' | 'ucet' | 'podminky' | 'soukromi' | 'pruvodce' | 'vzhled' | 'pripojit';
+export type View = 'dnes' | 'plan' | 'doprava' | 'predmety' | 'propojeni' | 'import' | 'ucet' | 'podminky' | 'soukromi' | 'pruvodce' | 'vzhled' | 'pripojit' | 'hudba';
 
-const VIEWS: View[] = ['dnes', 'plan', 'doprava', 'predmety', 'propojeni', 'import', 'ucet', 'podminky', 'soukromi', 'pruvodce', 'vzhled', 'pripojit'];
+const VIEWS: View[] = ['dnes', 'plan', 'doprava', 'predmety', 'propojeni', 'import', 'ucet', 'podminky', 'soukromi', 'pruvodce', 'vzhled', 'pripojit', 'hudba'];
 /** Starší adresy (i z první verze) → nové. */
 const ALIASES: Record<string, [View, string?]> = {
   ukoly: ['plan', 'ukoly'],
@@ -59,6 +59,8 @@ const ALIASES: Record<string, [View, string?]> = {
   help: ['pruvodce'],
   tour: ['pruvodce'],
   pair: ['pripojit'],
+  spotify: ['hudba'],
+  music: ['hudba'],
 };
 
 function parseHash(): { view: View; param?: string } {

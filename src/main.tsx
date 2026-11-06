@@ -4,6 +4,10 @@ import './index.css';
 import App from './App';
 import { startRemoteSync } from './lib/persistence';
 import { pickPersisted, useAppStore } from './store/appStore';
+import { captureSpotifyCallback } from './services/spotify';
+
+// Návrat z přihlášení Spotify (/spotify?code=…): převzít a hned vyčistit adresu.
+captureSpotifyCallback();
 
 const root = document.getElementById('root');
 if (root) {

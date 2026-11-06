@@ -49,6 +49,8 @@ export interface ServerCapabilities {
   aiProvider: 'anthropic' | 'openai' | 'gemini' | null;
   /** Veřejný kontaktní e-mail správce (zásady, podmínky). */
   contactEmail: string | null;
+  /** Spotify Client ID (přihlášení k účtu Spotify). */
+  spotifyClientId: string | null;
 }
 
 export const NO_SERVER: ServerCapabilities = {
@@ -64,6 +66,7 @@ export const NO_SERVER: ServerCapabilities = {
   googlePickerKey: null,
   aiProvider: null,
   contactEmail: null,
+  spotifyClientId: null,
 };
 
 /** Veřejná stránka předmětu ze SISu (text od „Popis předmětu“ po „Kontakty“). */
@@ -214,6 +217,7 @@ export async function fetchServerCapabilities(): Promise<ServerCapabilities> {
       googlePickerKey?: string | null;
       aiProvider?: ServerCapabilities['aiProvider'];
       contactEmail?: string | null;
+      spotifyClientId?: string | null;
     }>('/api/health', { timeoutMs: 8000 });
     return {
       reachable: Boolean(data.ok),
@@ -228,6 +232,7 @@ export async function fetchServerCapabilities(): Promise<ServerCapabilities> {
       googlePickerKey: data.googlePickerKey ?? null,
       aiProvider: data.aiProvider ?? null,
       contactEmail: data.contactEmail ?? null,
+      spotifyClientId: data.spotifyClientId ?? null,
     };
   } catch {
     return NO_SERVER;

@@ -22,6 +22,7 @@ import {
   TramFront,
   type LucideIcon,
 } from 'lucide-react';
+import { navigateTo } from '../../hooks/useAppShell';
 import { spotifyEmbedUrl } from '../../lib/music';
 import { useConnections, type ServiceId, type ServiceStatus } from '../../hooks/useConnections';
 import { connectGoogle } from '../../services/syncCenter';
@@ -73,6 +74,7 @@ export function ConnectionsHub() {
       };
     if (s.state === 'unavailable') return s.id === 'notifications' ? null : { label: 'Pro správce', run: () => document.getElementById('spravce')?.scrollIntoView({ behavior: 'smooth' }) };
     if (s.id === 'ai') return { label: s.state === 'connected' ? 'Změnit' : 'Vložit klíč', run: () => openSetup('ai') };
+    if (s.id === 'music') return { label: s.state === 'connected' ? 'Otevřít' : 'Propojit', run: () => navigateTo('hudba') };
     const step = WIZARD_STEP[s.id];
     if (!step) return null;
     if (s.id === 'google' && s.state === 'connected') return { label: 'Spravovat', run: () => document.getElementById('google')?.scrollIntoView({ behavior: 'smooth' }) };

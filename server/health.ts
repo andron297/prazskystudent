@@ -27,6 +27,8 @@ export async function handleHealth(request: Request): Promise<Response> {
     accountSchema: await ensureSchema(),
     accountDelete: Boolean(serviceKey()),
     googlePickerKey: process.env.GOOGLE_PICKER_API_KEY?.trim() || null,
+    /** Spotify Client ID (veřejný údaj; přihlášení přes PKCE bez tajného klíče). */
+    spotifyClientId: /^[0-9a-f]{32}$/i.test(process.env.SPOTIFY_CLIENT_ID?.trim() ?? '') ? process.env.SPOTIFY_CLIENT_ID!.trim() : null,
     contactEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.PUBLIC_CONTACT_EMAIL?.trim() ?? '') ? process.env.PUBLIC_CONTACT_EMAIL!.trim() : null,
   });
 }

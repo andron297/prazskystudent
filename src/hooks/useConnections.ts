@@ -11,6 +11,7 @@ import { useAppStore } from '../store/appStore';
 import { appNow } from '../store/clockStore';
 import { useUiStore } from '../store/uiStore';
 import { useSyncStore } from '../services/syncCenter';
+import { useSpotify } from '../services/spotify';
 
 export type ServiceId = 'weather' | 'transit' | 'location' | 'sis' | 'moodle' | 'google' | 'music' | 'notifications' | 'ai';
 
@@ -61,6 +62,7 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
   const subjects = useAppStore((s) => s.subjects);
   const server = useUiStore((s) => s.server);
   const connectedSince = useAppStore((s) => s.meta.connectedSince);
+  const spotifyName = useSpotify((s) => (s.status === 'connected' ? (s.profile?.name ?? 'propojeno') : null));
   const requirements = useAppStore((s) => s.requirements);
   const needsAuth = useSyncStore((s) => s.needsAuth);
   const googleError = useSyncStore((s) => s.lastError);
@@ -147,8 +149,8 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
       {
         id: 'music',
         title: 'Hudba (Spotify)',
-        state: music?.url ? 'connected' : pending('music'),
-        detail: music?.url ? (music.title ?? 'Váš playlist') : 'Playlist na učení a na cestu – bez přihlašování.',
+        state: spotifyName || music?.url ? 'connected' : pending('music'),
+        detail: spotifyName ? `Spotify: ${spotifyName}${music?.url ? ` · na učení: ${music.title ?? 'váš playlist'}` : ''}` : music?.url ? (music.title ?? 'Váš playlist') : 'Spotify účet nebo playlist na učení a na cestu.',
         optional: true,
         since: connectedSince?.music,
       },
@@ -177,7 +179,7 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
     const done = counted.filter((s) => s.state === 'auto' || s.state === 'connected').length;
     const attention = services.filter((s) => s.state === 'attention').length;
     return { services, done, total: counted.length, attention };
-  }, [mode, origin, icsSources, moodle, google, googleEnabled, music, notify, ownAiKey, skipped, events, subjects, server, needsAuth, googleError, connectedSince, requirements]);
+  }, [mode, origin, icsSources, moodle, google, googleEnabled, music, notify, ownAiKey, skipped, events, subjects, server, needsAuth, googleError, connectedSince, requirements, spotifyName]);
 }
 
 /** Je propojení čerstvé? (pro jemné „před chvílí“) */
