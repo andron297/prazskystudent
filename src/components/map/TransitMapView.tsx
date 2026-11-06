@@ -23,6 +23,7 @@ import { LineBadge } from '../transit/TransitBits';
 import { JourneyPlanner } from '../transit/JourneyPlanner';
 import { useJourneyStore } from '../../store/journeyStore';
 import { applyNature, PRAGUE_BOUNDS, STYLE_URL } from './mapStyle';
+import { facultyBuildings, facultyById, PRAGUE_CENTER } from '../../lib/campus';
 
 setWorkerUrl(workerUrl);
 
@@ -278,11 +279,13 @@ export function TransitMapView() {
   // Inicializace mapy
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    // Bez polohy telefonu: hlavní budova vaší fakulty, jinak střed Prahy – nikdy náhodné místo.
+    const home = origin.usingFallback ? (facultyBuildings(facultyById(settings.faculty), settings.buildings)[0]?.coords ?? (origin.source === 'gps' ? PRAGUE_CENTER : origin.coords)) : origin.coords;
     const map = new MapLibreMap({
       container: containerRef.current,
       style: STYLE_URL[theme],
-      center: [origin.coords.lng, origin.coords.lat],
-      zoom: 15,
+      center: [home.lng, home.lat],
+      zoom: origin.usingFallback ? 13.5 : 15,
       minZoom: 10,
       maxBounds: PRAGUE_BOUNDS,
       attributionControl: { compact: true },

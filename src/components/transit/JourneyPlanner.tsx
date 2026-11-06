@@ -10,7 +10,7 @@ import type { Itinerary, RideLeg, WalkLeg } from '../../types';
 import { calendarDayDiff, capitalize, formatDayMonth, formatDuration, formatRelative, formatTime, formatWeekdayShort, isSameDay, plural, toLocalInputValue, fromLocalInputValue } from '../../lib/dates';
 import { haversineMeters } from '../../lib/geo';
 import { searchStops } from '../../lib/stops';
-import { modeNoun, rideLegs } from '../../lib/transitPlanner';
+import { modeNoun, rideLegs, platformLabel } from '../../lib/transitPlanner';
 import { useNow } from '../../hooks/useNow';
 import { useOrigin } from '../../hooks/useOrigin';
 import { useVisibleEvents } from '../../hooks/useVisibleEvents';
@@ -23,6 +23,7 @@ import { useJourneyStore } from '../../store/journeyStore';
 import { buildingForEvent, isTransitTarget } from '../../store/selectors';
 import { useUiStore } from '../../store/uiStore';
 import { cn } from '../ui/primitives';
+import { facultyBuildings, facultyById } from '../../lib/campus';
 import { DelayChip, LineBadge } from './TransitBits';
 
 const KIND_ICON = { gps: LocateFixed, origin: MapPin, stop: TrainFront, address: MapPin, place: MapPin, building: Building2, recent: History } as const;
@@ -194,7 +195,7 @@ function ItineraryCard({ it, selected, onSelect, now, badge }: { it: Itinerary; 
           {first ? (
             <span>
               {modeNoun(first.mode).charAt(0).toUpperCase() + modeNoun(first.mode).slice(1)} {first.line} z <strong className="text-fg">{first.fromStop}</strong>
-              {first.platform ? ` (${first.platform})` : ''} v {formatTime(new Date(first.predictedDeparture))}
+              {first.platform ? ` (${platformLabel(first.mode, first.platform)})` : ''} v {formatTime(new Date(first.predictedDeparture))}
             </span>
           ) : (
             <span>Celou cestu pěšky</span>
@@ -249,7 +250,7 @@ function RideStep({ ride }: { ride: RideLeg }) {
       </p>
       <p className="mt-1 text-[13px]">
         <strong className="tabular">{formatTime(new Date(ride.predictedDeparture))}</strong> {ride.fromStop}
-        {ride.platform ? <span className="text-muted"> · nástupiště {ride.platform}</span> : null}
+        {ride.platform ? <span className="text-muted"> · {platformLabel(ride.mode, ride.platform)}</span> : null}
       </p>
       {via.length > 0 && (
         <button type="button" onClick={() => setStopsOpen((v) => !v)} className="my-0.5 text-[12px] font-semibold text-accent hover:underline">
@@ -350,9 +351,12 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
   }, [events, now, settings]);
 
   const base = useMemo<Place[]>(() => {
-    const school = [...new Map(lectures.map((l) => [l.b!.id, l.b!])).values()].map<Place>((b) => ({ kind: 'building', label: b.name, detail: b.address, coords: b.coords }));
+    const fromLectures = lectures.map((l) => l.b!);
+    const faculty = facultyBuildings(facultyById(settings.faculty), settings.buildings);
+    const custom = settings.buildings.filter((b) => b.custom);
+    const school = [...new Map([...fromLectures, ...faculty, ...custom].map((b) => [b.id, b])).values()].slice(0, 6).map<Place>((b) => ({ kind: 'building', label: b.name, detail: b.address, coords: b.coords }));
     return [myPlace, ...school];
-  }, [myPlace, lectures]);
+  }, [myPlace, lectures, settings.faculty, settings.buildings]);
 
   const queryTime = useCallback(() => (timeMode === 'now' ? appNow() : (fromLocalInputValue(timeValue) ?? appNow())), [timeMode, timeValue]);
 

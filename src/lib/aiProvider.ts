@@ -3,6 +3,12 @@ export type AiProvider = 'anthropic' | 'openai' | 'gemini';
 
 export const AI_NAMES: Record<AiProvider, string> = { anthropic: 'Claude', openai: 'ChatGPT', gemini: 'Gemini' };
 
+/** Kdo čte texty, když student nemá vlastní klíč (podle serveru). */
+export function serverAiLabel(provider: AiProvider | 'ovh' | null): string | null {
+  if (!provider) return null;
+  return provider === 'ovh' ? 'bezplatná AI (OVHcloud, servery v EU)' : `AI aplikace (${AI_NAMES[provider]})`;
+}
+
 export const AI_KEY_PAGES: Record<AiProvider, string> = {
   anthropic: 'https://console.anthropic.com/settings/keys',
   openai: 'https://platform.openai.com/api-keys',

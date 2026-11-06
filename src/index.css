@@ -13,6 +13,7 @@
   --animate-shimmer: shimmer 1.6s linear infinite;
   --animate-drift: drift 22s ease-in-out infinite alternate;
   --animate-rain: rain 0.9s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
 
   @keyframes ping-soft {
     0% {
@@ -39,6 +40,15 @@
     }
     100% {
       transform: scale(1.1) translate3d(-1.5%, -1%, 0);
+    }
+  }
+  @keyframes float {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+    50% {
+      transform: translate3d(0, -4px, 0) rotate(-2deg);
     }
   }
   @keyframes rain {

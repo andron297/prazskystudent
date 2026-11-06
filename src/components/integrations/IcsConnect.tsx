@@ -15,6 +15,7 @@ import { appNow } from '../../store/clockStore';
 import { toast, useUiStore } from '../../store/uiStore';
 import { Button, Chip, cn, Field, Segmented, Select, TextInput, Toggle } from '../ui/primitives';
 import { GuideStep } from './MoodleConnect';
+import { BuildingOptions } from './SchoolCard';
 
 type Source = 'sis' | 'google' | 'ics-file';
 
@@ -238,11 +239,7 @@ export function IcsConnect() {
                     aria-label={`Budova pro ${location}`}
                   >
                     <option value="">Přiřadit budovu…</option>
-                    {settings.buildings.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
+                    <BuildingOptions buildings={settings.buildings} facultyId={settings.faculty} />
                   </Select>
                 </li>
               ))}

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useId, useMemo, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import {
   BookOpen,
@@ -25,6 +25,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { AlertsButton } from '../notifications/AlertsCenter';
+import { FocusChip } from '../focus/FocusCard';
+import { ViewBoundary } from './ViewBoundary';
 import type { ThemePref } from '../../types';
 import { formatRelative, formatTime } from '../../lib/dates';
 import { buildTaskRows, dueGroup } from '../../lib/taskList';
@@ -45,23 +47,6 @@ const NAV: { view: View; label: string; icon: LucideIcon }[] = [
   { view: 'predmety', label: 'Předměty', icon: BookOpen },
   { view: 'propojeni', label: 'Propojení', icon: Settings2 },
 ];
-
-/** Při posunu dolů tlačítko Přidat uhne, aby nezakrývalo obsah; při posunu nahoru se vrátí. */
-function useHideOnScroll(): boolean {
-  const [hidden, setHidden] = useState(false);
-  useEffect(() => {
-    let last = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
-      if (Math.abs(y - last) < 12) return;
-      setHidden(y > last && y > 120);
-      last = y;
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-  return hidden;
-}
 
 /** Počet úkolů a termínů po termínu a na dnešek (odznak v navigaci). */
 function useUrgentCount(): number {
@@ -131,11 +116,14 @@ export function DemoRibbon() {
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#7a5a2e] px-2.5 py-0.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#fbf3e3]">
           <FlaskConical className="size-3.5" aria-hidden /> Ukázka
         </span>
-        <span className="text-[13px] font-semibold text-[#5c4322] dark:text-[#f0dcb8]">Předměty, rozvrh i úkoly jsou vymyšlené – jen na vyzkoušení.</span>
+        <span className="min-w-0 flex-1 text-[13px] font-semibold text-[#5c4322] dark:text-[#f0dcb8]">Předměty, rozvrh i úkoly jsou vymyšlené – jen na vyzkoušení.</span>
+        <span className="sm:hidden">
+          <DemoClockChip />
+        </span>
         <button
           type="button"
           onClick={() => openSetup('start')}
-          className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-full bg-[#2b5a40] px-3.5 text-[12.5px] font-bold text-white shadow-sm transition hover:brightness-110"
+          className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#2b5a40] px-3.5 text-[12.5px] font-bold text-white shadow-sm transition hover:brightness-110"
         >
           Nastavit svoje data <ArrowRight className="size-3.5" aria-hidden />
         </button>
@@ -246,8 +234,6 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
   const openEditor = useUiStore((s) => s.openEditor);
   const demo = useAppStore((s) => s.settings.mode === 'demo');
   const urgent = useUrgentCount();
-  const touring = useUiStore((s) => s.tour);
-  const fabHidden = useHideOnScroll() && !touring;
 
   return (
     <div className={fullBleed ? 'flex h-dvh flex-col overflow-hidden' : 'min-h-dvh'}>
@@ -280,14 +266,19 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
               );
             })}
           </nav>
-          <div className="ml-auto flex items-center gap-1.5 lg:ml-0">
-            <SyncChip />
+          <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-1.5 lg:ml-0">
+            <FocusChip />
+            <span className="hidden sm:contents">
+              <SyncChip />
+            </span>
             <div className="hidden items-center gap-1.5 sm:flex">
               <DemoClockChip />
               <ModeSwitch />
             </div>
             <AccountButton />
-            <ThemeToggle />
+            <span className="hidden sm:contents">
+              <ThemeToggle />
+            </span>
             <button
               type="button"
               onClick={() => openEditor({ type: 'quick' })}
@@ -305,36 +296,28 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
             </a>
           </div>
         </div>
-        {/* Mobil: režim a simulovaný čas pod lištou */}
-        <div className="flex items-center justify-end gap-1.5 px-4 pb-2 sm:hidden">
-          <DemoClockChip />
-          <ModeSwitch />
-        </div>
       </header>
 
-      <main className={cn(fullBleed ? 'relative min-h-0 w-full flex-1' : 'mx-auto w-full max-w-[1320px] px-4 pb-32 pt-4 sm:px-6 lg:px-8 lg:pb-14 lg:pt-6')}>{children}</main>
+      <main className={cn(fullBleed ? 'relative min-h-0 w-full flex-1' : 'mx-auto w-full max-w-[1320px] px-4 pb-[calc(env(safe-area-inset-bottom)+6.5rem)] pt-4 sm:px-6 lg:px-8 lg:pb-14 lg:pt-6')}>
+        <ViewBoundary key={view}>{children}</ViewBoundary>
+      </main>
 
-      {/* Mobil: tlačítko Přidat nad navigací */}
-      {!fullBleed && (
-        <motion.button
+      {/* Spodní navigace (mobil): čtyři sekce a uprostřed Přidat – nic neplave nad obsahem */}
+      <nav className="glass-strong fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 items-center rounded-full border border-line px-1 py-1 shadow-[0_18px_40px_-20px_rgb(0_0_0/0.45)] lg:hidden" aria-label="Hlavní navigace" data-tour="nav-mobile">
+        {NAV.slice(0, 2).map((item) => (
+          <BottomItem key={item.view} item={item} active={view === item.view} badge={item.view === 'plan' ? urgent : 0} />
+        ))}
+        <button
           type="button"
           onClick={() => openEditor({ type: 'quick' })}
           data-tour="add"
-          whileTap={{ scale: 0.92 }}
-          animate={{ y: fabHidden ? 110 : 0, opacity: fabHidden ? 0 : 1 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-          tabIndex={fabHidden ? -1 : 0}
-          className="fixed bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+4.6rem)] right-4 z-30 grid size-14 place-items-center rounded-full bg-accent text-accent-fg shadow-[0_14px_30px_-12px_var(--accent)] lg:hidden"
-          aria-label="Přidat úkol nebo událost"
+          className="mx-auto grid size-12 place-items-center rounded-full bg-accent text-accent-fg shadow-[0_10px_22px_-10px_var(--accent)] transition active:scale-95"
+          aria-label="Přidat úkol, událost nebo termín"
         >
-          <Plus className="size-7" aria-hidden />
-        </motion.button>
-      )}
-
-      {/* Spodní navigace (mobil) */}
-      <nav className="glass-strong fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 grid grid-cols-5 items-center rounded-full border border-line px-1 py-1 shadow-[0_18px_40px_-20px_rgb(0_0_0/0.45)] lg:hidden" aria-label="Hlavní navigace" data-tour="nav-mobile">
-        {NAV.slice(0, 5).map((item) => (
-          <BottomItem key={item.view} item={item} active={view === item.view} badge={item.view === 'plan' ? urgent : 0} />
+          <Plus className="size-6" aria-hidden />
+        </button>
+        {NAV.slice(2, 4).map((item) => (
+          <BottomItem key={item.view} item={item} active={view === item.view} />
         ))}
       </nav>
       {demo && <div className="demo-frame" aria-hidden />}

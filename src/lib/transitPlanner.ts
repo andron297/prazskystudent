@@ -335,7 +335,7 @@ export function routeSteps(it: Itinerary, eventStart: Date, buildingName: string
     kind: 'walk',
     time: new Date(leave + m.prep * MIN_MS),
     title: `Jděte na zastávku ${first.fromStop}`,
-    detail: [`${it.walkToStopMinutes} min pěšky`, platform ? `nástupiště ${platform}` : null].filter(Boolean).join(' · '),
+    detail: [`${it.walkToStopMinutes} min pěšky`, platformLabel(first.mode, platform) ?? null].filter(Boolean).join(' · '),
   });
   if (m.entry > 0) {
     const depMs = new Date(first.predictedDeparture).getTime();
@@ -348,7 +348,7 @@ export function routeSteps(it: Itinerary, eventStart: Date, buildingName: string
         kind: 'transfer',
         time: new Date(rides[i - 1].predictedArrival),
         title: `Přestupte na ${modeNoun(r.mode)} ${r.line}`,
-        detail: [r.fromStop, r.platform ? `nástupiště ${r.platform}` : null, transferWalk && transferWalk.kind === 'walk' ? `${transferWalk.minutes} min na přestupte` : null].filter(Boolean).join(' · '),
+        detail: [r.fromStop, platformLabel(r.mode, r.platform) ?? null, transferWalk && transferWalk.kind === 'walk' ? `${transferWalk.minutes} min na přestup` : null].filter(Boolean).join(' · '),
       });
     }
     const rideMin = Math.round((ms(r.predictedArrival) - ms(r.predictedDeparture)) / MIN_MS);
@@ -432,4 +432,14 @@ export function lastNounPhrase(mode: string): string {
     default:
       return 'Poslední spoj';
   }
+}
+
+/**
+ * Jak nástupiště říct česky: u tramvaje a autobusu písmeno sloupku („nástupiště A“),
+ * u metra a vlaku číslo koleje („kolej 2“) – tak, jak to člověk uvidí na místě.
+ */
+export function platformLabel(mode: RideLeg['mode'] | undefined, code: string | undefined | null): string | undefined {
+  const c = code?.trim();
+  if (!c) return undefined;
+  return mode === 'metro' || mode === 'train' ? `kolej ${c}` : `nástupiště ${c}`;
 }

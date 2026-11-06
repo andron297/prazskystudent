@@ -4,6 +4,22 @@ import { json, methodNotAllowed } from './http.js';
 import { serverAiProvider } from './aiParse.js';
 import { accountConfig, ensureSchema, serviceKey } from './supabase.js';
 
+/** Kontakt provozovatele (zásady ochrany údajů, podmínky); PUBLIC_CONTACT_EMAIL ho může změnit. */
+export const DEFAULT_CONTACT_EMAIL = 'andrleondrej@gmail.com';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Nová hlavní adresa aplikace (při stěhování domény), např. https://stihnu.vercel.app. */
+export function canonicalOrigin(): string | null {
+  const raw = process.env.PUBLIC_CANONICAL_ORIGIN?.trim();
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' && !url.pathname.replace(/\/$/, '') ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function handleHealth(request: Request): Promise<Response> {
   if (request.method !== 'GET') return methodNotAllowed(['GET']);
   return json({
@@ -27,8 +43,7 @@ export async function handleHealth(request: Request): Promise<Response> {
     accountSchema: await ensureSchema(),
     accountDelete: Boolean(serviceKey()),
     googlePickerKey: process.env.GOOGLE_PICKER_API_KEY?.trim() || null,
-    /** Spotify Client ID (veřejný údaj; přihlášení přes PKCE bez tajného klíče). */
-    spotifyClientId: /^[0-9a-f]{32}$/i.test(process.env.SPOTIFY_CLIENT_ID?.trim() ?? '') ? process.env.SPOTIFY_CLIENT_ID!.trim() : null,
-    contactEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.PUBLIC_CONTACT_EMAIL?.trim() ?? '') ? process.env.PUBLIC_CONTACT_EMAIL!.trim() : null,
+    canonicalOrigin: canonicalOrigin(),
+    contactEmail: EMAIL_RE.test(process.env.PUBLIC_CONTACT_EMAIL?.trim() ?? '') ? process.env.PUBLIC_CONTACT_EMAIL!.trim() : DEFAULT_CONTACT_EMAIL,
   });
 }

@@ -1,24 +1,22 @@
 /**
  * Podmínky použití a Zásady ochrany osobních údajů – srozumitelně a česky.
- * Kontaktní e-mail doplní správce v proměnné PUBLIC_CONTACT_EMAIL.
+ * Kontaktní e-mail je výchozí (CONTACT_EMAIL); správce ho může změnit v PUBLIC_CONTACT_EMAIL.
  */
 import type { ReactNode } from 'react';
 import { useUiStore } from '../../store/uiStore';
 import { SerifTitle } from '../ui/primitives';
 
-const EFFECTIVE = '5. listopadu 2026';
+const EFFECTIVE = '6. listopadu 2026';
 const OPERATOR = 'Ondřej Andrle';
 const REPO = 'https://github.com/andron297/prazskystudent';
+/** Výchozí kontakt provozovatele (platí i offline, když server neodpoví). */
+export const CONTACT_EMAIL = 'andrleondrej@gmail.com';
 
 function Contact() {
-  const email = useUiStore((s) => s.server.contactEmail);
-  return email ? (
+  const email = useUiStore((s) => s.server.contactEmail) ?? CONTACT_EMAIL;
+  return (
     <a href={`mailto:${email}`} className="font-semibold text-accent hover:underline">
       {email}
-    </a>
-  ) : (
-    <a href={`${REPO}/issues`} target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
-      stránka projektu na GitHubu
     </a>
   );
 }
@@ -77,9 +75,10 @@ export function PrivacyView() {
         <ul>
           <li>Supabase (účty a zašifrovaná data, servery v EU – Frankfurt) a Vercel (provoz aplikace).</li>
           <li>Google – jen pokud si Kalendář, Úkoly nebo Disk propojíte.</li>
-          <li>Poskytovatel AI (Google Gemini, OpenAI nebo Anthropic) – jen text, který necháte přečíst. U bezplatné AI může poskytovatel text použít ke zlepšování svých služeb, proto do ní neposílejte citlivé údaje.</li>
+          <li>OVHcloud AI Endpoints (bezplatná AI, servery v EU – Francie) – jen text sylabu, harmonogramu nebo stránky, který necháte přečíst. Posíláme ho přes náš server bez vaší identity a poskytovatel ho podle svých podmínek neukládá.</li>
+          <li>Pokud si vložíte vlastní klíč: Google Gemini, OpenAI nebo Anthropic – jen text, který necháte přečíst, podle podmínek daného poskytovatele.</li>
           <li>Transitous a PID Golemio (trasy a odjezdy), Open-Meteo (počasí) – dostanou jen souřadnice, ne vaši identitu.</li>
-          <li>Koleje a menzy UK (jídelníček) a OpenFreeMap (mapové podklady) – nedostanou o vám nic, jen dotaz na jídelníček nebo mapu.</li>
+          <li>Koleje a menzy UK (jídelníček) a OpenFreeMap (mapové podklady) – nedostanou o vás nic, jen dotaz na jídelníček nebo mapu.</li>
         </ul>
         <p className="mt-2">Někteří poskytovatelé sídlí v USA; předání je chráněné standardními smluvními doložkami nebo rámcem EU–USA pro ochranu údajů.</p>
       </section>

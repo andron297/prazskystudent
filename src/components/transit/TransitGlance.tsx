@@ -2,7 +2,7 @@ import { motion } from 'motion/react';
 import { ArrowDown, ChevronDown, Flag, Footprints, MapPin, Navigation2 } from 'lucide-react';
 import type { Building, Itinerary, RideLeg, ScheduleEvent } from '../../types';
 import { formatTime } from '../../lib/dates';
-import { rideLegs } from '../../lib/transitPlanner';
+import { platformLabel, rideLegs } from '../../lib/transitPlanner';
 import { TRANSIT_STYLES } from '../../lib/urgency';
 import type { TransitPlanState } from '../../hooks/useTransitPlan';
 import { useNow } from '../../hooks/useNow';
@@ -127,7 +127,7 @@ export function TransitGlance({
                   <span>
                     {estimate ? 'Na zastávku ' : 'Jděte na '}
                     <strong className="font-bold">{first.fromStop}</strong>
-                    {platform ? <span className="text-white/80"> · nástupiště {platform}</span> : null}
+                    {platform ? <span className="text-white/80"> · {platformLabel(first?.mode, platform)}</span> : null}
                     <span className="text-white/80"> · {chosen.walkToStopMinutes} min</span>
                   </span>
                 </li>

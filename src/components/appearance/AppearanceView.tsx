@@ -299,7 +299,7 @@ export function AppearanceView() {
             </div>
           </Section>
 
-          <Section title={<>Úvodní <em className="italic text-moss">animace</em></>} hint="Krátké přivítání při každém otevření (asi dvě sekundy, klepnutím se dá přeskočit).">
+          <Section title={<>Úvodní <em className="italic text-moss">animace</em></>} hint="Přivítání při každém otevření: logo, „Stihnete to.“ a tři věty o vašem dni (asi čtyři sekundy, klepnutím se dá přeskočit).">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Toggle checked={a.intro} onChange={(v) => update({ intro: v })} label="Přehrát při otevření" />
               <Button icon={Play} onClick={() => useUiStore.setState((s) => ({ introTick: s.introTick + 1 }))}>

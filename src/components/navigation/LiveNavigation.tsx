@@ -30,6 +30,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
+import { platformLabel } from '../../lib/transitPlanner';
 import type { LatLng } from '../../types';
 import { formatTime, plural } from '../../lib/dates';
 import { haversineMeters } from '../../lib/geo';
@@ -382,7 +383,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     }
   }, [rideState, ride, phaseIndex, voice]);
   useEffect(() => {
-    if (phase?.kind === 'walk' && phase.target.isStop && voice && phaseIndex === 0) speak(`Jděte na zastávku ${phase.target.name}${phase.target.platform ? `, nástupiště ${phase.target.platform}` : ''}.`);
+    if (phase?.kind === 'walk' && phase.target.isStop && voice && phaseIndex === 0) speak(`Jděte na zastávku ${phase.target.name}${phase.target.platform ? `, ${platformLabel(phase.target.mode, phase.target.platform)}` : ''}.`);
     if (phase?.kind === 'ride' && voice) speak(`Nastupte do ${phase.ride.mode === 'tram' ? 'tramvaje' : phase.ride.mode === 'metro' ? 'metra' : phase.ride.mode === 'bus' ? 'autobusu' : 'spoje'} ${phase.ride.line}. Vystupujete na zastávce ${phase.ride.toStop}.`);
   }, [phaseIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -459,7 +460,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     const p = phases[phaseIndex];
     if (p) {
       const coords = p.kind === 'walk' ? p.target.coords : p.stops[p.stops.length - 1]?.coords;
-      const label = p.kind === 'walk' ? (p.target.isStop ? `${p.target.name}${p.target.platform ? ` · ${p.target.platform}` : ''}` : p.target.name) : `Vystupte: ${p.ride.toStop}`;
+      const label = p.kind === 'walk' ? (p.target.isStop ? `${p.target.name}${p.target.platform ? ` · ${platformLabel(p.target.mode, p.target.platform)}` : ''}` : p.target.name) : `Vystupte: ${p.ride.toStop}`;
       if (coords) targetRef.current = new Marker({ element: targetMarker(label, p.kind === 'ride' ? (p.ride.color ?? '#2f6b4a') : '#a36f45'), anchor: 'left', offset: [-12, 0] }).setLngLat([coords.lng, coords.lat]).addTo(map);
     }
   }, [mapReady, phaseIndex, phases]);
@@ -500,7 +501,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
   const instruction =
     walk && next
       ? next.maneuver.type === 'arrive' && next.distance >= 15
-        ? { headline: walk.target.isStop ? `Jděte na zastávku ${walk.target.name}` : `Jděte do budovy ${walk.target.name}`, detail: `${formatDistance(next.distance)}${walk.target.platform ? ` · nástupiště ${walk.target.platform}` : ''}` }
+        ? { headline: walk.target.isStop ? `Jděte na zastávku ${walk.target.name}` : `Jděte do budovy ${walk.target.name}`, detail: `${formatDistance(next.distance)}${walk.target.platform ? ` · ${platformLabel(walk.target.mode, walk.target.platform)}` : ''}` }
         : instructionText(next.maneuver, next.distance, walk.target.name)
       : null;
   const bearingToTarget = walk && fix ? bearing(fix.coords, walk.target.coords) : null;
@@ -642,7 +643,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
                   <p className="eyebrow text-subtle">{walk.target.isStop ? 'Jdete na zastávku' : 'Jdete do budovy'}</p>
                   <p className="mt-0.5 truncate text-[19px] font-bold leading-tight">
                     {walk.target.name}
-                    {walk.target.platform && <span className="text-muted"> · nástupiště {walk.target.platform}</span>}
+                    {walk.target.platform && <span className="text-muted"> · {platformLabel(walk.target.mode, walk.target.platform)}</span>}
                   </p>
                   <p className="mt-0.5 text-[13px] text-muted tabular">
                     {formatDistance(offRoute && directDistance ? directDistance : remaining)} · asi {Math.max(1, Math.round((offRoute && directDistance ? directDistance * 1.3 : remaining) / speed / 60))} min chůze
@@ -682,7 +683,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
                           <MIcon className="size-4 shrink-0 text-moss" aria-hidden />
                           <span className="min-w-0 flex-1">
                             {m.type === 'arrive'
-                              ? `Cíl: ${walk.target.name}${walk.target.platform ? `, nástupiště ${walk.target.platform}` : ''}`
+                              ? `Cíl: ${walk.target.name}${walk.target.platform ? `, ${platformLabel(walk.target.mode, walk.target.platform)}` : ''}`
                               : `${instructionText(m, 5).headline}`}
                           </span>
                           <span className="shrink-0 text-subtle tabular">{formatDistance(m.at)}</span>

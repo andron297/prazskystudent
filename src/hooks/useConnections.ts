@@ -4,16 +4,16 @@
  * i průvodce – texty jsou záměrně obyčejnou češtinou.
  */
 import { useMemo } from 'react';
-import { AI_NAMES, providerForKey } from '../lib/aiProvider';
+import { AI_NAMES, providerForKey, serverAiLabel } from '../lib/aiProvider';
 import { findPreset } from '../lib/buildings';
+import { facultyBuildings, facultyById } from '../lib/campus';
 import { formatRelative } from '../lib/dates';
 import { useAppStore } from '../store/appStore';
 import { appNow } from '../store/clockStore';
 import { useUiStore } from '../store/uiStore';
 import { useSyncStore } from '../services/syncCenter';
-import { useSpotify } from '../services/spotify';
 
-export type ServiceId = 'weather' | 'transit' | 'location' | 'sis' | 'moodle' | 'google' | 'music' | 'notifications' | 'ai';
+export type ServiceId = 'weather' | 'transit' | 'location' | 'school' | 'sis' | 'moodle' | 'google' | 'music' | 'notifications' | 'ai';
 
 export type ServiceState =
   /** Funguje samo, nic není potřeba. */
@@ -59,10 +59,11 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
   const ownAiKey = useAppStore((s) => providerForKey(s.settings.anthropicApiKey));
   const skipped = useAppStore((s) => s.meta.setupSkipped);
   const events = useAppStore((s) => s.events);
+  const facultyId = useAppStore((s) => s.settings.faculty ?? null);
+  const buildings = useAppStore((s) => s.settings.buildings);
   const subjects = useAppStore((s) => s.subjects);
   const server = useUiStore((s) => s.server);
   const connectedSince = useAppStore((s) => s.meta.connectedSince);
-  const spotifyName = useSpotify((s) => (s.status === 'connected' ? (s.profile?.name ?? 'propojeno') : null));
   const requirements = useAppStore((s) => s.requirements);
   const needsAuth = useSyncStore((s) => s.needsAuth);
   const googleError = useSyncStore((s) => s.lastError);
@@ -127,6 +128,18 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
         optional: false,
         since: connectedSince?.location,
       },
+      (() => {
+        const faculty = facultyById(facultyId);
+        const count = facultyBuildings(faculty, buildings).length + buildings.filter((b) => b.custom).length;
+        return {
+          id: 'school' as const,
+          title: 'Škola a budovy',
+          state: faculty ? ('connected' as const) : pending('school'),
+          detail: faculty ? `${faculty.short} · ${count} ${count === 1 ? 'budova' : count < 5 ? 'budovy' : 'budov'} na mapě a v plánovači` : 'Vyberte fakultu – ukážu vaše budovy a menzu poblíž.',
+          optional: false,
+          since: connectedSince?.school,
+        };
+      })(),
       {
         id: 'sis',
         title: 'Rozvrh a sylaby (SIS)',
@@ -149,8 +162,8 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
       {
         id: 'music',
         title: 'Hudba (Spotify)',
-        state: spotifyName || music?.url ? 'connected' : pending('music'),
-        detail: spotifyName ? `Spotify: ${spotifyName}${music?.url ? ` · na učení: ${music.title ?? 'váš playlist'}` : ''}` : music?.url ? (music.title ?? 'Váš playlist') : 'Spotify účet nebo playlist na učení a na cestu.',
+        state: music?.url ? 'connected' : pending('music'),
+        detail: music?.url ? `Playlist: ${music.title ?? 'váš playlist'}` : 'Playlist na učení a na cestu – bez přihlašování.',
         optional: true,
         since: connectedSince?.music,
       },
@@ -169,8 +182,8 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
         detail: ownAiKey
           ? `Sylaby, Moodle i PDF čte ${AI_NAMES[ownAiKey]} (váš klíč).`
           : server.anthropic
-            ? 'Sylaby, Moodle i PDF čte AI aplikace.'
-            : 'Bez AI čtu sylaby pravidly. Vložte klíč od Claude, ChatGPT nebo Gemini.',
+            ? `Sylaby, Moodle i PDF čte ${serverAiLabel(server.aiProvider) ?? 'AI aplikace'} – zdarma, bez klíče.`
+            : 'Bez AI čtu sylaby pravidly.',
         optional: true,
         since: ownAiKey ? connectedSince?.ai : undefined,
       },
@@ -179,7 +192,7 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
     const done = counted.filter((s) => s.state === 'auto' || s.state === 'connected').length;
     const attention = services.filter((s) => s.state === 'attention').length;
     return { services, done, total: counted.length, attention };
-  }, [mode, origin, icsSources, moodle, google, googleEnabled, music, notify, ownAiKey, skipped, events, subjects, server, needsAuth, googleError, connectedSince, requirements, spotifyName]);
+  }, [mode, origin, icsSources, moodle, google, googleEnabled, music, notify, ownAiKey, skipped, events, subjects, server, needsAuth, googleError, connectedSince, requirements, facultyId, buildings]);
 }
 
 /** Je propojení čerstvé? (pro jemné „před chvílí“) */

@@ -122,11 +122,11 @@ Propojení → Pro správce aplikace.
    | `GOOGLE_TOKEN_SECRET` | volitelný vlastní klíč pro šifrování cookie (jinak se odvodí z client secret) |
    | `GOLEMIO_API_KEY` | nepovinné – PID Golemio přidá klimatizaci a bezbariérovost vozů ([api.golemio.cz](https://api.golemio.cz/api-keys)); trasy a zpoždění fungují i bez něj přes Transitous |
    | `GOOGLE_MAPS_API_KEY` | Google Routes API – trasy s přestupy |
-   | `GEMINI_API_KEY` | **AI zdarma pro všechny přihlášené** (klíč z [Google AI Studia](https://aistudio.google.com/apikey)); model Gemini 3.8 Flash se záložními modely, jde změnit v `GEMINI_MODEL` |
-   | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | AI od jiného poskytovatele (správce); studenti mohou zadat i vlastní klíč |
+   | *(nic)* | **AI zdarma bez klíče**: sylaby, harmonogram a stránky z Moodlu čte [OVHcloud AI Endpoints](https://endpoints.ai.cloud.ovh.net/) (servery v EU, data se neukládají, limit 2 dotazy/min na model). Vypnout: `FREE_AI=off`; jiný model: `FREE_AI_MODEL` |
+   | `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | nepovinné – AI od jiného poskytovatele místo bezplatné (správce); studenti mohou zadat i vlastní klíč |
    | `GOOGLE_PICKER_API_KEY` | výběr souborů a složek z Google Disku k předmětům (Google Picker API, klíč omezený na adresu aplikace) |
-   | `PUBLIC_CONTACT_EMAIL` | kontakt v zásadách ochrany osobních údajů a v podmínkách |
-   | `SPOTIFY_CLIENT_ID` | přihlášení k účtu Spotify na stránce Hudba (co hraje, ovládání, playlisty). Aplikace na [developer.spotify.com](https://developer.spotify.com/dashboard) s Redirect URI `https://<vaše-adresa>/spotify` (lokálně `http://127.0.0.1:5173/spotify`), API „Web API“. Bez tajného klíče (PKCE). Pozor: nové aplikace jsou ve vývojářském režimu – přihlásit se může jen max. 25 účtů, které přidáte v *User Management*. Vložený přehrávač playlistu funguje i bez toho. |
+   | `PUBLIC_CONTACT_EMAIL` | kontakt v zásadách ochrany osobních údajů a v podmínkách (výchozí andrleondrej@gmail.com) |
+   | `PUBLIC_CANONICAL_ORIGIN` | nová hlavní adresa při stěhování (např. `https://stihnu.vercel.app`) – stará adresa pak nabídne přesun i s daty, viz [docs/STEHOVANI.md](docs/STEHOVANI.md) |
    | `PROXY_ALLOWED_HOSTS` | allowlist domén pro Moodle/iCal proxy, např. `*.cuni.cz,calendar.google.com` |
 
 3. Deploy. PWA jde nainstalovat (Přidat na plochu) a funguje offline.
@@ -137,7 +137,7 @@ Propojení → Pro správce aplikace.
 2. **APIs & Services → Library**: zapni *Google Calendar API*, *Google Tasks API* a *Google Drive API*.
 3. **OAuth consent screen**: typ *External*, stav *Testing*, do *Test users* přidej svůj Gmail.
 4. **Credentials → Create credentials → OAuth client ID → Web application**:
-   - *Authorized JavaScript origins*: `https://prazskystudent.vercel.app` a `http://localhost:5173`.
+   - *Authorized JavaScript origins*: adresa aplikace (např. `https://prazskystudent.vercel.app`, po přestěhování i nová) a `http://localhost:5173`.
    - Pro trvalé přihlášení (volitelné) ulož i *Client secret* do Vercelu jako `GOOGLE_CLIENT_SECRET` a Client ID jako `GOOGLE_CLIENT_ID`.
 5. Client ID vlož v aplikaci (**Propojení → Google**), nebo ho nastav jako `VITE_GOOGLE_CLIENT_ID` a znovu nasaď.
 6. V aplikaci přepni na **Live** a klikni **Propojit s Googlem**.

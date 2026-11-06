@@ -46,11 +46,12 @@ export interface ServerCapabilities {
   accountDelete: boolean;
   /** Veřejný klíč pro výběr souborů z Google Disku (Google Picker). */
   googlePickerKey: string | null;
-  aiProvider: 'anthropic' | 'openai' | 'gemini' | null;
+  /** AI na serveru: klíč správce, nebo bezplatná AI z OVHcloud (`ovh`, bez klíče). */
+  aiProvider: 'anthropic' | 'openai' | 'gemini' | 'ovh' | null;
   /** Veřejný kontaktní e-mail správce (zásady, podmínky). */
   contactEmail: string | null;
-  /** Spotify Client ID (přihlášení k účtu Spotify). */
-  spotifyClientId: string | null;
+  /** Nová hlavní adresa aplikace při stěhování (jinak null). */
+  canonicalOrigin: string | null;
 }
 
 export const NO_SERVER: ServerCapabilities = {
@@ -66,7 +67,7 @@ export const NO_SERVER: ServerCapabilities = {
   googlePickerKey: null,
   aiProvider: null,
   contactEmail: null,
-  spotifyClientId: null,
+  canonicalOrigin: null,
 };
 
 /** Veřejná stránka předmětu ze SISu (text od „Popis předmětu“ po „Kontakty“). */
@@ -217,7 +218,7 @@ export async function fetchServerCapabilities(): Promise<ServerCapabilities> {
       googlePickerKey?: string | null;
       aiProvider?: ServerCapabilities['aiProvider'];
       contactEmail?: string | null;
-      spotifyClientId?: string | null;
+      canonicalOrigin?: string | null;
     }>('/api/health', { timeoutMs: 8000 });
     return {
       reachable: Boolean(data.ok),
@@ -232,7 +233,7 @@ export async function fetchServerCapabilities(): Promise<ServerCapabilities> {
       googlePickerKey: data.googlePickerKey ?? null,
       aiProvider: data.aiProvider ?? null,
       contactEmail: data.contactEmail ?? null,
-      spotifyClientId: data.spotifyClientId ?? null,
+      canonicalOrigin: typeof data.canonicalOrigin === 'string' && /^https:\/\/[a-z0-9.-]+$/i.test(data.canonicalOrigin) ? data.canonicalOrigin : null,
     };
   } catch {
     return NO_SERVER;

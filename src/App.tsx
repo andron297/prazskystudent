@@ -16,10 +16,12 @@ import { IntroSplash } from './components/intro/IntroSplash';
 import { AppBackdrop, useAppearanceEffect } from './components/appearance/AppBackdrop';
 import { CelebrationHost, ConnectionWatcher } from './components/setup/ConnectionPulse';
 import { AlertsPanel, useDeadlineReminders } from './components/notifications/AlertsCenter';
-import { initSpotify } from './services/spotify';
 import { CountdownEditor } from './components/dashboard/Countdowns';
 import { startSubjectAssist } from './services/subjectAssist';
 import { startLeaveBadge } from './services/leaveBadge';
+import { useFocusTicker } from './hooks/useFocusTicker';
+import { useFacultyAutoDetect } from './hooks/useFacultyAutoDetect';
+import { MovedNotice } from './components/migration/MovedNotice';
 
 // Méně používané sekce se načítají až při otevření (menší první načtení PWA).
 const TransitMapView = lazy(() => import('./components/map/TransitMapView').then((m) => ({ default: m.TransitMapView })));
@@ -35,7 +37,6 @@ const PrivacyView = lazy(() => import('./components/legal/LegalViews').then((m) 
 const TermsView = lazy(() => import('./components/legal/LegalViews').then((m) => ({ default: m.TermsView })));
 const AccountGate = lazy(() => import('./components/account/AccountScreens').then((m) => ({ default: m.AccountGate })));
 const LiveNavigation = lazy(() => import('./components/navigation/LiveNavigation').then((m) => ({ default: m.LiveNavigation })));
-const MusicView = lazy(() => import('./components/music/MusicView').then((m) => ({ default: m.MusicView })));
 const PairClaimView = lazy(() => import('./components/account/PairDevice').then((m) => ({ default: m.PairClaimView })));
 const AppearanceView = lazy(() => import('./components/appearance/AppearanceView').then((m) => ({ default: m.AppearanceView })));
 const GuideView = lazy(() => import('./components/tour/GuideView').then((m) => ({ default: m.GuideView })));
@@ -70,6 +71,8 @@ export default function App() {
   useDeadlineReminders();
   useBackgroundSync();
   useSisBridge();
+  useFocusTicker();
+  useFacultyAutoDetect();
 
   useEffect(() => {
     if (connectOpen) setConnectMounted(true);
@@ -85,10 +88,7 @@ export default function App() {
     void useUiStore
       .getState()
       .refreshServer()
-      .then(() => {
-        void initSpotify();
-        return initAccount();
-      })
+      .then(() => initAccount())
       .catch(() => useAccount.setState({ status: 'off' }));
   }, []);
 
@@ -136,6 +136,7 @@ export default function App() {
       <IntroSplash />
       <AppBackdrop />
       <ConnectionWatcher />
+      <MovedNotice />
       <CelebrationHost />
       <AlertsPanel />
       {gated ? (
@@ -164,7 +165,6 @@ export default function App() {
                   {view === 'pruvodce' && <GuideView />}
                   {view === 'vzhled' && <AppearanceView />}
                   {view === 'pripojit' && <PairClaimView param={param} />}
-                  {view === 'hudba' && <MusicView />}
                 </Suspense>
               </motion.div>
             </AnimatePresence>

@@ -23,7 +23,13 @@ const SPOTIFY_RE = /^https:\/\/open\.spotify\.com\/(?:intl-[a-z]{2}\/)?(playlist
 /** Odkaz ze Spotify (Sdílet → Kopírovat odkaz) → adresa vloženého přehrávače, jinak null. */
 export function spotifyEmbedUrl(url: string | undefined | null): string | null {
   const m = SPOTIFY_RE.exec((url ?? '').trim());
-  return m ? `https://open.spotify.com/embed/${m[1]}/${m[2]}?utm_source=generator&theme=0` : null;
+  return m ? `https://open.spotify.com/embed/${m[1]}/${m[2]}?utm_source=generator` : null;
+}
+
+/** Odkaz, který na telefonu otevře aplikaci Spotify (jinak web přehrávač). */
+export function spotifyOpenUrl(url: string | undefined | null): string | null {
+  const m = SPOTIFY_RE.exec((url ?? '').trim());
+  return m ? `https://open.spotify.com/${m[1]}/${m[2]}` : null;
 }
 
 export function isSpotifyUrl(url: string): boolean {

@@ -1,4 +1,4 @@
-/** Klient pro volitelné AI vylepšení parseru (`/api/ai-parse` – Claude, ChatGPT nebo Gemini). */
+/** Klient AI čtení (`/api/ai-parse` – bezplatná AI z OVHcloud, nebo Claude, ChatGPT či Gemini s vlastním klíčem). */
 import type { MilestoneCategory, RequirementType } from '../types';
 import { toDateKey } from '../lib/dates';
 import { uid } from '../lib/id';
@@ -42,8 +42,9 @@ export async function aiParseText(
     timeoutMs: 75_000,
   });
   return data.items.map((item) => {
-    const start = normalizeDate(item.start);
-    const end = normalizeDate(item.end);
+    // Některé modely dají termín „do 15. 12.“ jen do konce rozsahu – pak je to začátek.
+    const start = normalizeDate(item.start ?? item.end);
+    const end = normalizeDate(item.start ? item.end : null);
     const target = mode === 'syllabus' ? item.target : 'milestone';
     return {
       id: uid('ai'),

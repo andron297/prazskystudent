@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { ArrowLeftRight, Droplets, Wind } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 import type { WeatherAdvice, WeatherForecast } from '../../lib/weather';
-import { weatherKind, weatherLabel } from '../../lib/weather';
+import { weatherLabel } from '../../lib/weather';
 import { formatTime } from '../../lib/dates';
-import { Card, Chip, cn } from '../ui/primitives';
-import { WeatherAvatar } from './WeatherAvatar';
-import { WeatherGlyph } from './WeatherGlyph';
+import { OUTFIT_3D, weather3d } from '../../lib/emoji3d';
+import { Emoji3D } from '../ui/Emoji3D';
+import { Card, cn } from '../ui/primitives';
 
 /** Teplota (čára) a pravděpodobnost srážek (sloupce) na dalších 12 hodin; okna cest jako pruhy. */
 function HourlyChart({ forecast, now, advice }: { forecast: WeatherForecast; now: Date; advice: WeatherAdvice }) {
@@ -60,87 +60,79 @@ function HourlyChart({ forecast, now, advice }: { forecast: WeatherForecast; now
 }
 
 export function WeatherCard({ forecast, advice, now, dayLabel }: { forecast: WeatherForecast | null; advice: WeatherAdvice | null; now: Date; dayLabel: string }) {
+  const reduce = useReducedMotion();
   if (!forecast || !advice) {
     return (
       <Card title="Počasí" eyebrow="Na cestu">
-        <div className="h-48 animate-pulse rounded-[22px] bg-surface-2" />
+        <div className="h-40 animate-pulse rounded-[22px] bg-surface-2" />
       </Card>
     );
   }
   const c = forecast.current;
   return (
-    <Card
-      title={
-        <>
-          Co si <em className="italic text-moss">obléct</em>
-        </>
-      }
-      eyebrow={dayLabel}
-      action={
-        <span className="flex items-center gap-1.5 text-muted">
-          <WeatherGlyph code={c.code} isDay={c.isDay} className="size-8" title={weatherLabel(c.code)} />
-          <span className="font-display text-[26px] leading-none text-fg tabular">{Math.round(c.temp)}°</span>
-        </span>
-      }
-    >
-      <div className="flex gap-4">
-        <WeatherAvatar
-          outfit={advice.outfit.map((o) => o.id)}
-          kind={weatherKind(advice.commutes.find((x) => x.wet)?.code ?? c.code)}
-          isDay={c.isDay}
-          feels={advice.basisFeels}
-          windy={advice.tips.some((t) => t.toLowerCase().includes('vítr'))}
-          className="w-[118px] shrink-0 drop-shadow-[0_12px_18px_rgb(0_0_0/0.12)] sm:w-[132px]"
-          label={`Počasník: ${advice.outfit.map((o) => o.label.toLowerCase()).join(', ')}`}
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-semibold leading-snug">{advice.headline}</p>
-          <p className="mt-1 text-[12.5px] text-muted">
-            Teď {Math.round(c.temp)}° · {weatherLabel(c.code).toLowerCase()} · pocitově {Math.round(c.feels)}°
-          </p>
-          <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Doporučené oblečení">
-            {advice.outfit.map((o) => (
-              <li key={o.id} className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-[12.5px] font-semibold ring-1 ring-inset', o.id === 'umbrella' || o.id === 'raincoat' ? 'bg-sky-500/12 text-sky-800 ring-sky-500/25 dark:text-sky-200' : 'bg-surface-2 ring-line')}>
-                {o.label}
-              </li>
-            ))}
-          </ul>
+    <section className="card relative min-w-0 overflow-hidden rounded-[26px] p-4 sm:p-5" aria-label="Počasí a co si obléct">
+      <div className="pointer-events-none absolute -right-10 -top-16 size-56 rounded-full bg-[radial-gradient(closest-side,rgb(125_175_230/0.20),transparent)] dark:bg-[radial-gradient(closest-side,rgb(125_175_230/0.12),transparent)]" aria-hidden />
+      <header className="relative flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="eyebrow mb-1 text-subtle">{dayLabel}</p>
+          <h2 className="font-display text-[23px] leading-none">
+            Co si <em className="italic text-moss">obléct</em>
+          </h2>
         </div>
-      </div>
+        <div className="-mr-1 -mt-2 flex items-center gap-1.5">
+          <Emoji3D name={weather3d(c.code, c.isDay)} size={58} eager alt={weatherLabel(c.code)} className={reduce ? undefined : 'animate-float'} />
+          <div className="text-right">
+            <p className="font-display text-[34px] leading-none tabular">{Math.round(c.temp)}°</p>
+            <p className="mt-0.5 text-[11.5px] font-semibold text-muted">{weatherLabel(c.code)}</p>
+          </div>
+        </div>
+      </header>
+
+      <p className="relative mt-3 text-[15.5px] font-semibold leading-snug">{advice.headline}</p>
+      <p className="relative mt-0.5 text-[12.5px] text-muted">Pocitově {Math.round(c.feels)}° · rada počítá s {advice.basisFeels}° na cestě</p>
+
+      <ul className="relative mt-3.5 grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-2" aria-label="Doporučené oblečení">
+        {advice.outfit.map((o, i) => (
+          <motion.li
+            key={o.id}
+            initial={reduce ? false : { opacity: 0, y: 10, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.06 * i, type: 'spring', stiffness: 380, damping: 26 }}
+            className={cn('flex flex-col items-center gap-1 rounded-[18px] px-1.5 pb-2 pt-2.5 text-center ring-1 ring-inset', o.id === 'umbrella' || o.id === 'raincoat' ? 'bg-sky-500/10 ring-sky-500/25' : 'bg-surface-2/80 ring-line')}
+          >
+            <Emoji3D name={OUTFIT_3D[o.id]} size={42} />
+            <span className="text-[11.5px] font-semibold leading-tight">{o.label}</span>
+          </motion.li>
+        ))}
+      </ul>
 
       {advice.commutes.length > 0 && (
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="relative mt-3 grid gap-2 sm:grid-cols-2">
           {advice.commutes.map((cw) => (
-            <div key={cw.window.kind} className={cn('rounded-[18px] p-3 ring-1 ring-inset', cw.wet ? 'bg-sky-500/10 ring-sky-500/25' : 'bg-surface-2 ring-line')}>
-              <p className="eyebrow flex items-center gap-1 text-subtle">
-                <ArrowLeftRight className="size-3" aria-hidden />
-                {cw.window.kind === 'to' ? 'Cesta tam' : 'Cesta zpět'} · {formatTime(cw.window.from)}
-              </p>
-              <p className="mt-1.5 flex items-center gap-2">
-                <WeatherGlyph code={cw.code} className="size-7" />
-                <span className="font-display text-[24px] leading-none tabular">{cw.temp}°</span>
-                <span className="text-xs text-muted">pocitově {cw.feels}°</span>
-              </p>
-              <p className={cn('mt-1 flex items-center gap-1 text-xs font-semibold', cw.wet ? 'text-sky-700 dark:text-sky-300' : 'text-muted')}>
-                <Droplets className="size-3.5" aria-hidden />
-                {cw.wet ? `${cw.precipProb} % · ${weatherLabel(cw.code).toLowerCase()}` : `sucho · ${cw.precipProb} %`}
-              </p>
+            <div key={cw.window.kind} className={cn('flex items-center gap-2.5 rounded-[18px] px-3 py-2 ring-1 ring-inset', cw.wet ? 'bg-sky-500/10 ring-sky-500/25' : 'bg-surface-2/70 ring-line')}>
+              <Emoji3D name={weather3d(cw.code)} size={32} />
+              <span className="min-w-0 flex-1 leading-tight">
+                <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-subtle">
+                  {cw.window.kind === 'to' ? 'Cesta tam' : 'Cesta zpět'} · {formatTime(cw.window.from)}
+                </span>
+                <span className={cn('block truncate text-[13px] font-semibold', cw.wet && 'text-sky-800 dark:text-sky-200')}>
+                  {cw.temp}° · {cw.wet ? `${cw.precipProb} % ${weatherLabel(cw.code).toLowerCase()}` : 'sucho'}
+                </span>
+              </span>
             </div>
           ))}
         </div>
       )}
 
-      <div className="mt-3">
+      <div className="relative mt-3">
         <HourlyChart forecast={forecast} now={now} advice={advice} />
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+      <div className="relative mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted">
         {advice.tips.map((t) => (
-          <Chip key={t} icon={Wind}>
-            {t}
-          </Chip>
+          <span key={t}>{t}</span>
         ))}
         <span className="ml-auto text-[11px] text-subtle">{forecast.source === 'open-meteo' ? 'Open-Meteo' : 'simulace'}</span>
       </div>
-    </Card>
+    </section>
   );
 }

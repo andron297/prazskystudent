@@ -31,6 +31,7 @@ import { Button, Chip, cn, IconButton, Select, Skeleton } from '../ui/primitives
 import { DelayChip, LineBadge, VehicleFlags } from './TransitBits';
 import { KIND_LABEL, transitStatusOf } from './transitStatus';
 import { usePlatformLookup } from './usePlatformLookup';
+import { BuildingOptions } from '../integrations/SchoolCard';
 
 const SOURCE_LABEL: Record<string, string> = {
   demo: 'Simulace PID (ukázka)',
@@ -176,11 +177,7 @@ export function TransitPanel({
                   <option value="" disabled>
                     Vyberte budovu…
                   </option>
-                  {settings.buildings.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} – {b.address}
-                    </option>
-                  ))}
+                  <BuildingOptions buildings={settings.buildings} facultyId={settings.faculty} />
                 </Select>
               )}
             </div>

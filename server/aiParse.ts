@@ -1,8 +1,10 @@
 /**
- * Volitelné AI vylepšení parseru harmonogramu a sylabů.
- * Funguje s Claude (Anthropic), ChatGPT (OpenAI) i Gemini (Google) – poskytovatel
- * se pozná podle klíče. Klíč: hlavička `x-ai-key` (vlastní klíč studenta), jinak
- * env `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` nebo `GEMINI_API_KEY` (správce).
+ * AI čtení harmonogramu a sylabů.
+ * Bez jakéhokoli klíče funguje zdarma přes OVHcloud AI Endpoints (servery v EU,
+ * data se neukládají). Volitelně Claude (Anthropic), ChatGPT (OpenAI) nebo Gemini
+ * (Google) – poskytovatel se pozná podle klíče. Klíč: hlavička `x-ai-key` (vlastní
+ * klíč studenta), jinak env `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` nebo
+ * `GEMINI_API_KEY` (správce). `FREE_AI=off` bezplatnou AI vypne.
  * Výstup je strukturovaný JSON validovaný schématem.
  */
 import Anthropic from '@anthropic-ai/sdk';
@@ -56,10 +58,10 @@ function systemPrompt(mode: 'harmonogram' | 'syllabus', ayStart: number, today: 
   ].join('\n');
 }
 
-export type AiProvider = 'anthropic' | 'openai' | 'gemini';
+export type AiProvider = 'anthropic' | 'openai' | 'gemini' | 'ovh';
 
 /** Poskytovatel podle tvaru klíče: sk-ant-… Claude, AIza… Gemini, sk-… ChatGPT. */
-export function providerForKey(key: string): AiProvider | null {
+export function providerForKey(key: string): Exclude<AiProvider, 'ovh'> | null {
   const k = key.trim();
   if (k.startsWith('sk-ant-')) return 'anthropic';
   if (k.startsWith('AIza')) return 'gemini';
@@ -67,12 +69,13 @@ export function providerForKey(key: string): AiProvider | null {
   return null;
 }
 
-/** Je na serveru nastavená nějaká AI? */
+/** Jaká AI je na serveru: klíč správce, jinak bezplatná AI z OVHcloud (bez klíče). */
 export function serverAiProvider(): AiProvider | null {
   if (process.env.ANTHROPIC_API_KEY?.trim()) return 'anthropic';
   if (process.env.OPENAI_API_KEY?.trim()) return 'openai';
   if (process.env.GEMINI_API_KEY?.trim()) return 'gemini';
-  return null;
+  if (process.env.FREE_AI?.trim().toLowerCase() === 'off') return null;
+  return 'ovh';
 }
 
 /** Ochrana sdíleného klíče správce: nejvýš N dotazů za hodinu na uživatele / adresu. */
@@ -96,6 +99,7 @@ function resolveKey(request: Request): { provider: AiProvider; key: string; shar
   }
   const provider = serverAiProvider();
   if (!provider) return null;
+  if (provider === 'ovh') return { provider, key: '', shared: true };
   const env = provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : provider === 'openai' ? 'OPENAI_API_KEY' : 'GEMINI_API_KEY';
   return { provider, key: process.env[env]!.trim(), shared: true };
 }
@@ -216,6 +220,63 @@ async function callGemini(key: string, system: string, text: string): Promise<un
   throw new HttpError(502, 'ai_api_error', `Gemini teď neodpovídá (HTTP ${lastStatus}).`);
 }
 
+/**
+ * OVHcloud AI Endpoints: OpenAI-kompatibilní rozhraní, bez klíče zdarma
+ * (2 dotazy za minutu na model a adresu), servery ve Francii, data se neukládají.
+ * Když je model vytížený (429) nebo nedostupný, zkusí se další.
+ */
+const OVH_URL = 'https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/chat/completions';
+const OVH_MODELS = [...new Set([process.env.FREE_AI_MODEL?.trim(), 'Meta-Llama-3_3-70B-Instruct', 'Mistral-Small-3.2-24B-Instruct-2506', 'Qwen3.6-27B'].filter((m): m is string => Boolean(m && /^[\w.-]{3,80}$/.test(m))))];
+
+async function callOvh(system: string, text: string): Promise<unknown> {
+  let lastStatus = 0;
+  const started = Date.now();
+  for (const model of OVH_MODELS) {
+    // Vercel funkce má limit 60 s – na další model zbývá čas jen chvíli po začátku.
+    const left = 56_000 - (Date.now() - started);
+    if (left < 8_000) break;
+    let response: Response;
+    try {
+      response = await fetch(OVH_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        signal: AbortSignal.timeout(left),
+        body: JSON.stringify({
+          model,
+          temperature: 0,
+          max_tokens: 6000,
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: `<text>\n${text}\n</text>` },
+          ],
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'extraction',
+              strict: true,
+              schema: { type: 'object', additionalProperties: false, required: ['items'], properties: { items: { type: 'array', items: { type: 'object', additionalProperties: false, required: REQUIRED, properties: ITEM_PROPS } } } },
+            },
+          },
+        }),
+      });
+    } catch {
+      lastStatus = 504;
+      continue;
+    }
+    lastStatus = response.status;
+    if (response.status === 429 || response.status === 404 || response.status >= 500) continue;
+    if (!response.ok) throw new HttpError(502, 'ai_api_error', `Bezplatná AI požadavek odmítla (HTTP ${response.status}).`);
+    const data = (await response.json()) as { choices?: { message?: { content?: string }; finish_reason?: string }[] };
+    const choice = data.choices?.[0];
+    const content = choice?.message?.content;
+    if (!content) continue;
+    if (choice?.finish_reason === 'length') throw new HttpError(422, 'ai_truncated', 'Text je na bezplatnou AI moc dlouhý – vložte jen část s termíny.');
+    return JSON.parse(content);
+  }
+  if (lastStatus === 429) throw new HttpError(429, 'ai_rate_limited', 'Bezplatná AI je teď vytížená. Zkuste to za minutu – mezitím platí výsledek bez AI.');
+  throw new HttpError(502, 'ai_api_error', 'Bezplatná AI teď neodpovídá. Výsledek bez AI zůstává.');
+}
+
 async function callClaude(key: string, system: string, text: string): Promise<{ items: AiExtractionResult['items']; model: string }> {
   const client = new Anthropic({ apiKey: key, maxRetries: 1, timeout: 55_000 });
   const response = await client.beta.messages.parse({
@@ -241,9 +302,10 @@ export async function handleAiParse(request: Request): Promise<Response> {
       throw new HttpError(401, 'missing_ai_key', 'AI není nastavená – vložte vlastní klíč (Claude, ChatGPT nebo Gemini). Lokální parser funguje i bez něj.');
     }
     if (resolved.shared) {
-      // AI zdarma od správce: jen pro přihlášené (když jsou účty zapnuté) a s limitem, ať ji nikdo nezneužije.
-      const user = accountConfig() ? await verifyUser(request) : null;
-      if (accountConfig() && !user) throw new HttpError(401, 'login_required', 'AI zdarma je pro přihlášené – přihlaste se ke svému účtu.');
+      // Sdílená AI: klíč správce jen pro přihlášené (když jsou účty zapnuté), bezplatná AI i bez účtu.
+      // Vždy s hodinovým limitem, ať ji nikdo nezneužije na úkor ostatních.
+      const user = accountConfig() ? await verifyUser(request).catch(() => null) : null;
+      if (resolved.provider !== 'ovh' && accountConfig() && !user) throw new HttpError(401, 'login_required', 'AI zdarma je pro přihlášené – přihlaste se ke svému účtu.');
       const who = user?.id ?? request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anon';
       if (!allow(who, user ? 40 : 15)) throw new HttpError(429, 'ai_rate_limited', 'Na tuto hodinu je limit AI vyčerpaný. Zkuste to později.');
     }
@@ -263,7 +325,7 @@ export async function handleAiParse(request: Request): Promise<Response> {
       const out = await callClaude(resolved.key, system, body.text);
       return json({ ...out, provider: 'anthropic' });
     }
-    const raw = resolved.provider === 'openai' ? await callOpenAi(resolved.key, system, body.text) : await callGemini(resolved.key, system, body.text);
+    const raw = resolved.provider === 'ovh' ? await callOvh(system, body.text) : resolved.provider === 'openai' ? await callOpenAi(resolved.key, system, body.text) : await callGemini(resolved.key, system, body.text);
     const parsed = ExtractionResult.safeParse(raw);
     if (!parsed.success) throw new HttpError(502, 'ai_unparseable', 'AI vrátilo odpověď v nečekaném tvaru.');
     return json({ items: parsed.data.items, provider: resolved.provider });

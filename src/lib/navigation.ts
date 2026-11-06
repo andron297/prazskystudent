@@ -23,7 +23,7 @@ export interface WalkPhase {
   length: number;
   maneuvers: Maneuver[];
   /** Kam jdu: zastávka (s nástupištěm) nebo budova. */
-  target: { name: string; coords: LatLng; platform?: string; isStop: boolean };
+  target: { name: string; coords: LatLng; platform?: string; isStop: boolean; mode?: RideLeg['mode'] };
   /** Kdy musím být u cíle (odjezd spoje nebo začátek výuky). */
   deadline?: string;
   /** Odhad plánovače (min). */
@@ -152,7 +152,7 @@ export function buildPhases(it: Itinerary, origin: LatLng, building: { name: str
         cum,
         length: pathLength(path),
         maneuvers: maneuversFor(path, walk.steps),
-        target: nextRide ? { name: nextRide.fromStop, coords: targetCoords, platform: nextRide.platform, isStop: true } : { name: building.name, coords: targetCoords, isStop: false },
+        target: nextRide ? { name: nextRide.fromStop, coords: targetCoords, platform: nextRide.platform, isStop: true, mode: nextRide.mode } : { name: building.name, coords: targetCoords, isStop: false },
         deadline: nextRide ? nextRide.predictedDeparture : eventStart,
         minutes: walk.minutes,
       });

@@ -453,6 +453,8 @@ export interface Settings {
   /** Vlastní odpočty (na hlavní stránce). */
   countdowns?: Countdown[];
   appearance?: AppearanceSettings;
+  /** Fakulta / škola studenta (lib/campus) – „moje budovy“ na mapě a v plánovači. */
+  faculty?: string | null;
 }
 
 /* ------------------------------------------------------------------ */

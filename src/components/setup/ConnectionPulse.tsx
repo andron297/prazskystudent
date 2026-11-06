@@ -4,10 +4,10 @@
  *  - FlowBanner: nahoře v Propojení živý pás, kudy data tečou do Stihnu,
  *  - ConnectionWatcher + CelebrationHost: velké potvrzení hned po propojení.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, type LucideIcon } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { formatDayMonthLong, formatRelative } from '../../lib/dates';
 import { useConnections, type ServiceId, type ServiceStatus } from '../../hooks/useConnections';
 import { useNow } from '../../hooks/useNow';
@@ -65,7 +65,7 @@ export function ConnectionStatusLine({ s }: { s: ServiceStatus }) {
 }
 
 /** Pás nahoře v Propojení: ikony propojených služeb → animovaná cesta → Stihnu. */
-export function FlowBanner({ icons }: { icons: Record<ServiceId, LucideIcon> }) {
+export function FlowBanner({ visual }: { visual: (id: ServiceId) => ReactNode }) {
   const { services } = useConnections();
   const linked = services.filter((s) => s.state === 'connected' || s.state === 'auto');
   const last = linked.map((s) => s.lastFlow).filter((x): x is string => Boolean(x)).sort().pop();
@@ -74,14 +74,11 @@ export function FlowBanner({ icons }: { icons: Record<ServiceId, LucideIcon> }) 
     <div className="card relative overflow-hidden rounded-[24px] px-4 py-3.5 sm:px-5">
       <div className="flex items-center gap-3">
         <div className="flex -space-x-1.5">
-          {linked.slice(0, 7).map((s) => {
-            const Icon = icons[s.id];
-            return (
-              <span key={s.id} title={s.title} className="grid size-8 place-items-center rounded-full bg-accent-soft text-accent ring-2 ring-[var(--surface)]">
-                <Icon className="size-4" aria-hidden />
-              </span>
-            );
-          })}
+          {linked.slice(0, 7).map((s) => (
+            <span key={s.id} title={s.title} className="grid size-9 place-items-center rounded-full bg-surface-2 ring-2 ring-[var(--surface)]">
+              {visual(s.id)}
+            </span>
+          ))}
         </div>
         <svg className="h-3 min-w-0 flex-1" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden>
           <line x1="0" y1="3" x2="100" y2="3" stroke="var(--line-strong)" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
@@ -107,7 +104,7 @@ const CELEBRATE: Partial<Record<ServiceId, [string, string]>> = {
   sis: ['Rozvrh ze SISu je propojený', 'Předměty a výuka jsou v aplikaci. Změny se stáhnou samy.'],
   moodle: ['Moodle je propojený', 'Termíny a úkoly se budou stahovat samy.'],
   google: ['Google je propojený', 'Kalendář a Úkoly se teď synchronizují oběma směry.'],
-  music: ['Hudba je připravená', 'Playlist najdete v odpočívadlech.'],
+  music: ['Hudba je připravená', 'Playlist najdete u soustředění a před odchodem.'],
   notifications: ['Upozornění jsou zapnutá', 'Ozvu se, když bude čas vyrazit.'],
   ai: ['Chytré čtení je zapnuté', 'Sylaby, Moodle i PDF teď čte AI.'],
 };

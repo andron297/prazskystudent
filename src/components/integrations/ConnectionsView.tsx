@@ -9,6 +9,8 @@ import { uid } from '../../lib/id';
 import { isMoodleCalendarUrl } from '../../lib/moodleIcs';
 import { sisBookmarklet } from '../../lib/sisImport';
 import { ConnectionsHub } from '../setup/ConnectionsHub';
+import { SchoolCard } from './SchoolCard';
+import { MOODLE_SHOTS, RealScreens } from '../setup/RealScreens';
 import { AI_NAMES, providerForKey } from '../../lib/aiProvider';
 import { navigateTo } from '../../hooks/useAppShell';
 import { testGolemioKey } from '../../services/api';
@@ -153,13 +155,14 @@ function MoodleSection() {
               .
             </>,
             <>
-              U <strong>Exportovat</strong> zvolte <strong>Všechny události</strong> a období <strong>Nedávné a příštích 60 dní</strong>.
+              Zvolte <strong>Všechny události</strong> a období <strong>Předchozích a následujících 60 dnů</strong> (ve starší verzi „Nedávné a příštích 60 dní“).
             </>,
             <>
               Klikněte <strong>Získat URL kalendáře</strong>, zkopírujte odkaz a vložte ho sem.
             </>,
           ]}
         />
+        <RealScreens shots={MOODLE_SHOTS} source="Skutečné obrazovky Moodlu 5 (veřejná ukázka moodledemo.net) – Moodle UK vypadá stejně." />
         <AddSource kind="moodle" placeholder={`${base}/calendar/export_execute.php?userid=…&authtoken=…`} validate={(url) => (isMoodleCalendarUrl(url) ? null : 'Tohle nevypadá jako odkaz z „Exportovat kalendář“ (má obsahovat export_execute.php a authtoken).')} />
         {sources.length > 0 && (
           <ul className="space-y-2">
@@ -269,7 +272,7 @@ function SyllabiBlock() {
       </p>
       <p className="mt-1 text-[13px] text-muted">
         Po načtení rozvrhu stáhnu ke každému předmětu jeho veřejný sylabus ze SISu a z podmínek zakončení vytáhnu povinnosti, váhy a termíny.{' '}
-        {ownKey || serverAi ? 'Čte je AI.' : 'Teď je čtu pravidly; s AI (vlastní klíč od Claude, ChatGPT nebo Gemini) to bude chytřejší.'}
+        {ownKey || serverAi ? 'Čte je AI – zdarma, bez klíče.' : 'Teď je čtu pravidly.'}
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <Button size="sm" variant="primary" icon={RefreshCw} loading={running} disabled={relevant.length === 0} onClick={() => void importAllSyllabi({ manual: true, all: complete })}>
@@ -505,7 +508,7 @@ function TransitSection() {
           </div>
           <SecretField label="Google Maps klíč (volitelné)" value={settings.googleMapsApiKey} onChange={(googleMapsApiKey) => updateSettings({ googleMapsApiKey })} placeholder="AIza…" hint="Trasy s přestupy přes Routes API." />
         </div>
-        <Collapsible title="Budovy a zastávky u nich" icon={MapPin}>
+        <Collapsible title="Všechny budovy a cílové zastávky (pokročilé)" icon={MapPin}>
           <BuildingsEditor />
         </Collapsible>
       </div>
@@ -733,6 +736,8 @@ export function ConnectionsView({ section }: { section?: string }) {
 
       <ConnectionsHub />
 
+      <SchoolCard />
+
       <h2 className="px-1 pt-4 font-display text-[28px]">
         Podrobné <em className="text-moss">nastavení</em>
       </h2>
@@ -747,7 +752,7 @@ export function ConnectionsView({ section }: { section?: string }) {
         <AppSection />
       </div>
       <p className="flex items-center justify-center gap-2 pb-4 text-xs text-subtle">
-        <Database className="size-3.5" aria-hidden /> Data jsou v tomto zařízení{gs.connectedAt && settings.google.drive.enabled ? ' a ve vašem Google Disku' : ''}. Fotky: Unsplash.
+        <Database className="size-3.5" aria-hidden /> Data jsou v tomto zařízení{gs.connectedAt && settings.google.drive.enabled ? ' a ve vašem Google Disku' : ''}. Fotky: Wikimedia Commons a Unsplash (autoři ve Vzhledu), 3D obrázky: Microsoft Fluent Emoji (MIT).
       </p>
     </div>
   );

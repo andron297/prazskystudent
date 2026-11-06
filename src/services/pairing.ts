@@ -34,13 +34,13 @@ export interface PairingTicket {
 
 export type PairingStatus = { status: 'pending'; expiresAt: number } | { status: 'claimed'; device?: string; at?: number } | { status: 'expired' | 'gone' };
 
-/** Počítač: vytvoří jednorázový QR kód (platí 3 minuty). */
-export async function createPairing(): Promise<PairingTicket> {
+/** Počítač: vytvoří jednorázový QR kód (platí 3 minuty). `origin` = adresa aplikace v odkazu (při stěhování nová). */
+export async function createPairing(origin = window.location.origin): Promise<PairingTicket> {
   const raw = crypto.getRandomValues(new Uint8Array(32));
   const key = await crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt']);
   const wrapped = b64url(fromB64(await wrapDekForPairing(key)));
   const { pairId, userId, expiresAt } = await call<{ pairId: string; userId: string; expiresAt: number }>('pair-create', { wrapped });
-  return { pairId, expiresAt, url: `${window.location.origin}/#/pripojit/${userId}.${pairId}.${b64url(raw)}` };
+  return { pairId, expiresAt, url: `${origin}/#/pripojit/${userId}.${pairId}.${b64url(raw)}` };
 }
 
 export function pairingStatus(pairId: string): Promise<PairingStatus> {

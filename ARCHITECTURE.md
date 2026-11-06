@@ -21,7 +21,7 @@ flowchart LR
     PMOO["/api/moodle"]
     PGOL["/api/golemio"]
     PRT["/api/routes"]
-    PAI["/api/ai-parse (Claude)"]
+    PAI["/api/ai-parse (bezplatná AI OVHcloud, volitelně Claude, ChatGPT, Gemini)"]
     PGOO["/api/google – refresh token v HttpOnly cookie"]
   end
 

@@ -25,6 +25,7 @@ import type {
   Task,
 } from '../types';
 import { DEFAULT_BUILDINGS, locationAliasKey, resolveBuilding } from '../lib/buildings';
+import { withCampus } from '../lib/campus';
 import { deleteBlob } from '../lib/blobStore';
 import { nextSubjectColor } from '../lib/colors';
 import { calendarDayDiff, fromDateKey, shiftByDays, startOfDay, toDateKey } from '../lib/dates';
@@ -86,7 +87,7 @@ export const DEFAULT_SETTINGS: Settings = {
   preferAirConditioned: false,
   origin: {
     demo: { source: 'preset', presetId: 'kajetanka' },
-    live: { source: 'gps', presetId: 'kajetanka' },
+    live: { source: 'gps', presetId: 'centrum' },
   },
   originStop: { demo: null, live: null },
   demoClock: true,
@@ -875,7 +876,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: PERSIST_KEY,
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => safeLocalStorage),
       partialize: (s) => ({
         subjects: s.subjects,
@@ -902,6 +903,12 @@ export const useAppStore = create<AppState>()(
           p.settings = settings;
           p.tasks = Array.isArray(p.tasks) ? p.tasks : [];
           p.tombstones = p.tombstones ?? {};
+        }
+        if (version < 3) {
+          // Výchozí záložní místo bez GPS bývalo Kolej Kajetánka (Praha 6) – teď střed Prahy.
+          const settings = (p.settings ?? {}) as { origin?: { live?: { source?: string; presetId?: string } } };
+          const live = settings.origin?.live;
+          if (live && live.source === 'gps' && live.presetId === 'kajetanka') live.presetId = 'centrum';
         }
         return p as unknown as AppState;
       },
@@ -932,7 +939,7 @@ export function mergeSettings(base: Settings, patch: Partial<Settings>): Setting
     ...patch,
     origin: { ...base.origin, ...patch.origin },
     originStop: { ...base.originStop, ...patch.originStop },
-    buildings: patch.buildings?.length ? patch.buildings : base.buildings,
+    buildings: withCampus(patch.buildings?.length ? patch.buildings : base.buildings),
     icsSources: Array.isArray(patch.icsSources) ? patch.icsSources : base.icsSources,
     weather: { ...base.weather, ...patch.weather },
     google: g

@@ -5,7 +5,7 @@
  */
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, ExternalLink, Leaf, MapPin, RefreshCw, Route, SlidersHorizontal, Soup, Star, UtensilsCrossed } from 'lucide-react';
+import { Check, ExternalLink, MapPin, Star } from 'lucide-react';
 import type { Building, LatLng } from '../../types';
 import { addDays, formatDayMonth, formatWeekdayShort, isSameDay, toDateKey } from '../../lib/dates';
 import { ALLERGENS, CANTEENS, canteenById, MENZA_WEB, nearestCanteens } from '../../lib/menza';
@@ -14,6 +14,7 @@ import { planTripTo } from '../../store/journeyStore';
 import { useMenza, type MenzaDish } from '../../services/menza';
 import { useAppStore } from '../../store/appStore';
 import { Card, cn, Skeleton } from '../ui/primitives';
+import { Emoji3D } from '../ui/Emoji3D';
 
 const price = (n?: number) => (n === undefined ? '' : `${Math.round(n)} Kč`);
 
@@ -23,9 +24,7 @@ function Dish({ dish }: { dish: MenzaDish }) {
   const special = label !== dish.label ? label : null;
   return (
     <li className={cn('flex items-start gap-3 rounded-[16px] px-2.5 py-2', soup ? 'bg-surface-2/70' : '')}>
-      <span className={cn('mt-0.5 grid size-8 shrink-0 place-items-center rounded-full', soup ? 'bg-sand/25 text-clay' : dish.vegetarian ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300' : 'bg-accent-soft text-accent')}>
-        {soup ? <Soup className="size-4" aria-hidden /> : dish.vegetarian ? <Leaf className="size-4" aria-hidden /> : <UtensilsCrossed className="size-4" aria-hidden />}
-      </span>
+      <Emoji3D name={soup ? 'steaming-bowl' : dish.vegetarian ? 'green-salad' : 'fork-and-knife-with-plate'} size={30} className="mt-0.5" />
       <span className="min-w-0 flex-1">
         <span className="block text-[14px] font-semibold leading-snug">{dish.name}</span>
         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11.5px] text-muted">
@@ -137,16 +136,32 @@ export function MenzaCard({ now, building, fallback }: { now: Date; building?: B
       eyebrow={canteen?.name ?? 'Menza'}
       action={
         asked && !editing ? (
-          <button type="button" onClick={() => setEditing(true)} className="grid size-8 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-fg" aria-label="Upravit oblíbené menzy" title="Oblíbené menzy">
-            <SlidersHorizontal className="size-4" aria-hidden />
+          <button type="button" onClick={() => setEditing(true)} className="rounded-full px-3 py-1.5 text-[12.5px] font-bold text-muted hover:bg-surface-2 hover:text-fg" title="Oblíbené menzy">
+            Upravit
           </button>
         ) : undefined
       }
     >
-      {(!asked || editing) && (
+      {editing ? (
         <div className="mb-3">
           <CanteenChooser first={!asked} initial={favorites} suggested={near.map((n) => n.canteen.id)} onSave={save} onCancel={() => (asked ? setEditing(false) : save(favorites))} />
         </div>
+      ) : (
+        !asked && (
+          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[18px] bg-accent-soft/70 px-3.5 py-2.5 ring-1 ring-inset ring-accent/20">
+            <p className="min-w-0 flex-1 text-[13px] leading-snug">
+              Ukazuji <strong>{canteenById(favorites[0])?.short}</strong>. Chodíte jinam? Vyberte si až 4 oblíbené menzy.
+            </p>
+            <span className="flex shrink-0 gap-1.5">
+              <button type="button" onClick={() => setEditing(true)} className="h-8 rounded-full bg-accent px-3.5 text-[12.5px] font-bold text-accent-fg hover:brightness-110">
+                Vybrat menzy
+              </button>
+              <button type="button" onClick={() => save(favorites)} className="h-8 rounded-full px-3 text-[12.5px] font-bold text-muted hover:text-fg">
+                Je to tak
+              </button>
+            </span>
+          </div>
+        )
       )}
 
       {ids.length > 1 && (
@@ -197,9 +212,7 @@ export function MenzaCard({ now, building, fallback }: { now: Date; building?: B
           <Skeleton className="h-12" />
         </div>
       ) : error && !menu ? (
-        <p className="flex items-center gap-2 text-[13.5px] text-muted">
-          <RefreshCw className="size-4" aria-hidden /> {error}
-        </p>
+        <p className="text-[13.5px] text-muted">{error}</p>
       ) : !day ? (
         <p className="text-[13.5px] text-muted">{canteen?.name ?? 'Menza'} na nejbližší dny jídelníček nevypsala (o víkendu a o prázdninách se obvykle nevaří).</p>
       ) : (
@@ -219,8 +232,8 @@ export function MenzaCard({ now, building, fallback }: { now: Date; building?: B
             {canteen.short}
             {building ? ` · ${formatDistance(haversineMeters(building.coords, canteen.coords))} od budovy ${building.name} (asi ${walkingMinutes(building.coords, canteen.coords)} min pěšky)` : ''}
           </span>
-          <button type="button" onClick={() => planTripTo(canteen.name, canteen.coords, 'menza')} className="ml-auto inline-flex h-7 items-center gap-1 rounded-full bg-surface px-3 text-[12px] font-bold text-fg ring-1 ring-inset ring-line hover:bg-surface-2">
-            <Route className="size-3.5" aria-hidden /> Trasa
+          <button type="button" onClick={() => planTripTo(canteen.name, canteen.coords, 'menza')} className="ml-auto inline-flex h-7 items-center rounded-full bg-surface px-3 text-[12px] font-bold text-fg ring-1 ring-inset ring-line hover:bg-surface-2">
+            Trasa sem
           </button>
         </div>
       )}

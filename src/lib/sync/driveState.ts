@@ -39,6 +39,7 @@ export const SHARED_SETTING_KEYS = [
   'shownMilestones',
   'countdowns',
   'appearance',
+  'faculty',
 ] as const satisfies readonly (keyof Settings)[];
 
 export type SharedSettings = Partial<Pick<Settings, (typeof SHARED_SETTING_KEYS)[number]>>;

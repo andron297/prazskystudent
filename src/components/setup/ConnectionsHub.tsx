@@ -3,46 +3,47 @@
  * Pod tím soukromí (kde jsou data, co kam jde) a krátký návod pro správce.
  */
 import { useState } from 'react';
-import {
-  BellRing,
-  BookOpenCheck,
-  CalendarDays,
-  Check,
-  ChevronDown,
-  CloudSun,
-  Copy,
-  ExternalLink,
-  GraduationCap,
-  KeyRound,
-  Lock,
-  MapPin,
-  Music2,
-  ShieldCheck,
-  Sparkles,
-  TramFront,
-  type LucideIcon,
-} from 'lucide-react';
-import { navigateTo } from '../../hooks/useAppShell';
-import { spotifyEmbedUrl } from '../../lib/music';
+import { Check, ChevronDown, Copy, ExternalLink } from 'lucide-react';
 import { useConnections, type ServiceId, type ServiceStatus } from '../../hooks/useConnections';
+import type { Emoji3DName } from '../../lib/emoji3d';
 import { connectGoogle } from '../../services/syncCenter';
 import { useAppStore } from '../../store/appStore';
 import { confirmAction, toast, useUiStore } from '../../store/uiStore';
+import { Emoji3D } from '../ui/Emoji3D';
 import { cn } from '../ui/primitives';
+import { PlaylistPlayer } from '../music/PlaylistPlayer';
 import { StateDot } from './SetupWizard';
 import { ConnectionStatusLine, FlowBanner } from './ConnectionPulse';
 
-const ICON: Record<ServiceId, LucideIcon> = {
-  weather: CloudSun,
-  transit: TramFront,
-  location: MapPin,
-  sis: GraduationCap,
-  moodle: BookOpenCheck,
-  google: CalendarDays,
-  music: Music2,
-  notifications: BellRing,
-  ai: Sparkles,
+/** Oficiální logo Google „G“ (podle pravidel pro přihlašovací tlačítka). */
+export function GoogleG({ size = 24 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden>
+      <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z" />
+      <path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2A12 12 0 0 1 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z" />
+    </svg>
+  );
+}
+
+const VISUAL: Record<Exclude<ServiceId, 'google'>, Emoji3DName> = {
+  weather: 'sun-behind-small-cloud',
+  transit: 'tram',
+  location: 'round-pushpin',
+  school: 'classical-building',
+  sis: 'graduation-cap',
+  moodle: 'books',
+  music: 'headphone',
+  notifications: 'bell',
+  ai: 'sparkles',
 };
+
+/** Obrázek služby: 3D předmět, u Googlu jeho logo. */
+export function ServiceVisual({ id, size = 34 }: { id: ServiceId; size?: number }) {
+  if (id === 'google') return <GoogleG size={Math.round(size * 0.78)} />;
+  return <Emoji3D name={VISUAL[id]} size={size} />;
+}
 
 const STATE_LABEL: Record<ServiceStatus['state'], string> = {
   auto: 'Funguje samo',
@@ -53,12 +54,11 @@ const STATE_LABEL: Record<ServiceStatus['state'], string> = {
   unavailable: 'Zatím nejde',
 };
 
-const WIZARD_STEP: Partial<Record<ServiceId, string>> = { location: 'location', sis: 'sis', moodle: 'moodle', google: 'google', music: 'extras', notifications: 'extras', ai: 'ai' };
+const WIZARD_STEP: Partial<Record<ServiceId, string>> = { location: 'location', school: 'school', sis: 'sis', moodle: 'moodle', google: 'google', music: 'extras', notifications: 'extras', ai: 'ai' };
 
 export function ConnectionsHub() {
   const { services, done, total, attention } = useConnections();
   const openSetup = useUiStore((s) => s.openSetup);
-  const music = useAppStore((s) => s.settings.music);
   const [busyGoogle, setBusyGoogle] = useState(false);
   const firstTodo = services.find((s) => !s.optional && (s.state === 'todo' || s.state === 'skipped'));
 
@@ -74,7 +74,7 @@ export function ConnectionsHub() {
       };
     if (s.state === 'unavailable') return s.id === 'notifications' ? null : { label: 'Pro správce', run: () => document.getElementById('spravce')?.scrollIntoView({ behavior: 'smooth' }) };
     if (s.id === 'ai') return { label: s.state === 'connected' ? 'Změnit' : 'Vložit klíč', run: () => openSetup('ai') };
-    if (s.id === 'music') return { label: s.state === 'connected' ? 'Otevřít' : 'Propojit', run: () => navigateTo('hudba') };
+    if (s.id === 'music') return { label: s.state === 'connected' ? 'Změnit' : 'Vybrat', run: () => openSetup('extras') };
     const step = WIZARD_STEP[s.id];
     if (!step) return null;
     if (s.id === 'google' && s.state === 'connected') return { label: 'Spravovat', run: () => document.getElementById('google')?.scrollIntoView({ behavior: 'smooth' }) };
@@ -83,38 +83,38 @@ export function ConnectionsHub() {
 
   return (
     <section className="space-y-4" aria-label="Přehled propojení">
-      <div className="card flex flex-wrap items-center gap-4 rounded-[28px] p-5 sm:p-6">
-        <ProgressRing done={done} total={total} />
-        <div className="min-w-0 flex-1">
-          <h2 className="font-display text-[30px] leading-none sm:text-[34px]">
-            Vaše <em className="text-moss">propojení</em>
-          </h2>
-          <p className="mt-1.5 text-[15px] text-muted">
-            {done === total ? 'Všechno důležité je propojené.' : `Hotovo ${done} z ${total}.`}
-            {attention > 0 && <strong className="text-amber-700 dark:text-amber-300"> {attention === 1 ? 'Jedna věc potřebuje' : `${attention} věci potřebují`} jedno kliknutí.</strong>}
-          </p>
+      <div className="card flex flex-col gap-4 rounded-[28px] p-5 sm:flex-row sm:items-center sm:p-6">
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <ProgressRing done={done} total={total} />
+          <div className="min-w-0 flex-1">
+            <h2 className="font-display text-[30px] leading-none sm:text-[34px]">
+              Vaše <em className="text-moss">propojení</em>
+            </h2>
+            <p className="mt-1.5 text-[14.5px] text-muted">
+              {done === total ? 'Všechno důležité je propojené.' : `Hotovo ${done} z ${total}.`}
+              {attention > 0 && <strong className="text-amber-700 dark:text-amber-300"> {attention === 1 ? 'Jedna věc potřebuje' : `${attention} věci potřebují`} jedno kliknutí.</strong>}
+            </p>
+          </div>
         </div>
         <button
           type="button"
           onClick={() => openSetup(firstTodo ? (WIZARD_STEP[firstTodo.id] ?? 'start') : 'start')}
-          className="inline-flex min-h-12 items-center gap-2 rounded-full bg-accent px-5 text-[15px] font-bold text-accent-fg shadow-[0_10px_24px_-12px_var(--accent)] hover:brightness-110"
+          className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-accent px-5 text-[15px] font-bold text-accent-fg shadow-[0_10px_24px_-12px_var(--accent)] hover:brightness-110"
         >
-          <Sparkles className="size-4.5" aria-hidden /> {firstTodo ? 'Projít průvodce' : 'Spustit průvodce znovu'}
+          {firstTodo ? 'Projít průvodce' : 'Spustit průvodce znovu'}
         </button>
       </div>
 
-      <FlowBanner icons={ICON} />
+      <FlowBanner visual={(id) => <ServiceVisual id={id} size={26} />} />
 
       <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {services.map((s) => {
-          const Icon = ICON[s.id];
           const act = action(s);
-          const embed = s.id === 'music' ? spotifyEmbedUrl(music?.url) : null;
           return (
             <li key={s.id} className={cn('card flex flex-col rounded-[24px] p-4', s.state === 'attention' && 'ring-2 ring-amber-400/70')}>
               <div className="flex items-start gap-3">
-                <span className={cn('grid size-11 shrink-0 place-items-center rounded-2xl', s.state === 'auto' || s.state === 'connected' ? 'bg-accent-soft text-accent' : s.state === 'attention' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' : 'bg-surface-2 text-muted')}>
-                  <Icon className="size-5" aria-hidden />
+                <span className={cn('grid size-12 shrink-0 place-items-center rounded-2xl ring-1 ring-inset', s.id === 'google' ? 'bg-white ring-line' : s.state === 'attention' ? 'bg-amber-500/12 ring-amber-500/25' : 'bg-surface-2/80 ring-line', s.state !== 'auto' && s.state !== 'connected' && s.state !== 'attention' && 'opacity-80 grayscale-[0.35]')}>
+                  <ServiceVisual id={s.id} />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[15.5px] font-bold leading-tight">{s.title}</span>
@@ -123,15 +123,7 @@ export function ConnectionsHub() {
                 </span>
                 <StateDot state={s.state} />
               </div>
-              {embed && (
-                <iframe
-                  title="Přehrávač Spotify"
-                  src={embed}
-                  className="mt-3 h-[80px] w-full rounded-[14px] border-0"
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy"
-                />
-              )}
+              {s.id === 'music' && s.state === 'connected' && <PlaylistPlayer compact className="mt-3" />}
               <div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-3">
                 <span className={cn('text-[12.5px] font-bold', s.state === 'auto' || s.state === 'connected' ? 'text-accent' : s.state === 'attention' ? 'text-amber-700 dark:text-amber-300' : 'text-subtle')}>
                   {STATE_LABEL[s.state]}
@@ -183,21 +175,15 @@ function PrivacyCard() {
   const clearAllData = useAppStore((s) => s.clearAllData);
   return (
     <div className="card rounded-[24px] p-5">
-      <p className="flex items-center gap-2 text-[16px] font-bold">
-        <ShieldCheck className="size-5 text-accent" aria-hidden /> Soukromí a bezpečnost
+      <p className="flex items-center gap-2.5 text-[16px] font-bold">
+        <Emoji3D name="locked-with-key" size={30} /> Soukromí a bezpečnost
       </p>
-      <ul className="mt-3 space-y-2 text-[14px] leading-snug text-muted">
-        <li className="flex gap-2">
-          <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Rozvrh, úkoly i klíče jsou uložené jen v tomhle prohlížeči. Žádný účet, žádná databáze s vašimi daty.
-        </li>
-        <li className="flex gap-2">
-          <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Pro cestu se posílá jen poloha startu a cíle (do plánovače PID) a pro počasí jen přibližná poloha.
-        </li>
-        <li className="flex gap-2">
-          <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Google a Moodle vidí jen to, co jim povolíte. Odpojit je můžete kdykoli jedním kliknutím.
-        </li>
-        <li className="flex gap-2">
-          <Lock className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden /> Kód aplikace je otevřený – kdokoli si může ověřit, co dělá.{' '}
+      <ul className="mt-3 list-disc space-y-2 pl-5 text-[14px] leading-snug text-muted marker:text-accent">
+        <li>S účtem se rozvrh, úkoly i nastavení šifrují přímo ve vašem zařízení – na serveru je jen zašifrovaný balík, který nikdo jiný nepřečte. Bez účtu zůstává vše jen v tomto prohlížeči.</li>
+        <li>Pro cestu se posílá jen poloha startu a cíle (do plánovače PID) a pro počasí jen přibližná poloha.</li>
+        <li>Google a Moodle vidí jen to, co jim povolíte. Odpojit je můžete kdykoli jedním kliknutím.</li>
+        <li>
+          Kód aplikace je otevřený – kdokoli si může ověřit, co dělá.{' '}
           <a href="https://github.com/andron297/prazskystudent" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
             Zdrojový kód
           </a>
@@ -277,17 +263,9 @@ function OwnerCard() {
     {
       ok: server.aiProvider !== null,
       title: 'AI zdarma pro všechny',
-      why: 'Chytré čtení sylabů, stránek z Moodlu a PDF bez vlastního klíče.',
-      vars: ['GEMINI_API_KEY'],
-      how: (
-        <>
-          V{' '}
-          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
-            Google AI Studiu
-          </a>{' '}
-          klikněte <strong>Create API key</strong> (zdarma, bez platební karty) a klíč vložte do Vercelu jako GEMINI_API_KEY. Používat ji mohou jen přihlášení, s hodinovým limitem.
-        </>
-      ),
+      why: server.aiProvider === 'ovh' ? 'Běží bezplatná AI z OVHcloud (EU) bez klíče. Vlastní klíč (GEMINI_API_KEY, OPENAI_API_KEY nebo ANTHROPIC_API_KEY) ji může nahradit.' : 'Chytré čtení sylabů, stránek z Moodlu a PDF bez vlastního klíče.',
+      vars: ['FREE_AI'],
+      how: <>Bezplatná AI je zapnutá automaticky. Vypnout ji jde proměnnou FREE_AI=off.</>,
     },
     {
       ok: Boolean(server.contactEmail),
@@ -361,7 +339,7 @@ function OwnerCard() {
   return (
     <div id="spravce" className="card scroll-mt-24 rounded-[24px] p-5">
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-2 text-left" aria-expanded={open}>
-        <KeyRound className="size-5 text-accent" aria-hidden />
+        <Emoji3D name="key" size={28} />
         <span className="flex-1">
           <span className="block text-[16px] font-bold">Pro správce aplikace</span>
           <span className="block text-[13px] text-muted">{missing ? `${missing} ${missing === 1 ? 'věc' : 'věci'} na serveru ještě není nastavená` : 'Server je nastavený'}</span>

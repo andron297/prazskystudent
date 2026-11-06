@@ -2,7 +2,7 @@
  * Průvodce propojením – krok za krokem, velkým písmem, obyčejnou češtinou.
  * Každou službu jde přeskočit a kdykoli doplnit v Propojení.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -19,6 +19,7 @@ import {
   FileUp,
   FlaskConical,
   GraduationCap,
+  Landmark,
   LoaderCircle,
   LocateFixed,
   MapPin,
@@ -36,7 +37,7 @@ import { uid } from '../../lib/id';
 import { isMoodleCalendarUrl } from '../../lib/moodleIcs';
 import { MUSIC_PICKS, isSpotifyUrl } from '../../lib/music';
 import { AI_KEY_PAGES, AI_NAMES, providerForKey } from '../../lib/aiProvider';
-import { GuideAnimation } from './GuideAnimation';
+import { MOODLE_SHOTS, RealScreens } from './RealScreens';
 import { useConnections, type ServiceId, type ServiceStatus } from '../../hooks/useConnections';
 import { importSisIcsFile } from '../../services/icsFileImport';
 import { connectGoogle, refreshIcsSource } from '../../services/syncCenter';
@@ -44,10 +45,14 @@ import { useAppStore } from '../../store/appStore';
 import { useAccount } from '../../services/account';
 import { toast, useUiStore } from '../../store/uiStore';
 import { cn } from '../ui/primitives';
+import { FacultyPicker } from '../integrations/SchoolCard';
+import { detectFaculty } from '../../lib/buildings';
+import { facultyById } from '../../lib/campus';
+import { useVisibleEvents } from '../../hooks/useVisibleEvents';
 
-type StepId = 'start' | 'auto' | 'location' | 'sis' | 'moodle' | 'google' | 'extras' | 'ai' | 'done';
-const STEPS: StepId[] = ['start', 'auto', 'location', 'sis', 'moodle', 'google', 'extras', 'ai', 'done'];
-const SKIP_ID: Partial<Record<StepId, ServiceId[]>> = { location: ['location'], sis: ['sis'], moodle: ['moodle'], google: ['google'], extras: ['music', 'notifications'], ai: ['ai'] };
+type StepId = 'start' | 'auto' | 'location' | 'sis' | 'school' | 'moodle' | 'google' | 'extras' | 'ai' | 'done';
+const STEPS: StepId[] = ['start', 'auto', 'location', 'sis', 'school', 'moodle', 'google', 'extras', 'ai', 'done'];
+const SKIP_ID: Partial<Record<StepId, ServiceId[]>> = { location: ['location'], sis: ['sis'], school: ['school'], moodle: ['moodle'], google: ['google'], extras: ['music', 'notifications'], ai: ['ai'] };
 
 export function SetupWizard() {
   const open = useUiStore((s) => s.setupOpen);
@@ -132,6 +137,7 @@ export function SetupWizard() {
               {step === 'auto' && <AutoStep />}
               {step === 'location' && <LocationStep onDone={() => unskip(['location'])} />}
               {step === 'sis' && <SisStep onDone={() => unskip(['sis'])} />}
+              {step === 'school' && <SchoolStep onDone={() => unskip(['school'])} />}
               {step === 'moodle' && <MoodleStep onDone={() => unskip(['moodle'])} />}
               {step === 'google' && <GoogleStep onDone={() => unskip(['google'])} />}
               {step === 'extras' && <ExtrasStep onDone={(ids) => unskip(ids)} />}
@@ -381,6 +387,40 @@ function LocationStep({ onDone }: { onDone: () => void }) {
   );
 }
 
+function SchoolStep({ onDone }: { onDone: () => void }) {
+  const facultyId = useAppStore((s) => s.settings.faculty ?? null);
+  const buildings = useAppStore((s) => s.settings.buildings);
+  const aliases = useAppStore((s) => s.settings.locationAliases);
+  const updateSettings = useAppStore((s) => s.updateSettings);
+  const events = useVisibleEvents();
+  const detected = useMemo(() => detectFaculty(events, buildings, aliases), [events, buildings, aliases]);
+  const faculty = facultyById(facultyId);
+  return (
+    <div>
+      <StepHead icon={Landmark} kicker="Vaše škola" title={<>Kde <em className="text-moss">studujete?</em></>}>
+        Vaše budovy ukážu na mapě, nabídnu je v plánovači cest a najdu k nim nejbližší menzu.
+      </StepHead>
+      {detected && !faculty && (
+        <p className="mb-4 rounded-[18px] bg-accent-soft/70 p-3.5 text-[14.5px] ring-1 ring-inset ring-accent/20">
+          Podle rozvrhu to vypadá na <strong>{detected.faculty.short}</strong> – stačí potvrdit klepnutím níže.
+        </p>
+      )}
+      {faculty && <Success>Vaše škola: {faculty.short} ({faculty.name}).</Success>}
+      <div className="mt-4">
+        <FacultyPicker
+          value={facultyId}
+          suggested={detected?.faculty.id}
+          onPick={(f) => {
+            updateSettings({ faculty: f.id });
+            onDone();
+          }}
+        />
+      </div>
+      <p className="mt-4 text-[13.5px] text-muted">Učíte se i jinde? Další budovy přidáte podle adresy v Propojení → Škola a budovy.</p>
+    </div>
+  );
+}
+
 function SisStep({ onDone }: { onDone: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -402,7 +442,6 @@ function SisStep({ onDone }: { onDone: () => void }) {
       <StepHead icon={GraduationCap} kicker="Univerzita" title={<>Rozvrh ze <em className="text-moss">SISu</em></>}>
         Jeden soubor a máte tu všechny předměty, místnosti i sylaby. Zabere to asi minutu.
       </StepHead>
-      <GuideAnimation guide="sis" className="mb-4" />
       <NumberedSteps
         items={[
           <>
@@ -485,20 +524,20 @@ function MoodleStep({ onDone }: { onDone: () => void }) {
       <StepHead icon={BookOpenCheck} kicker="Úkoly a termíny" title={<>Termíny z <em className="text-moss">Moodlu</em></>}>
         Odevzdávárny a testy se vám samy objeví v kalendáři. Bez hesla – jen jeden odkaz.
       </StepHead>
-      <GuideAnimation guide="moodle" className="mb-4" />
       <NumberedSteps
         items={[
           <>
-            Otevřete <ExternalStep href={`${base}/calendar/export.php`}>export kalendáře v Moodlu</ExternalStep>.
+            Otevřete <ExternalStep href={`${base}/calendar/export.php`}>export kalendáře v Moodlu</ExternalStep> (případně se přihlaste).
           </>,
           <>
-            Vyberte <strong>Všechny události</strong> a <strong>Nedávné a příštích 60 dní</strong>.
+            Vyberte <strong>Všechny události</strong> a <strong>Předchozích a následujících 60 dnů</strong> (ve starší verzi „Nedávné a příštích 60 dní“).
           </>,
           <>
-            Klikněte <strong>Získat URL kalendáře</strong> a odkaz zkopírujte.
+            Klikněte <strong>Získat URL kalendáře</strong>, adresu zkopírujte a vložte níže.
           </>,
         ]}
       />
+      <RealScreens className="mt-4" shots={MOODLE_SHOTS} source="Skutečné obrazovky Moodlu 5 (veřejná ukázková instalace moodledemo.net). Moodle UK vypadá stejně, jen má vlastní logo a adresu." />
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <input
           value={url}
@@ -553,7 +592,6 @@ function GoogleStep({ onDone }: { onDone: () => void }) {
         <Success>Propojeno – {status.detail}</Success>
       ) : (
         <>
-          <GuideAnimation guide="google" className="mb-4" />
           <BigButton icon={CalendarDays} onClick={() => void connect()} busy={busy} autoFocus>
             {status.state === 'attention' ? 'Znovu potvrdit Google' : 'Propojit s Googlem'}
           </BigButton>
@@ -660,7 +698,9 @@ function AiStep({ onDone }: { onDone: () => void }) {
   const current = useAppStore((s) => s.settings.anthropicApiKey);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const serverAi = useUiStore((s) => s.server.anthropic);
+  const serverProvider = useUiStore((s) => s.server.aiProvider);
   const [key, setKey] = useState('');
+  const [ownKey, setOwnKey] = useState(false);
   const detected = providerForKey(key);
   const saved = providerForKey(current);
   const save = () => {
@@ -675,11 +715,21 @@ function AiStep({ onDone }: { onDone: () => void }) {
   };
   return (
     <div>
-      <StepHead icon={Sparkles} kicker="Nepovinné" title={<>Chytré čtení <em className="text-moss">s AI</em></>}>
-        AI přečte sylaby, stránky z Moodlu i PDF harmonogram a vytáhne z nich úkoly, váhy a termíny přesněji. Můžete použít svoji AI – Claude, ChatGPT nebo Gemini.
+      <StepHead icon={Sparkles} kicker="Funguje samo" title={<>Chytré čtení <em className="text-moss">s AI</em></>}>
+        AI přečte sylaby, stránky z Moodlu i PDF harmonogram a vytáhne z nich úkoly, váhy a termíny přesněji než pravidla.
       </StepHead>
-      {serverAi && !saved && <Success>AI už vám zapnul správce aplikace – nemusíte nic dělat.</Success>}
+      {serverAi && !saved && (
+        <Success>
+          {serverProvider === 'ovh' ? 'Zapnuto zdarma a bez klíče – texty čte AI od OVHcloud na serverech v EU, nic se neukládá.' : 'AI už vám zapnul správce aplikace – nemusíte nic dělat.'}
+        </Success>
+      )}
       {saved && <Success>Používáte {AI_NAMES[saved]} (váš klíč).</Success>}
+      {serverAi && !saved && !ownKey ? (
+        <button type="button" onClick={() => setOwnKey(true)} className="mt-4 text-[13.5px] font-semibold text-accent hover:underline">
+          Chci použít vlastní AI (Claude, ChatGPT nebo Gemini)
+        </button>
+      ) : (
+        <>
       <NumberedSteps
         items={[
           <>
@@ -708,13 +758,15 @@ function AiStep({ onDone }: { onDone: () => void }) {
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
         Klíč zůstává jen ve vašem prohlížeči a posílá se jen při čtení textu. AI platíte u svého poskytovatele (Gemini má bezplatnou úroveň).
       </p>
+        </>
+      )}
     </div>
   );
 }
 
 function DoneStep({ onClose, onGo }: { onClose: () => void; onGo: (s: StepId) => void }) {
   const { services } = useConnections();
-  const stepFor: Partial<Record<ServiceId, StepId>> = { location: 'location', sis: 'sis', moodle: 'moodle', google: 'google', music: 'extras', notifications: 'extras', ai: 'ai' };
+  const stepFor: Partial<Record<ServiceId, StepId>> = { location: 'location', school: 'school', sis: 'sis', moodle: 'moodle', google: 'google', music: 'extras', notifications: 'extras', ai: 'ai' };
   return (
     <div>
       <StepHead icon={PartyPopper} kicker="Hotovo" title={<>Máte <em className="text-moss">nastaveno</em></>}>

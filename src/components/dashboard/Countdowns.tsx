@@ -1,37 +1,68 @@
 /**
- * Odpočty: kolik zbývá do zkouškového, Vánoc, zkoušky nebo čehokoli
- * vlastního. Na hlavní stránce, s návrhy z harmonogramu a termínů.
+ * Odpočty: kolik zbývá do zkouškového, Vánoc, zkoušky nebo čehokoli vlastního.
+ * Nejbližší je velký, s průběhem od chvíle, kdy jste ho přidali; posledních
+ * 48 hodin běží živě. Návrhy z harmonogramu a termínů, 3D symboly.
  */
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CalendarPlus, Hourglass, Plus, Trash2 } from 'lucide-react';
 import type { Countdown } from '../../types';
 import { addDays, calendarDayDiff, formatDayMonth, formatTime, isDateKey, plural, startOfDay, toDate, toDateKey } from '../../lib/dates';
+import { COUNTDOWN_SYMBOLS, countdown3d } from '../../lib/emoji3d';
 import { uid } from '../../lib/id';
 import { usePlanData } from '../../hooks/usePlanData';
 import { useNow } from '../../hooks/useNow';
 import { useAppStore } from '../../store/appStore';
 import { toast, useUiStore } from '../../store/uiStore';
 import { Modal } from '../ui/overlays';
-import { Button, Card, cn, Field, TextInput, Toggle } from '../ui/primitives';
+import { Emoji3D } from '../ui/Emoji3D';
+import { Button, cn, Field, TextInput, Toggle } from '../ui/primitives';
 
 const NONE: Countdown[] = [];
-const EMOJIS = ['⏳', '🎓', '📚', '📝', '🎄', '☀️', '✈️', '🎉', '🏔️', '❤️'];
 
-function remaining(c: Countdown, now: Date): { big: string; unit: string; past: boolean } {
+interface Left {
+  /** Velké číslo nebo slovo. */
+  big: string;
+  unit: string;
+  past: boolean;
+  /** Zbývá méně než 48 h – ukazovat i hodiny a minuty. */
+  close: boolean;
+  /** Podrobně „5 h 12 min“ (u blízkých). */
+  detail?: string;
+}
+
+function remaining(c: Countdown, now: Date): Left {
   const target = toDate(c.at);
   const allDay = isDateKey(c.at);
+  const end = allDay ? startOfDay(target) : target;
+  const ms = end.getTime() - now.getTime();
   const days = calendarDayDiff(target, now);
-  if (days < 0) return { big: '✓', unit: 'proběhlo', past: true };
-  if (!allDay) {
-    const min = Math.round((target.getTime() - now.getTime()) / 60_000);
-    if (min < 0) return { big: '✓', unit: 'proběhlo', past: true };
-    if (min < 60) return { big: String(min), unit: 'min', past: false };
-    if (min < 48 * 60) return { big: String(Math.floor(min / 60)), unit: plural(Math.floor(min / 60), ['hodina', 'hodiny', 'hodin']), past: false };
+  if (allDay ? days < 0 : ms < 0) return { big: 'Hotovo', unit: '', past: true, close: false };
+  if (allDay && days === 0) return { big: 'Dnes', unit: '', past: false, close: true };
+  if (ms < 48 * 3_600_000) {
+    const h = Math.floor(ms / 3_600_000);
+    const m = Math.floor((ms % 3_600_000) / 60_000);
+    const s = Math.floor((ms % 60_000) / 1000);
+    if (h === 0) return { big: String(m), unit: plural(m, ['minuta', 'minuty', 'minut']), past: false, close: true, detail: `${m} min ${String(s).padStart(2, '0')} s` };
+    return { big: String(h), unit: plural(h, ['hodina', 'hodiny', 'hodin']), past: false, close: true, detail: `${h} h ${String(m).padStart(2, '0')} min` };
   }
-  if (days === 0) return { big: 'Dnes', unit: '', past: false };
-  if (days === 1) return { big: 'Zítra', unit: '', past: false };
-  return { big: String(days), unit: plural(days, ['den', 'dny', 'dní']), past: false };
+  if (days === 1) return { big: 'Zítra', unit: '', past: false, close: true };
+  if (days > 140) {
+    const weeks = Math.round(days / 7);
+    return { big: String(weeks), unit: plural(weeks, ['týden', 'týdny', 'týdnů']), past: false, close: false, detail: `${days} dní` };
+  }
+  return { big: String(days), unit: plural(days, ['den', 'dny', 'dní']), past: false, close: false };
+}
+
+function progressOf(c: Countdown, now: Date): number {
+  const start = new Date(c.createdAt).getTime();
+  const end = (isDateKey(c.at) ? startOfDay(toDate(c.at)) : toDate(c.at)).getTime();
+  if (!(end > start)) return 0;
+  return Math.max(0, Math.min(1, (now.getTime() - start) / (end - start)));
+}
+
+function whenLabel(c: Countdown): string {
+  const d = toDate(c.at);
+  return `${formatDayMonth(d)}${!isDateKey(c.at) ? ` v ${formatTime(d)}` : ''}`;
 }
 
 export function CountdownEditor() {
@@ -39,6 +70,15 @@ export function CountdownEditor() {
   const close = () => useUiStore.setState({ countdownEditor: false });
   return open ? <CountdownForm onClose={close} /> : null;
 }
+
+const PRESETS: { title: string; emoji: string; days: number }[] = [
+  { title: 'Zkouškové období', emoji: '📝', days: 30 },
+  { title: 'Státnice', emoji: '🎓', days: 120 },
+  { title: 'Odjezd na Erasmus', emoji: '✈️', days: 90 },
+  { title: 'Prázdniny', emoji: '🏖️', days: 60 },
+  { title: 'Narozeniny', emoji: '🎂', days: 45 },
+  { title: 'Odevzdání práce', emoji: '🚀', days: 14 },
+];
 
 function CountdownForm({ onClose }: { onClose: () => void }) {
   const countdowns = useAppStore((s) => s.settings.countdowns ?? NONE);
@@ -68,20 +108,38 @@ function CountdownForm({ onClose }: { onClose: () => void }) {
       open
       onClose={onClose}
       title="Nový odpočet"
-      description="Zobrazí se na hlavní stránce – kolik dní zbývá."
-      icon={Hourglass}
+      description="Na hlavní stránce uvidíte, kolik zbývá – v posledních dvou dnech na minuty."
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
             Zrušit
           </Button>
           <Button variant="primary" onClick={save} disabled={!title.trim() || !date}>
-            Přidat
+            Přidat odpočet
           </Button>
         </>
       }
     >
       <div className="space-y-4">
+        <div>
+          <p className="mb-1.5 text-[13px] font-medium">Rychlá volba</p>
+          <div className="flex flex-wrap gap-1.5">
+            {PRESETS.map((p) => (
+              <button
+                key={p.title}
+                type="button"
+                onClick={() => {
+                  setTitle(p.title);
+                  setEmoji(p.emoji);
+                  if (!time) setDate(toDateKey(addDays(new Date(), p.days)));
+                }}
+                className={cn('inline-flex items-center gap-1.5 rounded-full py-1 pl-1.5 pr-3 text-[12.5px] font-semibold ring-1 ring-inset transition', title === p.title ? 'bg-accent-soft ring-accent' : 'bg-surface ring-line hover:bg-surface-2')}
+              >
+                <Emoji3D name={countdown3d(p.emoji)} size={22} /> {p.title}
+              </button>
+            ))}
+          </div>
+        </div>
         <Field label="Do čeho odpočítávat">
           <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="např. Státnice, Odjezd na Erasmus, Narozeniny" autoFocus />
         </Field>
@@ -95,10 +153,18 @@ function CountdownForm({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <p className="mb-1.5 text-[13px] font-medium">Symbol</p>
-          <div className="flex flex-wrap gap-1.5">
-            {EMOJIS.map((e) => (
-              <button key={e} type="button" onClick={() => setEmoji(e)} aria-pressed={emoji === e} className={cn('grid size-10 place-items-center rounded-xl text-[20px] ring-1 ring-inset transition', emoji === e ? 'bg-accent-soft ring-accent' : 'ring-line hover:bg-surface-2')}>
-                {e}
+          <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-9">
+            {COUNTDOWN_SYMBOLS.map((s) => (
+              <button
+                key={s.emoji}
+                type="button"
+                onClick={() => setEmoji(s.emoji)}
+                aria-pressed={emoji === s.emoji}
+                title={s.label}
+                aria-label={s.label}
+                className={cn('grid aspect-square place-items-center rounded-[14px] ring-1 ring-inset transition', emoji === s.emoji ? 'bg-accent-soft ring-2 ring-accent' : 'ring-line hover:bg-surface-2')}
+              >
+                <Emoji3D name={s.name} size={30} />
               </button>
             ))}
           </div>
@@ -109,9 +175,39 @@ function CountdownForm({ onClose }: { onClose: () => void }) {
   );
 }
 
+function Featured({ c, left, progress, editing, onRemove }: { c: Countdown; left: Left; progress: number; editing: boolean; onRemove: () => void }) {
+  return (
+    <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-accent/14 via-surface-2/80 to-sand/20 p-4 ring-1 ring-inset ring-line">
+      <div className="flex items-center gap-3.5">
+        <Emoji3D name={countdown3d(c.emoji)} size={64} className="animate-float" />
+        <div className="min-w-0 flex-1">
+          <p className="eyebrow text-subtle">Nejbližší</p>
+          <p className="line-clamp-2 text-[15.5px] font-bold leading-tight">{c.title}</p>
+          <p className="text-[12.5px] text-muted">{whenLabel(c)}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="font-display text-[46px] leading-[0.9] tabular">{left.big}</p>
+          {left.unit && <p className="text-[12.5px] font-semibold text-muted">{left.unit}</p>}
+        </div>
+      </div>
+      {left.detail && left.close && <p className="mt-2 text-right text-[12.5px] font-bold text-accent tabular">ještě {left.detail}</p>}
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
+        <motion.div className="h-full rounded-full bg-accent" initial={{ width: 0 }} animate={{ width: `${Math.round(progress * 100)}%` }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} />
+      </div>
+      {editing && (
+        <button type="button" onClick={onRemove} className="mt-2 text-[12.5px] font-bold text-red-700 hover:underline dark:text-red-300">
+          Smazat odpočet
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function CountdownsCard() {
-  const now = useNow(60_000);
   const countdowns = useAppStore((s) => s.settings.countdowns ?? NONE);
+  // Živé sekundy jen tehdy, když něco končí do dvou dnů.
+  const anyClose = countdowns.some((c) => !isDateKey(c.at) && toDate(c.at).getTime() - Date.now() < 48 * 3_600_000 && toDate(c.at).getTime() > Date.now());
+  const now = useNow(anyClose ? 1000 : 60_000);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const plan = usePlanData();
   const [editing, setEditing] = useState(false);
@@ -119,7 +215,7 @@ export function CountdownsCard() {
   const list = useMemo(
     () =>
       countdowns
-        .map((c) => ({ c, r: remaining(c, now) }))
+        .map((c) => ({ c, r: remaining(c, now), p: progressOf(c, now) }))
         .filter(({ c, r }) => !r.past || calendarDayDiff(now, toDate(c.at)) <= 1)
         .sort((a, b) => toDate(a.c.at).getTime() - toDate(b.c.at).getTime()),
     [countdowns, now],
@@ -136,7 +232,7 @@ export function CountdownsCard() {
         continue;
       }
       if (m.category === 'exam-period') out.push({ key: `ms:${m.id}`, title: m.title, at: m.start.slice(0, 10), emoji: '📝' });
-      if (m.category === 'holiday' && m.end) out.push({ key: `ms:${m.id}`, title: m.title, at: m.start.slice(0, 10), emoji: '☀️' });
+      if (m.category === 'holiday' && m.end) out.push({ key: `ms:${m.id}`, title: m.title, at: m.start.slice(0, 10), emoji: '🏖️' });
     }
     for (const r of plan.requirements) {
       if (r.type === 'exam' && r.deadline && new Date(r.deadline) > now) out.push({ key: `req:${r.id}`, title: r.title, at: r.deadline, emoji: '🎓' });
@@ -149,46 +245,46 @@ export function CountdownsCard() {
 
   const add = (s: { key: string; title: string; at: string; emoji: string }) => updateSettings({ countdowns: [...countdowns, { id: uid('cd'), title: s.title, at: s.at, emoji: s.emoji, sourceKey: s.key, createdAt: new Date().toISOString() }] });
   const remove = (id: string) => updateSettings({ countdowns: countdowns.filter((c) => c.id !== id) });
+  const [first, ...rest] = list;
 
   return (
-    <Card
-      title="Odpočty"
-      icon={Hourglass}
-      action={
+    <section className="card min-w-0 rounded-[26px] p-4 sm:p-5" aria-label="Odpočty">
+      <header className="mb-3.5 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Emoji3D name="hourglass-not-done" size={34} />
+          <h2 className="font-display text-[23px] leading-none">Odpočty</h2>
+        </div>
         <span className="flex items-center gap-1">
           {list.length > 0 && (
             <button type="button" onClick={() => setEditing((v) => !v)} className="rounded-full px-3 py-1.5 text-[12.5px] font-bold text-muted hover:bg-surface-2 hover:text-fg">
               {editing ? 'Hotovo' : 'Upravit'}
             </button>
           )}
-          <button type="button" onClick={() => useUiStore.setState({ countdownEditor: true })} className="grid size-9 place-items-center rounded-full bg-accent-soft text-accent hover:bg-accent/15" aria-label="Přidat odpočet">
-            <Plus className="size-4" aria-hidden />
+          <button type="button" onClick={() => useUiStore.setState({ countdownEditor: true })} className="rounded-full bg-accent-soft px-3.5 py-1.5 text-[12.5px] font-bold text-accent hover:bg-accent/15">
+            Přidat
           </button>
         </span>
-      }
-    >
-      {list.length > 0 && (
-        <ul className="grid gap-2 sm:grid-cols-2">
+      </header>
+
+      {first && <Featured c={first.c} left={first.r} progress={first.p} editing={editing} onRemove={() => remove(first.c.id)} />}
+
+      {rest.length > 0 && (
+        <ul className="mt-2 grid gap-2 sm:grid-cols-2">
           <AnimatePresence initial={false}>
-            {list.map(({ c, r }) => (
-              <motion.li key={c.id} layout initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} className="relative flex items-center gap-3 rounded-[20px] bg-surface-2/80 px-4 py-3">
-                <span className="text-[26px] leading-none" aria-hidden>
-                  {c.emoji ?? '⏳'}
-                </span>
+            {rest.map(({ c, r }) => (
+              <motion.li key={c.id} layout initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} className="flex items-center gap-3 rounded-[18px] bg-surface-2/70 px-3 py-2.5 ring-1 ring-inset ring-line">
+                <Emoji3D name={countdown3d(c.emoji)} size={36} />
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline gap-1.5">
-                    <span className="font-display text-[32px] leading-none tabular">{r.big}</span>
-                    {r.unit && <span className="text-[13px] font-semibold text-muted">{r.unit}</span>}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[13px] font-semibold">{c.title}</span>
-                  <span className="block text-[11.5px] text-subtle">
-                    {formatDayMonth(toDate(c.at))}
-                    {!isDateKey(c.at) ? ` v ${formatTime(toDate(c.at))}` : ''}
-                  </span>
+                  <span className="line-clamp-2 block text-[13.5px] font-semibold leading-snug">{c.title}</span>
+                  <span className="block text-[11.5px] text-subtle">{whenLabel(c)}</span>
+                </span>
+                <span className="shrink-0 text-right">
+                  <span className="block font-display text-[26px] leading-none tabular">{r.big}</span>
+                  {r.unit && <span className="block text-[11px] font-semibold text-muted">{r.unit}</span>}
                 </span>
                 {editing && (
-                  <button type="button" onClick={() => remove(c.id)} className="grid size-9 place-items-center rounded-full text-red-600 hover:bg-red-500/10" aria-label={`Smazat odpočet ${c.title}`}>
-                    <Trash2 className="size-4" aria-hidden />
+                  <button type="button" onClick={() => remove(c.id)} className="shrink-0 rounded-full px-2 py-1 text-[12px] font-bold text-red-700 hover:bg-red-500/10 dark:text-red-300" aria-label={`Smazat odpočet ${c.title}`}>
+                    Smazat
                   </button>
                 )}
               </motion.li>
@@ -196,13 +292,14 @@ export function CountdownsCard() {
           </AnimatePresence>
         </ul>
       )}
+
       {suggestions.length > 0 && (
         <div className={cn(list.length > 0 && 'mt-3 border-t border-line pt-3')}>
           <p className="mb-2 text-[12px] font-bold uppercase tracking-[0.1em] text-subtle">{list.length ? 'Přidat také' : 'Navrhované odpočty'}</p>
           <div className="flex flex-wrap gap-1.5">
             {suggestions.map((s) => (
-              <button key={s.key} type="button" onClick={() => add(s)} className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-[12.5px] font-semibold ring-1 ring-inset ring-line hover:bg-surface-2">
-                <span aria-hidden>{s.emoji}</span>
+              <button key={s.key} type="button" onClick={() => add(s)} className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface py-1 pl-1.5 pr-3 text-[12.5px] font-semibold ring-1 ring-inset ring-line hover:bg-surface-2">
+                <Emoji3D name={countdown3d(s.emoji)} size={22} />
                 <span className="truncate">{s.title}</span>
                 <span className="shrink-0 text-subtle">{formatDayMonth(toDate(s.at))}</span>
               </button>
@@ -212,9 +309,9 @@ export function CountdownsCard() {
       )}
       {list.length === 0 && suggestions.length === 0 && (
         <button type="button" onClick={() => useUiStore.setState({ countdownEditor: true })} className="flex w-full items-center gap-3 rounded-[18px] border border-dashed border-line-strong px-4 py-4 text-left text-[13.5px] text-muted hover:bg-surface-2">
-          <CalendarPlus className="size-5 text-moss" aria-hidden /> Přidejte si odpočet – třeba do státnic nebo do odjezdu domů.
+          <Emoji3D name="spiral-calendar" size={32} /> Přidejte si odpočet – třeba do státnic nebo do odjezdu domů.
         </button>
       )}
-    </Card>
+    </section>
   );
 }

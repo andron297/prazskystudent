@@ -4,10 +4,12 @@ import './index.css';
 import App from './App';
 import { startRemoteSync } from './lib/persistence';
 import { pickPersisted, useAppStore } from './store/appStore';
-import { captureSpotifyCallback } from './services/spotify';
+import { reloadOnceForNewVersion } from './components/layout/ViewBoundary';
 
-// Návrat z přihlášení Spotify (/spotify?code=…): převzít a hned vyčistit adresu.
-captureSpotifyCallback();
+// Po nasazení nové verze může mít otevřená aplikace odkazy na staré soubory → jednou obnovit.
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadOnceForNewVersion()) event.preventDefault();
+});
 
 const root = document.getElementById('root');
 if (root) {

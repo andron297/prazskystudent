@@ -3,6 +3,7 @@ import { Check, FlaskConical, Play, Zap } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import { Button } from '../ui/primitives';
+import { Emoji3D } from '../ui/Emoji3D';
 
 /* ------------------------------------------------------------------ */
 /* Uvítání ukázky a nabídka prohlídky                                  */
@@ -53,19 +54,17 @@ export function TourOffer() {
   const markTourSeen = useAppStore((s) => s.markTourSeen);
   if (!show) return null;
   return (
-    <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="card flex flex-col gap-3 rounded-[26px] p-5 sm:flex-row sm:items-center">
-      <div className="grid size-11 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
-        <Play className="size-5" aria-hidden />
-      </div>
+    <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="card flex flex-wrap items-center gap-x-3.5 gap-y-2.5 rounded-[24px] px-4 py-3 sm:px-5">
+      <Emoji3D name="compass" size={38} />
       <div className="min-w-0 flex-1">
-        <p className="font-display text-[22px] leading-tight">Ukázat, co kde najdete?</p>
-        <p className="mt-0.5 text-[13.5px] text-muted">Krátká prohlídka zabere minutu. Kdykoli ji spustíte i z Průvodce (ikona otazníku nahoře).</p>
+        <p className="text-[14.5px] font-bold leading-tight">Ukázat, co kde najdete?</p>
+        <p className="mt-0.5 text-[12.5px] text-muted">Prohlídka na minutu. Později ji najdete v Průvodci.</p>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="secondary" onClick={markTourSeen}>
+      <div className="flex gap-1.5">
+        <Button size="sm" variant="ghost" onClick={markTourSeen}>
           Teď ne
         </Button>
-        <Button size="sm" variant="primary" icon={Play} onClick={() => useUiStore.getState().startTour()}>
+        <Button size="sm" variant="primary" onClick={() => useUiStore.getState().startTour()}>
           Ukázat
         </Button>
       </div>
