@@ -1,0 +1,39 @@
+{
+  "svetly": {
+    "canvas": "#eeeae0",
+    "surface": "#faf8f3",
+    "surface-2": "#f2eee5",
+    "fg": "#17241c",
+    "muted": "#59625a",
+    "subtle": "#8b9088",
+    "accent": "#2b5a40",
+    "accent-fg": "#f7f4ec",
+    "forest": "#1d3a2a",
+    "forest-fg": "#f1ece0",
+    "moss": "#7a8a52",
+    "sand": "#c7a676",
+    "clay": "#a36f45"
+  },
+  "tmavy": {
+    "canvas": "#0b110d",
+    "surface": "#121b15",
+    "surface-2": "#19241d",
+    "fg": "#ece7db",
+    "muted": "#a2aa9e",
+    "subtle": "#6d776b",
+    "accent": "#a8c79f",
+    "accent-fg": "#0b110d",
+    "forest": "#16291e",
+    "moss": "#9aab70",
+    "sand": "#d4b98e",
+    "clay": "#c48c5f"
+  },
+  "logo": {
+    "gradient-od": "#3f7a55",
+    "gradient-do": "#1b3626",
+    "ciferník": "#f1ece0",
+    "oblouk": "#d4b98e",
+    "lístek": "#a8c79f",
+    "zvýraznění-na-fotce": "#e7d6b5"
+  }
+}

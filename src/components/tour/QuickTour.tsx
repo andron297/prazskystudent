@@ -31,17 +31,22 @@ const STEPS: TourStep[] = [
   {
     targets: ['tasks'],
     title: 'Úkoly a termíny',
-    text: 'Všechno na jednom místě – vlastní úkoly, Google Úkoly i termíny z Moodlu a SISu. Předmět k úkolu aplikace pozná sama.',
+    text: 'Všechno na jednom místě – vlastní úkoly, Google Úkoly i termíny z Moodlu a SISu. Předmět k úkolu poznám sám, i podle zkratky (ČJ, AJ…).',
   },
   {
     targets: ['menza'],
     title: 'Jídelníček menzy',
-    text: 'Menza nejblíž budově, kde máte výuku, se studentskými cenami. Jinou menzu vyberete klepnutím na její název.',
+    text: 'Vaše oblíbené menzy (výchozí Arnošta z Pardubic) se studentskými cenami. Mezi nimi přepnete jedním klepnutím.',
   },
   {
     targets: ['nav', 'nav-mobile'],
     title: 'Hlavní menu',
-    text: 'Úkoly, doprava a mapa zastávek, předměty s materiály a kalendář s harmonogramem akademického roku.',
+    text: 'Plán (úkoly, kalendář a harmonogram), Doprava jako vyhledávač spojení, předměty s materiály a propojení.',
+  },
+  {
+    targets: ['alerts'],
+    title: 'Co je potřeba',
+    text: 'Zvonek ukazuje, co hoří teď a dnes – odchod, termíny, propojení. Každou věc vyřídíte jedním klepnutím.',
   },
   {
     targets: ['add'],

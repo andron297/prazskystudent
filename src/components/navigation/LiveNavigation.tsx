@@ -241,6 +241,14 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [arrived, setArrived] = useState(false);
   const [following, setFollowing] = useState(true);
+  /** 3D pohled: náklon, budovy a mapa natočená ve směru chůze. */
+  const [tilt, setTilt] = useState(() => {
+    try {
+      return localStorage.getItem('stihnu:nav-3d') !== '0';
+    } catch {
+      return true;
+    }
+  });
   const [voice, setVoice] = useState(() => {
     try {
       return localStorage.getItem('stihnu:nav-voice') === '1';
@@ -399,6 +407,23 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     });
     map.on('style.load', () => {
       applyNature(map, theme);
+      // 3D budovy z vektorových dlaždic (výška podle OpenStreetMap)
+      if (map.getSource('openmaptiles') && !map.getLayer('nav-3d-buildings')) {
+        map.addLayer({
+          id: 'nav-3d-buildings',
+          type: 'fill-extrusion',
+          source: 'openmaptiles',
+          'source-layer': 'building',
+          minzoom: 14.5,
+          paint: {
+            'fill-extrusion-color': theme === 'dark' ? '#1c2a22' : '#e6dfd0',
+            'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14.5, 0, 15.5, ['coalesce', ['get', 'render_height'], 12]],
+            'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+            'fill-extrusion-opacity': theme === 'dark' ? 0.85 : 0.9,
+            'fill-extrusion-vertical-gradient': true,
+          },
+        });
+      }
       map.addSource('nav-route', { type: 'geojson', data: routeGeoJSON(phases, 0) });
       map.addLayer({ id: 'nav-ride-casing', type: 'line', source: 'nav-route', filter: ['==', ['get', 'kind'], 'ride'], paint: { 'line-color': '#ffffff', 'line-width': 9, 'line-opacity': 0.9 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
       map.addLayer({ id: 'nav-ride', type: 'line', source: 'nav-route', filter: ['==', ['get', 'kind'], 'ride'], paint: { 'line-color': ['get', 'color'], 'line-width': 6, 'line-opacity': ['case', ['==', ['get', 'done'], 1], 0.35, 1] }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
@@ -442,15 +467,31 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady || !fix) return;
-    if (!meRef.current) meRef.current = new Marker({ element: userMarker() }).setLngLat([fix.coords.lng, fix.coords.lat]).addTo(map);
+    // Značka leží na mapě (otáčí se s ní), takže kužel směru sedí i při mapě natočené po směru chůze.
+    if (!meRef.current) meRef.current = new Marker({ element: userMarker(), rotationAlignment: 'map', pitchAlignment: 'map' }).setLngLat([fix.coords.lng, fix.coords.lat]).addTo(map);
     meRef.current.setLngLat([fix.coords.lng, fix.coords.lat]);
     const cone = meRef.current.getElement().querySelector<HTMLElement>('.nav-me-cone');
     if (cone) {
       cone.style.opacity = heading === null ? '0' : '1';
       cone.style.transform = `rotate(${heading ?? 0}deg)`;
     }
-    if (following) map.easeTo({ center: [fix.coords.lng, fix.coords.lat], zoom: ride ? 14.5 : 17, duration: 900, padding: { top: 180, bottom: 250, left: 0, right: 0 } });
-  }, [fix, heading, following, mapReady, ride]);
+    if (following) {
+      // Pěšky: mapa natočená ve směru chůze a nakloněná (jako v autě), ve voze přehled.
+      const course = tilt && heading !== null && !ride ? heading : 0;
+      map.easeTo({ center: [fix.coords.lng, fix.coords.lat], zoom: ride ? 14.5 : tilt ? 17.6 : 17, pitch: tilt ? (ride ? 35 : 58) : 0, bearing: course, duration: 900, padding: { top: 180, bottom: 250, left: 0, right: 0 } });
+    }
+  }, [fix, heading, following, mapReady, ride, tilt]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('stihnu:nav-3d', tilt ? '1' : '0');
+    } catch {
+      /* bez úložiště */
+    }
+    const map = mapRef.current;
+    if (map?.getLayer('nav-3d-buildings')) map.setLayoutProperty('nav-3d-buildings', 'visibility', tilt ? 'visible' : 'none');
+    if (map && !tilt) map.easeTo({ pitch: 0, bearing: 0, duration: 500 });
+  }, [tilt, mapReady]);
 
   /* -------------------------------- vzhled -------------------------------- */
 
@@ -575,6 +616,9 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
           aria-pressed={voice}
         >
           {voice ? <Volume2 className="size-5" aria-hidden /> : <VolumeX className="size-5" aria-hidden />}
+        </button>
+        <button type="button" onClick={() => setTilt((v) => !v)} className={cn('grid size-11 place-items-center rounded-full text-[12.5px] font-black shadow-lg ring-1 ring-line', tilt ? 'bg-accent text-accent-fg' : 'bg-[var(--surface)] text-fg')} aria-label={tilt ? 'Přepnout na plochou mapu' : 'Přepnout na 3D pohled'} aria-pressed={tilt}>
+          {tilt ? '3D' : '2D'}
         </button>
         {!following && (
           <button type="button" onClick={() => setFollowing(true)} className="grid size-11 place-items-center rounded-full bg-[var(--surface)] text-accent shadow-lg ring-1 ring-line" aria-label="Zpět na moji polohu">

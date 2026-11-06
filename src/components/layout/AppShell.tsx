@@ -120,7 +120,7 @@ function ModeSwitch() {
   );
 }
 
-/** Výrazný pruh: ukázková data nejsou tvoje. */
+/** Výrazný pruh: ukázková data nejsou vaše. */
 export function DemoRibbon() {
   const mode = useAppStore((s) => s.settings.mode);
   const openSetup = useUiStore((s) => s.openSetup);
