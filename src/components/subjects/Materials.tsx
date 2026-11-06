@@ -1,11 +1,12 @@
-import { useMemo, useRef, useState, type DragEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Download, Eye, FileText, FileUp, FolderOpen, HardDrive, KeyRound, Link2, NotebookPen, Paperclip, Pencil, Plus, Trash, Upload, ExternalLink } from 'lucide-react';
+import { ChevronDown, Download, Eye, FilePlus2, FileSpreadsheet, FileText, FileUp, FolderOpen, HardDrive, KeyRound, Link2, LoaderCircle, NotebookPen, Paperclip, Pencil, Plus, Presentation, Trash, Upload, ExternalLink } from 'lucide-react';
 import type { Material, Requirement, Subject } from '../../types';
 import { formatBytes, loadBlob, saveBlob } from '../../lib/blobStore';
-import { formatDate } from '../../lib/dates';
+import { formatDate, formatRelative } from '../../lib/dates';
+import { createGoogleFile, driveFileInfo, driveFilesAvailable, folderUrl, subjectFolder, uploadToSubject, type DriveFileInfo, type GoogleDocKind } from '../../services/google/driveFiles';
 import { uid } from '../../lib/id';
 import { moodleFileUrlWithToken } from '../../services/moodle';
 import { drivePickerAvailable, parseDriveLink, pickFromDrive, type PickedDriveItem } from '../../services/google/picker';
@@ -65,6 +66,148 @@ export function useMaterialOpener() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Google Disk: lišta a údaje o souborech                              */
+/* ------------------------------------------------------------------ */
+
+/** Otevře nové okno hned (kvůli blokování vyskakovacích oken) a adresu doplní později. */
+async function openLater(work: () => Promise<string | undefined>): Promise<void> {
+  const win = window.open('', '_blank');
+  try {
+    const url = await work();
+    if (url && win) win.location.href = url;
+    else win?.close();
+  } catch (error) {
+    win?.close();
+    throw error;
+  }
+}
+
+function addDriveMaterial(subject: Subject, info: DriveFileInfo, requirementId?: string) {
+  useAppStore.getState().addMaterial({
+    id: uid('mat'),
+    subjectId: subject.id,
+    requirementId,
+    kind: 'link',
+    title: info.name.replace(/\.[^.]{1,5}$/, ''),
+    fileName: info.name,
+    url: info.webViewLink,
+    mimeType: info.mimeType,
+    driveFileId: info.id,
+    size: info.size ? Number(info.size) : undefined,
+    source: 'google',
+    createdAt: new Date().toISOString(),
+  });
+}
+
+const DOC_KINDS: { kind: GoogleDocKind; label: string; icon: typeof FileText }[] = [
+  { kind: 'document', label: 'Dokument Google', icon: FileText },
+  { kind: 'spreadsheet', label: 'Tabulka Google', icon: FileSpreadsheet },
+  { kind: 'presentation', label: 'Prezentace Google', icon: Presentation },
+];
+
+function DriveBar({ subject }: { subject: Subject }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const run = async (label: string, work: () => Promise<void>) => {
+    setBusy(label);
+    try {
+      await work();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(null);
+    }
+  };
+  const upload = (files: File[]) =>
+    run('upload', async () => {
+      let done = 0;
+      for (const file of files) {
+        const info = await uploadToSubject(subject, file, (r) => setBusy(`upload:${Math.round(r * 100)}`));
+        addDriveMaterial(subject, info);
+        done++;
+      }
+      toast.success(done === 1 ? 'Nahráno na Google Disk do složky předmětu.' : `Nahráno ${done} souborů na Google Disk.`);
+    });
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[18px] bg-surface-2/70 px-3 py-2.5 ring-1 ring-inset ring-line">
+      <span className="flex min-w-0 flex-1 items-center gap-2 text-[12.5px] text-muted">
+        <HardDrive className="size-4 shrink-0 text-accent" aria-hidden />
+        <span className="truncate">
+          Google Disk · <span className="font-semibold text-fg">Stihnu/{subject.code ?? subject.name}</span>
+        </span>
+      </span>
+      <button type="button" disabled={Boolean(busy)} onClick={() => inputRef.current?.click()} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-[12.5px] font-bold ring-1 ring-inset ring-line hover:bg-surface-2 disabled:opacity-60">
+        {busy?.startsWith('upload') ? <LoaderCircle className="size-3.5 animate-spin" aria-hidden /> : <Upload className="size-3.5" aria-hidden />}
+        {busy?.startsWith('upload:') ? `${busy.slice(7)} %` : 'Nahrát'}
+      </button>
+      <Menu
+        label="Nový soubor na Disku"
+        items={DOC_KINDS.map((d) => ({
+          label: d.label,
+          icon: d.icon,
+          onSelect: () =>
+            void run('create', () =>
+              openLater(async () => {
+                const info = await createGoogleFile(subject, d.kind);
+                addDriveMaterial(subject, info);
+                toast.success(`${d.label} vytvořen ve složce předmětu.`);
+                return info.webViewLink;
+              }),
+            ),
+        }))}
+        trigger={(props) => (
+          <button type="button" disabled={Boolean(busy)} className="inline-flex h-8 items-center gap-1 rounded-full bg-surface px-3 text-[12.5px] font-bold ring-1 ring-inset ring-line hover:bg-surface-2 disabled:opacity-60" {...props}>
+            {busy === 'create' ? <LoaderCircle className="size-3.5 animate-spin" aria-hidden /> : <FilePlus2 className="size-3.5" aria-hidden />} Nový <ChevronDown className="size-3.5" aria-hidden />
+          </button>
+        )}
+      />
+      <button
+        type="button"
+        disabled={Boolean(busy)}
+        onClick={() => void run('folder', () => openLater(async () => folderUrl(await subjectFolder(subject))))}
+        className="inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-bold text-muted hover:bg-surface hover:text-fg disabled:opacity-60"
+      >
+        <FolderOpen className="size-3.5" aria-hidden /> Složka
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          e.target.value = '';
+          if (files.length) void upload(files);
+        }}
+      />
+    </div>
+  );
+}
+
+/** „upraveno před 2 h (Jana)“ u souborů z Disku. */
+function DriveMeta({ id }: { id: string }) {
+  const [info, setInfo] = useState<DriveFileInfo | null | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    driveFileInfo(id)
+      .then((r) => alive && setInfo(r))
+      .catch(() => alive && setInfo(null));
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+  if (!info?.modifiedTime) return null;
+  const who = info.lastModifyingUser?.me ? 'vámi' : info.lastModifyingUser?.displayName;
+  return (
+    <span className="inline-flex items-center gap-1">
+      {info.iconLink && <img src={info.iconLink} alt="" className="size-3.5" loading="lazy" referrerPolicy="no-referrer" />}
+      upraveno {formatRelative(new Date(info.modifiedTime), new Date())}
+      {who ? ` (${who})` : ''}
+    </span>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Panel materiálů předmětu                                            */
 /* ------------------------------------------------------------------ */
 
@@ -76,6 +219,8 @@ export function MaterialsPanel({ subject, materials, requirements, onOpen }: { s
   const [addKey, setAddKey] = useState(0);
   const removeMaterial = useAppStore((s) => s.removeMaterial);
   const updateMaterial = useAppStore((s) => s.updateMaterial);
+  const googleConnected = useAppStore((s) => Boolean(s.googleSync.live.connectedAt) && s.settings.mode === 'live');
+  const driveReady = googleConnected && driveFilesAvailable();
 
   const groups = useMemo(() => {
     const visible = materials.filter((m) => {
@@ -122,6 +267,7 @@ export function MaterialsPanel({ subject, materials, requirements, onOpen }: { s
         ]}
         className="mb-3"
       />
+      {driveReady && <DriveBar subject={subject} />}
       {groups.length === 0 ? (
         <EmptyState icon={FileUp} title="Zatím žádné materiály">
           Prezentace a PDF se stáhnou automaticky po propojení Moodlu. Vlastní soubory, poznámky a odkazy přidáte tlačítkem Přidat.
@@ -146,7 +292,8 @@ export function MaterialsPanel({ subject, materials, requirements, onOpen }: { s
                           <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
                             <span>{v.label}</span>
                             {m.size ? <span>{formatBytes(m.size)}</span> : null}
-                            {m.kind === 'upload' && <span>nahráno {formatDate(new Date(m.createdAt))}</span>}
+                            {m.kind === 'upload' && <span>nahráno {formatDate(new Date(m.createdAt))} · jen v tomto zařízení</span>}
+                            {driveReady && m.driveFileId && m.source === 'google' && <DriveMeta id={m.driveFileId} />}
                             {linked && <span className="truncate">↳ {linked}</span>}
                           </span>
                         </button>
@@ -223,6 +370,8 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const driveOk = driveFilesAvailable();
+  const [toDrive, setToDrive] = useState(driveOk);
 
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
@@ -235,7 +384,15 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
     const base = { subjectId: subject.id, requirementId: requirementId || undefined, source: 'manual' as const, createdAt: now };
     setBusy(true);
     try {
-      if (tab === 'file') {
+      if (tab === 'file' && toDrive && driveOk) {
+        let saved = 0;
+        for (const file of files) {
+          const info = await uploadToSubject(subject, file);
+          addDriveMaterial(subject, info, requirementId || undefined);
+          saved++;
+        }
+        if (saved) toast.success(saved === 1 ? 'Nahráno na Google Disk do složky předmětu.' : `Nahráno ${saved} souborů na Google Disk.`);
+      } else if (tab === 'file') {
         let saved = 0;
         for (const file of files) {
           if (file.size > MAX_UPLOAD) {
@@ -331,8 +488,16 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
           >
             <FileUp className="mb-2 size-7 text-subtle" aria-hidden />
             <span className="text-sm font-medium">Přetáhněte soubory sem nebo klikněte</span>
-            <span className="mt-1 text-xs text-muted">PDF, prezentace, tabulky, obrázky… do 50 MB. Uloží se jen v tomto zařízení (IndexedDB).</span>
+            <span className="mt-1 text-xs text-muted">{toDrive && driveOk ? 'PDF, prezentace, tabulky, obrázky… Nahraje se na Google Disk do složky předmětu.' : 'PDF, prezentace, tabulky, obrázky… do 50 MB. Uloží se jen v tomto zařízení.'}</span>
           </button>
+          {driveOk && (
+            <label className="mt-3 flex items-start gap-3 rounded-2xl bg-surface-2 px-3.5 py-3 text-[13px]">
+              <input type="checkbox" checked={toDrive} onChange={(e) => setToDrive(e.target.checked)} className="mt-0.5 size-4 accent-[var(--accent)]" />
+              <span>
+                <strong>Uložit na Google Disk</strong> do složky „Stihnu/{subject.code ?? subject.name}“ – soubor pak otevřete na každém zařízení.
+              </span>
+            </label>
+          )}
           <input ref={inputRef} type="file" multiple className="hidden" onChange={(e) => setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])])} />
           {files.length > 0 && (
             <ul className="mt-3 space-y-1 text-[13px]">

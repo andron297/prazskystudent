@@ -112,6 +112,8 @@ export interface Subject {
   moodleCourseId?: number;
   moodleCourseUrl?: string;
   syllabus?: SubjectSyllabus;
+  /** Složka předmětu na Google Disku (Stihnu/<předmět>). */
+  driveFolderId?: string;
   createdAt: ISODateTime;
   updatedAt?: ISODateTime;
   /** Položka ukázkových dat (posouvá se s dneškem, lze hromadně smazat). */

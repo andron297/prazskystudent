@@ -32,8 +32,65 @@ const GENERIC = new Set(
 );
 const TITLES = /^(prof|doc|dr|mgr|bc|ing|phdr|judr|mudr|rndr|paeddr|thdr|phd|csc|drsc|mba|ma|ba|msc|bsc|dis|ll|m|th)$/;
 
+/**
+ * Běžné zkratky a hovorové názvy předmětů („ČJ“, „matika“, „děják“, „ZSV“).
+ * `short` = dvoupísmenné zkratky (platí jen velkými písmeny nebo s diakritikou,
+ * aby „nj“ ve smyslu „no jo“ nic nespletlo), `words` = začátky slov,
+ * `name` = co musí obsahovat název předmětu (bez diakritiky).
+ */
+interface Alias {
+  label: string;
+  short?: string[];
+  words: RegExp;
+  name: RegExp;
+}
+
+export const SUBJECT_ALIASES: Alias[] = [
+  { label: 'čeština', short: ['cj'], words: /^(cestin|cesky|ceskeho|ceskem|bohemist|cjl)/, name: /cesk\w* jazyk|cestin|bohemist|cesk\w* literatur|stylistik/ },
+  { label: 'angličtina', short: ['aj'], words: /^(anglictin|anglin|anj$|english|angl$)/, name: /anglick|anglictin|english/ },
+  { label: 'němčina', short: ['nj'], words: /^(nemcin|nemcik|nemec(ky|keho)|german|deutsch)/, name: /nemeck|nemcin|german|deutsch/ },
+  { label: 'francouzština', short: ['fj'], words: /^(francouzstin|francin|french|fra$)/, name: /francouz|french/ },
+  { label: 'španělština', short: ['sj'], words: /^(spanelstin|spanish|spa$)/, name: /spanel|spanish/ },
+  { label: 'ruština', short: ['rj'], words: /^(rustin|russian)/, name: /rusk\w* jazyk|rustin|russian/ },
+  { label: 'latina', words: /^(latin|lat$)/, name: /latin/ },
+  { label: 'matematika', words: /^(mat$|matik|matematik|math)/, name: /matemat|math|algebr/ },
+  { label: 'dějepis', words: /^(dej$|dejak|dejepis|dejin|histor)/, name: /dejin|dejepis|histor/ },
+  { label: 'zeměpis', words: /^(zem$|zemak|zemepis|geograf)/, name: /zemepis|geograf/ },
+  { label: 'fyzika', words: /^(fyz$|fyzik|fyzicka|physic)/, name: /fyzik|physic/ },
+  { label: 'chemie', short: ['ch'], words: /^(chem$|chemi|chemick)/, name: /chemi/ },
+  { label: 'biologie', words: /^(bio$|biosk|biolog|prirodopis)/, name: /biolog|prirodopis/ },
+  { label: 'informatika', words: /^(inf$|info$|ivt$|informatik|programov)/, name: /informat|programov|pocitac/ },
+  { label: 'společenské vědy', words: /^(zsv$|obcank|obcanskou)/, name: /spolecensk\w* ved|obcansk/ },
+  { label: 'tělocvik', short: ['tv'], words: /^(telak|telocvik|telesn)/, name: /telesn|telocvik|sport/ },
+  { label: 'hudební výchova', short: ['hv'], words: /^(hudebk|hudb)/, name: /hudb|hudebn|muzikolog/ },
+  { label: 'výtvarná výchova', short: ['vv'], words: /^(vytvark|vytvarn)/, name: /vytvarn/ },
+  { label: 'ekonomie', words: /^(eko$|ekonomk|ekonomi|econ)/, name: /ekonom|econom/ },
+  { label: 'statistika', words: /^(stat$|statk|statisti)/, name: /statist/ },
+  { label: 'psychologie', words: /^(psy$|psych$|psycholog)/, name: /psycholog/ },
+  { label: 'sociologie', words: /^(soc$|socka|socky|sociolog)/, name: /sociolog/ },
+  { label: 'filozofie', words: /^(fil$|filda|filozof|filosof)/, name: /filozof|filosof/ },
+  { label: 'politologie', words: /^(politolog|politik)/, name: /politolog|politick/ },
+  { label: 'mediální studia', words: /^(medialk|zurnalistik|novinarin)/, name: /medial|zurnalist|novinar/ },
+  { label: 'literatura', words: /^(lit$|literatur|liter$)/, name: /literatur/ },
+  { label: 'pedagogika', words: /^(ped$|pedagogik|pedagog|didaktik)/, name: /pedagog|didakt/ },
+];
+
+/** Které skupiny zkratek text zmiňuje. */
+function aliasesInText(toks: Tok[]): Set<number> {
+  const hits = new Set<number>();
+  SUBJECT_ALIASES.forEach((a, i) => {
+    for (const tok of toks) {
+      if (a.short?.includes(tok.t) && (tok.upper || /[^\u0000-\u007f]/.test(tok.raw))) hits.add(i);
+      else if (tok.t.length >= 3 && a.words.test(tok.t)) hits.add(i);
+    }
+  });
+  return hits;
+}
+
 interface Tok {
   t: string;
+  /** Původní podoba (s diakritikou a velikostí písmen). */
+  raw: string;
   /** Psáno se zkracovací tečkou („soc.“) – smí se shodovat i začátkem slova. */
   abbr: boolean;
   /** Původně velkými písmeny (zkratky jako „AMO“). */
@@ -47,7 +104,7 @@ function tokenize(text: string): Tok[] {
     const raw = m[0].replace(/\.$/, '');
     const t = foldDiacritics(raw);
     if (t.length < 2 && !/\d/.test(t)) continue;
-    out.push({ t, abbr: Boolean(m[1]) && raw.length >= 3 && raw.length <= 6, upper: raw.length >= 2 && raw === raw.toUpperCase() && /\p{L}/u.test(raw) });
+    out.push({ t, raw, abbr: Boolean(m[1]) && raw.length >= 3 && raw.length <= 6, upper: raw.length >= 2 && raw === raw.toUpperCase() && /\p{L}/u.test(raw) });
   }
   return out;
 }
@@ -108,6 +165,8 @@ interface SubjectProfile {
   weekdays: Set<number>;
   /** Konkrétní hodiny (pro „na příští seminář“ a úkoly psané během výuky). */
   classes: { start: number; end: number }[];
+  /** Skupiny běžných zkratek, kterým název odpovídá („Český jazyk“ → ČJ). */
+  aliases: Set<number>;
 }
 
 export interface MatchContext {
@@ -145,6 +204,7 @@ export function buildMatchContext(data: { subjects: Subject[]; events?: Schedule
       keywords,
       weekdays: new Set(events.map((e) => new Date(e.start).getDay())),
       classes: events.map((e) => ({ start: new Date(e.start).getTime(), end: new Date(e.end).getTime() })),
+      aliases: new Set(SUBJECT_ALIASES.map((a, i) => (a.name.test(foldDiacritics(subject.name)) ? i : -1)).filter((i) => i >= 0)),
     };
   });
   const df = new Map<string, number>();
@@ -175,6 +235,7 @@ export function guessSubject(input: MatchInput, ctx: MatchContext, opts: { exclu
   const dueDate = input.due ? new Date(input.due.length === 10 ? `${input.due}T12:00:00` : input.due) : null;
   const created = input.createdAt ? new Date(input.createdAt).getTime() : null;
   const classHint = CLASS_HINT.test(folded);
+  const textAliases = aliasesInText(toks);
 
   const scored: { id: string; score: number; reason: string }[] = [];
   for (const p of ctx.profiles) {
@@ -203,6 +264,12 @@ export function guessSubject(input: MatchInput, ctx: MatchContext, opts: { exclu
       // Výrazné slovo, které má v názvu jen tento předmět („statistika“), stačí samo.
       if (p.nameWords.some((w) => w.length >= 7 && (ctx.df.get(w) ?? 0) === 1 && toks.some((t) => tokenMatches(t, w) === 1))) nameScore += 2;
       add(nameScore, 'podle názvu');
+    }
+    for (const i of textAliases) {
+      if (p.aliases.has(i)) {
+        add(6.5, `podle zkratky (${SUBJECT_ALIASES[i].label})`);
+        break;
+      }
     }
     if (p.acronym && p.acronym.length >= 2) {
       const hit = toks.some((t) => t.t === p.acronym && (p.acronym!.length >= 3 ? t.t.length === p.acronym!.length : t.upper));

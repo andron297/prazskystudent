@@ -286,3 +286,14 @@ describe('obousměrná synchronizace s Googlem', () => {
     expect(data.events.some((e) => e.title === 'Cizí událost')).toBe(false);
   });
 });
+
+describe('odpočty v Google Kalendáři', () => {
+  it('odpočet je celodenní událost s ikonou a stálým klíčem', async () => {
+    const { countdownMilestone, milestonePayload } = await import('../lib/sync/mapping');
+    const m = countdownMilestone({ id: 'c1', title: 'Státnice', at: '2027-06-15', emoji: '🎓', createdAt: '2026-11-06T10:00:00.000Z' });
+    expect(m).toMatchObject({ id: 'cd-c1', title: '🎓 Státnice', allDay: true, start: '2027-06-15' });
+    const p = milestonePayload(m);
+    expect(p).toMatchObject({ summary: '🎓 Státnice', start: '2027-06-15', end: '2027-06-16', allDay: true });
+    expect(countdownMilestone({ id: 'c2', title: 'Vlak domů', at: '2026-12-19T14:30:00.000Z', createdAt: '' }).allDay).toBe(false);
+  });
+});

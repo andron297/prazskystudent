@@ -53,3 +53,32 @@ describe('chytré přiřazení úkolu k předmětu', () => {
     expect(guessSubject({ title: 'statistika – domácí úkol 5' }, ctx, { exclude: ['stat'] })).toBeNull();
   });
 });
+
+describe('běžné zkratky a hovorové názvy předmětů', () => {
+  const school = [
+    subj('cj', 'Český jazyk a stylistika', { code: 'JSB001' }),
+    subj('aj', 'Angličtina pro mediální studia', { code: 'JSB002' }),
+    subj('mat', 'Matematika I', { code: 'JSB003' }),
+    subj('dej', 'Dějiny moderní doby', { code: 'JSB004' }),
+    subj('nj', 'Německý jazyk II', { code: 'JSB005' }),
+    subj('soc', 'Úvod do sociologie', { code: 'JSB006' }),
+  ];
+  const c = buildMatchContext({ subjects: school });
+  const g = (title: string) => guessSubject({ title }, c);
+  it('ČJ je čeština, AJ angličtina, NJ němčina', () => {
+    expect(g('ČJ – slohová práce')).toMatchObject({ subjectId: 'cj', confidence: 'high', reason: 'podle zkratky (čeština)' });
+    expect(g('čj cvičení 3')?.subjectId).toBe('cj');
+    expect(g('AJ slovíčka unit 5')?.subjectId).toBe('aj');
+    expect(g('NJ – časování sloves')?.subjectId).toBe('nj');
+    expect(g('procvičit češtinu')?.subjectId).toBe('cj');
+  });
+  it('hovorové názvy', () => {
+    expect(g('matika příklady 12–20')?.subjectId).toBe('mat');
+    expect(g('děják – referát o studené válce')?.subjectId).toBe('dej');
+    expect(g('socka: přečíst Webera')?.subjectId).toBe('soc');
+  });
+  it('„nj“ psané malými (no jo) ani obecný text nic nepřiřadí', () => {
+    expect(g('nj, zítra koupit mléko')).toBeNull();
+    expect(g('zavolat babičce')).toBeNull();
+  });
+});

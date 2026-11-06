@@ -371,7 +371,7 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
         setResult(r);
         setExtra({ before: [], after: [], prev: r.previous, next: r.next });
         setStatus('idle');
-        useJourneyStore.setState((s) => ({ from: from.coords, to: to.coords, selected: s.selected && r.itineraries.some((x) => x.id === s.selected!.id) ? r.itineraries.find((x) => x.id === s.selected!.id)! : (r.itineraries[0] ?? null) }));
+        useJourneyStore.setState((s) => ({ from: from.coords, to: to.coords, toIsSchool: to.kind === 'building', selected: s.selected && r.itineraries.some((x) => x.id === s.selected!.id) ? r.itineraries.find((x) => x.id === s.selected!.id)! : (r.itineraries[0] ?? null) }));
       } catch (e) {
         setStatus('error');
         setError(errorMessage(e));
@@ -380,9 +380,23 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
     [from, to, arriveBy, queryTime, settings.accessibleOnly],
   );
 
+  // Požadavek odjinud (např. „Trasa“ u menzy): cíl je dané místo, odjezd teď.
+  const request = useJourneyStore((s) => s.request);
+  useEffect(() => {
+    if (!request) return;
+    touched.current = true;
+    setFrom(myPlace);
+    setTo({ kind: 'place', label: request.label, detail: request.detail, coords: request.coords });
+    setArriveBy(false);
+    setTimeMode('now');
+    setLecture(null);
+    useJourneyStore.setState({ request: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request]);
+
   // Výchozí nastavení: odkud = moje poloha; když se blíží přednáška, kam = škola s příjezdem včas.
   useEffect(() => {
-    if (touched.current) return;
+    if (touched.current || useJourneyStore.getState().request) return;
     setFrom(myPlace);
     const l = lectures[0];
     if (l && new Date(l.e.start).getTime() - now.getTime() < 3 * 3_600_000) {

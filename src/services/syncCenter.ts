@@ -15,6 +15,7 @@ import { buildMoodleIcsImport } from '../lib/moodleIcs';
 import { loadBlob } from '../lib/blobStore';
 import { hashString } from '../lib/id';
 import { combineReports, mergeServiceState } from '../lib/sync/apply';
+import { countdownMilestone } from '../lib/sync/mapping';
 import { buildSnapshot, mergeSnapshots, parseSnapshot, pickSharedSettings, snapshotData, STATE_FILE_NAME } from '../lib/sync/driveState';
 import { syncCalendar, syncTasks, type ServiceResult, type SyncContext } from '../lib/sync/engine';
 import { GoogleAuthError, type GoogleBackend, type RemoteCalendar } from '../lib/sync/remote';
@@ -256,8 +257,11 @@ export async function runGoogleSync(options: { manual?: boolean; allowMassDelete
           events: s.events,
           requirements: s.requirements,
           tasks: s.tasks,
-          // Jen termíny harmonogramu, které se studenta týkají (skryté se z Googlu uklidí).
-          milestones: splitMilestones(s.milestones, { profile: s.settings.studyProfile, hidden: s.settings.hiddenMilestones, shown: s.settings.shownMilestones }).visible,
+          // Jen termíny harmonogramu, které se studenta týkají (skryté se z Googlu uklidí), a odpočty.
+          milestones: [
+            ...splitMilestones(s.milestones, { profile: s.settings.studyProfile, hidden: s.settings.hiddenMilestones, shown: s.settings.shownMilestones }).visible,
+            ...(s.settings.countdowns ?? []).map(countdownMilestone),
+          ],
           tombstones: s.tombstones,
           buildingFor: (e) => buildingForEvent(e, s.settings).building,
         },
@@ -468,7 +472,21 @@ export function useBackgroundSync(): void {
     window.addEventListener('online', tick);
     document.addEventListener('visibilitychange', onVisible);
     const unsubscribe = useAppStore.subscribe((state, prev) => {
-      if (state.events !== prev.events || state.tasks !== prev.tasks || state.requirements !== prev.requirements || state.milestones !== prev.milestones || state.materials !== prev.materials) scheduleSoon();
+      const a = state.settings;
+      const b = prev.settings;
+      if (
+        state.events !== prev.events ||
+        state.tasks !== prev.tasks ||
+        state.requirements !== prev.requirements ||
+        state.milestones !== prev.milestones ||
+        state.materials !== prev.materials ||
+        // I odpočty a to, které termíny harmonogramu se studenta týkají
+        a.countdowns !== b.countdowns ||
+        a.hiddenMilestones !== b.hiddenMilestones ||
+        a.shownMilestones !== b.shownMilestones ||
+        a.studyProfile !== b.studyProfile
+      )
+        scheduleSoon();
     });
     return () => {
       clearTimeout(first);

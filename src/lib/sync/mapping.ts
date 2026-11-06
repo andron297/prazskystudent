@@ -3,7 +3,7 @@
  * Každá strana má vlastní „payload“ (normalizovaný tvar) a jeho otisk – změnu
  * poznáme porovnáním otisku s hodnotou uloženou při poslední synchronizaci.
  */
-import type { Building, Milestone, Requirement, ScheduleEvent, Subject, SubjectColor, Subtask, Task } from '../../types';
+import type { Building, Countdown, Milestone, Requirement, ScheduleEvent, Subject, SubjectColor, Subtask, Task } from '../../types';
 import { addDays, formatDeadline, fromDateKey, isDateKey, toDateKey } from '../dates';
 import { hashString } from '../id';
 import { isRequirementComplete, REQUIREMENT_TYPE_LABELS } from '../progress';
@@ -147,6 +147,12 @@ export function milestonePayload(m: Milestone, subject?: Subject): CalendarPaylo
   const start = new Date(m.start);
   const end = m.end ? new Date(m.end) : new Date(start.getTime() + 60 * 60_000);
   return { summary: m.title, description, location: '', start: start.toISOString(), end: end.toISOString(), allDay: false };
+}
+
+/** Odpočet jako důležitý den (do Google Kalendáře jde stejně jako termíny harmonogramu). */
+export function countdownMilestone(c: Countdown): Milestone {
+  const allDay = isDateKey(c.at);
+  return { id: `cd-${c.id}`, title: `${c.emoji ?? '⏳'} ${c.title}`, category: 'event', start: c.at, allDay, source: 'manual', note: 'Odpočet', updatedAt: c.createdAt };
 }
 
 export function toEventBody(candidate: CalendarCandidate, appUrl: string): EventBody {

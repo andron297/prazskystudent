@@ -134,8 +134,13 @@ function addStopLayers(map: MapLibreMap, theme: 'light' | 'dark', data: ReturnTy
   }
 }
 
-function markerEl(kind: 'me' | 'school'): HTMLElement {
+function markerEl(kind: 'me' | 'school' | 'pin'): HTMLElement {
   const el = document.createElement('div');
+  if (kind === 'pin') {
+    el.className = 'grid size-9 place-items-center rounded-full border-[3px] border-white bg-[#a36f45] text-white shadow-lg';
+    el.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+    return el;
+  }
   if (kind === 'me') {
     el.className = 'relative grid size-7 place-items-center';
     el.innerHTML = '<span class="absolute inline-flex size-full animate-ping-soft rounded-full bg-[#c7a676]/70"></span><span class="relative size-[18px] rounded-full border-[3px] border-white bg-[#a36f45] shadow-lg"></span>';
@@ -257,6 +262,7 @@ export function TransitMapView() {
   const journey = useJourneyStore((s) => s.selected);
   const journeyFrom = useJourneyStore((s) => s.from);
   const journeyTo = useJourneyStore((s) => s.to);
+  const journeyToSchool = useJourneyStore((s) => s.toIsSchool);
   const focusTick = useJourneyStore((s) => s.focusTick);
   const endMarkers = useRef<Marker[]>([]);
 
@@ -375,9 +381,9 @@ export function TransitMapView() {
     for (const m of endMarkers.current) m.remove();
     endMarkers.current = [];
     if (tab === 'spojeni' && journeyFrom && journeyTo) {
-      endMarkers.current = [new Marker({ element: markerEl('me') }).setLngLat([journeyFrom.lng, journeyFrom.lat]).addTo(map), new Marker({ element: markerEl('school') }).setLngLat([journeyTo.lng, journeyTo.lat]).addTo(map)];
+      endMarkers.current = [new Marker({ element: markerEl('me') }).setLngLat([journeyFrom.lng, journeyFrom.lat]).addTo(map), new Marker({ element: markerEl(journeyToSchool ? 'school' : 'pin') }).setLngLat([journeyTo.lng, journeyTo.lat]).addTo(map)];
     }
-  }, [ready, journey, journeyFrom, journeyTo, tab, theme]);
+  }, [ready, journey, journeyFrom, journeyTo, journeyToSchool, tab, theme]);
 
   // Okraje mapy podle panelu; v odjezdech zpět na okolí výchozího místa
   const tabRef = useRef(tab);
