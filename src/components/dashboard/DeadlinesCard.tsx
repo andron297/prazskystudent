@@ -1,6 +1,7 @@
 /**
- * Termíny dnes a zítra – výrazně, hned pod úvodní fotkou. Po termínu červeně,
- * dnes v barvě hlíny, zítra jantarově. U každého tlačítko Hotovo.
+ * Termíny dnes a zítra – výrazně, hned pod úvodní fotkou, ale věcně: nadpis
+ * „Termíny“ a u každého jen kdy („Dnes 23:59“, „Zítra 14:00“, „Po termínu
+ * · 2 dny“). Po termínu červeně, dnes v barvě hlíny, zítra jantarově.
  */
 import { useMemo } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -18,10 +19,10 @@ function whenText(r: TaskRow, group: Urgent, now: Date): string {
   if (!r.due) return '';
   if (group === 'overdue') {
     const days = Math.floor((now.getTime() - r.due.getTime()) / 86_400_000);
-    return days >= 1 ? `po termínu ${days} ${plural(days, ['den', 'dny', 'dní'])}` : 'po termínu';
+    return days >= 1 ? `Po termínu · ${days} ${plural(days, ['den', 'dny', 'dní'])}` : 'Po termínu';
   }
-  const day = group === 'today' ? 'dnes' : 'zítra';
-  return r.dueAllDay ? `${day} do konce dne` : `${day} do ${formatTime(r.due)}`;
+  const day = group === 'today' ? 'Dnes' : 'Zítra';
+  return r.dueAllDay ? day : `${day} ${formatTime(r.due)}`;
 }
 
 export function DeadlinesCard({ now }: { now: Date }) {
@@ -49,7 +50,7 @@ export function DeadlinesCard({ now }: { now: Date }) {
     if (r.requirement && !r.requirement.done) store.toggleRequirementDone(r.requirement.id);
     toast.success(`Hotovo: ${r.title}`);
   };
-  const headline = overdue > 0 ? 'Termíny, které hoří' : today > 0 ? 'Dnes vám končí' : 'Zítra vám končí';
+  const headline = 'Termíny';
 
   return (
     <section
@@ -71,7 +72,7 @@ export function DeadlinesCard({ now }: { now: Date }) {
               <motion.li key={r.key} layout exit={{ opacity: 0, height: 0 }} className="flex items-center gap-3 rounded-[18px] bg-surface/90 px-3.5 py-2.5 shadow-sm ring-1 ring-inset ring-black/5 dark:bg-surface/70">
                 <span className={cn('w-1.5 self-stretch rounded-full', g === 'overdue' ? 'bg-red-600' : g === 'today' ? 'bg-[#a36f45]' : 'bg-amber-500')} aria-hidden />
                 <button type="button" onClick={() => navigateTo('plan', 'ukoly')} className="min-w-0 flex-1 text-left">
-                  <span className={cn('block text-[11.5px] font-black uppercase tracking-[0.1em]', g === 'overdue' ? 'text-red-700 dark:text-red-300' : g === 'today' ? 'text-[#8a5a35] dark:text-[#e8b98f]' : 'text-amber-700 dark:text-amber-300')}>{whenText(r, g, now)}</span>
+                  <span className={cn('block text-[12.5px] font-bold tabular', g === 'overdue' ? 'text-red-700 dark:text-red-300' : g === 'today' ? 'text-[#8a5a35] dark:text-[#e8b98f]' : 'text-amber-700 dark:text-amber-300')}>{whenText(r, g, now)}</span>
                   <span className="block text-[15px] font-bold leading-snug text-fg">{r.title}</span>
                   {subject && <span className="block truncate text-[12.5px] text-muted">{subject.name}</span>}
                 </button>

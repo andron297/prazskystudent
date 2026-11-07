@@ -533,7 +533,7 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
           ) : (
             <p className="rounded-2xl bg-surface-2 px-4 py-3 text-[13px] text-muted">
               Vložte odkaz na soubor nebo složku z Disku (v Disku: pravé tlačítko → <strong>Sdílet</strong> → <strong>Kopírovat odkaz</strong>).
-              {useAppStore.getState().settings.mode === 'live' && ' Výběr přímo z Disku se objeví, až ho správce aplikace zapne.'}
+              {useAppStore.getState().settings.mode === 'live' && ' Výběr přímo z Disku zatím není k dispozici.'}
             </p>
           )}
           {picked.length > 0 && (

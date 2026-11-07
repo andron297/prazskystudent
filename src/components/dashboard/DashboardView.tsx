@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Palette } from 'lucide-react';
 import type { ScheduleEvent } from '../../types';
-import { capitalize, formatDateLong, formatTime, startOfDay } from '../../lib/dates';
+import { vTime, capitalize, formatDateLong, formatTime, startOfDay } from '../../lib/dates';
 import { nameDayText, publicHoliday } from '../../lib/czechDays';
 import { autoHeroPhoto, galleryPhoto, photoCredit, photoUrl, resolveAppearance } from '../../lib/appearance';
 import { useLocalImage } from '../../hooks/useLocalImage';
@@ -31,6 +31,7 @@ import { TourOffer, WelcomeCard } from './DashboardCards';
 import { CountdownsCard } from './Countdowns';
 import { DayBrief } from './DayBrief';
 import { DeadlinesCard } from './DeadlinesCard';
+import { NextPlaceCard } from './NextPlaceCard';
 import { myBuildings } from '../../lib/campus';
 import { MenzaCard } from './MenzaCard';
 
@@ -111,7 +112,7 @@ export function DashboardView() {
     if (days > 7) return 'Dnes už žádná výuka.';
     const b = buildingForEvent(next, settings).building;
     const when = days === 0 ? 'dnes' : days === 1 ? 'zítra' : ['v neděli', 'v pondělí', 'v úterý', 've středu', 've čtvrtek', 'v pátek', 'v sobotu'][d.getDay()];
-    return `Dnes už žádná výuka. Další ${when} v ${formatTime(d)}${b ? ` · ${b.name}` : ''}.`;
+    return `Dnes už žádná výuka. Další ${when} ${vTime(d)}${b ? ` · ${b.name}` : ''}.`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [events, Math.floor(minuteKey / 10), settings.buildings]);
   const nameDay = nameDayText(now);
@@ -164,7 +165,7 @@ export function DashboardView() {
             </motion.h1>
             <p className="mt-3 max-w-md text-[15px] leading-relaxed text-white/85 sm:mt-4">
               {within
-                ? `${KIND_LABEL[within.kind]}${building?.locative ? ` ${building.locative}` : ''} v ${formatTime(new Date(within.start))}${subject ? ` · ${subject.name}` : ''}`
+                ? `${KIND_LABEL[within.kind]}${building?.locative ? ` ${building.locative}` : ''} ${vTime(new Date(within.start))}${subject ? ` · ${subject.name}` : ''}`
                 : nextClassText}
             </p>
             {forecast && (
@@ -189,6 +190,8 @@ export function DashboardView() {
       </section>
 
       <DeadlinesCard now={now} />
+
+      <NextPlaceCard now={now} glanceEventId={within && !transit.tooFar ? within.id : null} />
 
       <WelcomeCard />
       <TourOffer />

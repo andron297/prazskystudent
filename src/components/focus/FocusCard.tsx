@@ -8,6 +8,7 @@ import type { Task } from '../../types';
 import { plural } from '../../lib/dates';
 import { FOCUS_PRESETS, focusLeft, focusSummary, phaseMinutes, presetOf, useFocusStore } from '../../store/focusStore';
 import { PlaylistPlayer } from '../music/PlaylistPlayer';
+import { BreathingDialog } from '../rest/RestSpots';
 import { Glyph, GlyphTile } from '../ui/Glyph';
 import { cn } from '../ui/primitives';
 
@@ -32,6 +33,7 @@ function fmt(ms: number): string {
 
 export function FocusCard({ tasks }: { tasks: Task[] }) {
   const reduce = useReducedMotion();
+  const [breathing, setBreathing] = useState(false);
   const f = useFocusStore();
   const running = Boolean(f.endsAt);
   const now = useTick(running);
@@ -49,6 +51,7 @@ export function FocusCard({ tasks }: { tasks: Task[] }) {
 
   return (
     <section className="card relative min-w-0 overflow-hidden rounded-[26px] p-4 sm:p-5" aria-label="Soustředění – pomodoro">
+      <BreathingDialog open={breathing} onClose={() => setBreathing(false)} />
       <div className={cn('pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b transition-colors duration-700', isBreak ? 'from-sand/30' : 'from-accent/12')} aria-hidden />
       <header className="relative flex flex-wrap items-center gap-x-3 gap-y-2.5">
         <div className="mr-auto flex items-center gap-2.5">
@@ -158,10 +161,13 @@ export function FocusCard({ tasks }: { tasks: Task[] }) {
 
       <div className="relative mt-4 border-t border-line pt-3">
         <PlaylistPlayer compact />
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-muted">
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted">
           <label className="inline-flex cursor-pointer items-center gap-1.5">
             <input type="checkbox" className="size-3.5 accent-[var(--accent)]" checked={f.autoNext} onChange={(e) => f.setAutoNext(e.target.checked)} /> Pauzy a bloky navazují samy
           </label>
+          <button type="button" onClick={() => setBreathing(true)} className="font-bold text-accent hover:underline">
+            Dechové cvičení
+          </button>
           <label className="inline-flex cursor-pointer items-center gap-1.5">
             <input type="checkbox" className="size-3.5 accent-[var(--accent)]" checked={f.sound} onChange={(e) => f.setSound(e.target.checked)} /> Zvuk na konci
           </label>

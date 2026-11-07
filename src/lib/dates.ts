@@ -96,6 +96,22 @@ const monthYearFmt = new Intl.DateTimeFormat('cs-CZ', { month: 'long', year: 'nu
 const monthShortFmt = new Intl.DateTimeFormat('cs-CZ', { month: 'short' });
 
 export const formatTime = (d: Date): string => timeFmt.format(d);
+
+/** Hodiny, před kterými se říká „ve“ (ve dvě, ve tři, ve čtyři, ve dvanáct… ve dvacet tři). */
+const VE_HOURS = new Set([2, 3, 4, 12, 13, 14, 20, 21, 22, 23]);
+
+/** Čas s předložkou: „v 9:30“, ale „ve 13:30“. */
+export const vTime = (d: Date): string => `${VE_HOURS.has(d.getHours()) ? 've' : 'v'} ${formatTime(d)}`;
+
+const DAY_PHRASE = ['v neděli', 'v pondělí', 'v úterý', 've středu', 've čtvrtek', 'v pátek', 'v sobotu'];
+
+/** Den s předložkou vůči dnešku: „dnes“, „zítra“, „v pondělí“, „ve středu“. */
+export function dayPhrase(d: Date, now: Date): string {
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const b = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const diff = Math.round((a - b) / 86_400_000);
+  return diff === 0 ? 'dnes' : diff === 1 ? 'zítra' : DAY_PHRASE[d.getDay()];
+}
 export const formatDayMonth = (d: Date): string => dayMonthFmt.format(d);
 export const formatDate = (d: Date): string => dateFmt.format(d);
 export const formatWeekdayShort = (d: Date): string => weekdayShortFmt.format(d);
@@ -144,9 +160,9 @@ export function formatRelative(target: Date, now: Date): string {
   const dayDiff = calendarDayDiff(target, now);
   if (diffMin === 0) return 'právě teď';
   if (diffMin > 0) {
-    if (dayDiff === 0) return diffMin < 6 * 60 ? `za ${formatDuration(diffMin)}` : `dnes v ${formatTime(target)}`;
-    if (dayDiff === 1) return `zítra v ${formatTime(target)}`;
-    if (dayDiff === 2) return `pozítří v ${formatTime(target)}`;
+    if (dayDiff === 0) return diffMin < 6 * 60 ? `za ${formatDuration(diffMin)}` : `dnes ${vTime(target)}`;
+    if (dayDiff === 1) return `zítra ${vTime(target)}`;
+    if (dayDiff === 2) return `pozítří ${vTime(target)}`;
     if (dayDiff < 7) return `za ${dayDiff} ${plural(dayDiff, ['den', 'dny', 'dní'])}`;
     if (dayDiff < 35) {
       const weeks = Math.round(dayDiff / 7);
@@ -155,8 +171,8 @@ export function formatRelative(target: Date, now: Date): string {
     return formatDate(target);
   }
   const ago = -diffMin;
-  if (dayDiff === 0) return ago < 6 * 60 ? `před ${formatDuration(ago)}` : `dnes v ${formatTime(target)}`;
-  if (dayDiff === -1) return `včera v ${formatTime(target)}`;
+  if (dayDiff === 0) return ago < 6 * 60 ? `před ${formatDuration(ago)}` : `dnes ${vTime(target)}`;
+  if (dayDiff === -1) return `včera ${vTime(target)}`;
   const days = -dayDiff;
   if (days < 7) return `před ${days} ${plural(days, ['dnem', 'dny', 'dny'])}`;
   return formatDate(target);

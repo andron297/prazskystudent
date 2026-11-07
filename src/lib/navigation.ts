@@ -3,8 +3,10 @@
  * jízda, pěšky do budovy) a z tvaru trasy pokyny „za 80 m odboč vlevo“.
  * Pokyny se počítají z geometrie (změna směru), názvy ulic z plánovače.
  */
-import type { Itinerary, LatLng, RideLeg, WalkLeg, WalkStep } from '../types';
+import type { Itinerary, LatLng, RideLeg, TransitMode, WalkLeg, WalkStep } from '../types';
+import { vTime } from './dates';
 import { haversineMeters } from './geo';
+import { entranceForPath, stationFor, type MetroStation } from './metroEntrances';
 import { bearing, cumulative, pathLength, pointAlong, turnAngle } from './polyline';
 
 export type ManeuverType =
@@ -42,6 +44,8 @@ export interface Maneuver {
   crossingFirst?: boolean;
   /** Vstup do metra / výstup z metra. */
   note?: 'entrance' | 'exit';
+  /** Označení vstupu v datech PID (E17…). */
+  entranceId?: string;
 }
 
 /** Co je která cesta na trase (z OpenStreetMap, viz services/wayInfo). */
@@ -79,6 +83,8 @@ export interface WalkPhase {
   deadline?: string;
   /** Odhad plánovače (min). */
   minutes: number;
+  /** Vstup do metra, kterým trasa vede (z dat PID). */
+  entrance?: { id: string; lat: number; lng: number; along: number };
 }
 
 export interface RidePhase {
@@ -320,6 +326,19 @@ const CROSSING_PHRASE: Record<CrossingKind, string> = {
   unmarked: 'přejděte silnici',
 };
 
+/** Čím se jde dolů nebo nahoru (u vstupu do metra). */
+const MEANS: Partial<Record<ManeuverType, string>> = {
+  stairs: 'po schodech',
+  'stairs-up': 'po schodech nahoru',
+  'stairs-down': 'po schodech dolů',
+  escalator: 'eskalátorem',
+  'escalator-up': 'eskalátorem nahoru',
+  'escalator-down': 'eskalátorem dolů',
+  elevator: 'výtahem',
+  'elevator-up': 'výtahem nahoru',
+  'elevator-down': 'výtahem dolů',
+};
+
 function phrase(m: Maneuver): string {
   if (m.type === 'crossing') return CROSSING_PHRASE[m.crossing ?? 'zebra'];
   const base = PHRASE[m.type];
@@ -340,8 +359,10 @@ export function instructionText(m: Maneuver, distance: number, targetName?: stri
   }
   const action = phrase(m);
   if (m.note) {
-    const place = m.note === 'entrance' ? 'vstup do metra' : 'výstup z metra';
-    return distance < 15 ? { headline: capitalizeFirst(place), detail: capitalizeFirst(action) } : { headline: `Za ${formatDistance(distance)} ${place}`, detail: capitalizeFirst(action) };
+    const verb = m.note === 'entrance' ? 'sejděte do metra' : 'vyjděte z metra';
+    const how = MEANS[m.type];
+    const detail = [how ? capitalizeFirst(how) : '', m.entranceId ? `vstup ${m.entranceId}` : ''].filter(Boolean).join(' · ') || undefined;
+    return distance < 15 ? { headline: capitalizeFirst(verb), detail } : { headline: `Za ${formatDistance(distance)} ${verb}`, detail };
   }
   const street = m.street && TURNS.has(m.type) ? `do ulice ${m.street}` : undefined;
   if (distance < 15) return { headline: `${capitalizeFirst(action)}${street ? ` ${street}` : ''}` };
@@ -359,4 +380,103 @@ export function slackMinutes(remainingMeters: number, deadline: string | undefin
   if (!deadline) return null;
   const eta = now.getTime() + (remainingMeters / speed) * 1000;
   return (new Date(deadline).getTime() - eta) / 60_000;
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Vstupy do metra (data PID)                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * U cesty na metro najde vstup, kterým trasa vede (nebo nejbližší, když trasa
+ * nemá tvar), pokyn „sejděte do metra“ posadí přesně k němu a fázi ho připíše.
+ */
+export function withMetroEntrances(phases: NavPhase[], stations: MetroStation[]): NavPhase[] {
+  if (stations.length === 0) return phases;
+  return phases.map((p) => {
+    if (p.kind !== 'walk' || !p.target.isStop || p.target.mode !== 'metro') return p;
+    const station = stationFor(stations, p.target.name, p.target.coords);
+    if (!station) return p;
+    let hit = entranceForPath(station, p.path);
+    if (!hit) return p;
+    let { path, cum, length, maneuvers } = p;
+    if (!Number.isFinite(hit.offRoute) || p.path.length <= 2) {
+      // Trasa bez tvaru (jen přímka): přes nejbližší vstup.
+      path = [p.path[0], { lat: hit.entrance.lat, lng: hit.entrance.lng }, p.path[p.path.length - 1]];
+      cum = cumulative(path);
+      length = cum[cum.length - 1];
+      hit = { ...hit, along: cum[1], offRoute: 0 };
+      maneuvers = [{ at: 0, type: 'depart' }, { at: cum[1], type: 'stairs-down', note: 'entrance', entranceId: hit.entrance.id }, { at: length, type: 'arrive' }];
+    } else {
+      const along = hit.along;
+      const i = maneuvers.findIndex((m) => m.note === 'entrance');
+      if (i >= 0) {
+        if (Math.abs(maneuvers[i].at - along) < 90) maneuvers = maneuvers.map((m, j) => (j === i ? { ...m, at: along, entranceId: hit!.entrance.id } : m));
+      } else if (along > 5 && along < length - 3) {
+        const entrance: Maneuver = { at: along, type: 'stairs-down', note: 'entrance', entranceId: hit.entrance.id };
+        maneuvers = [...maneuvers.filter((m) => m.type === 'depart' || m.type === 'arrive' || Math.abs(m.at - along) > 8), entrance].sort((a, b) => (a.type === 'arrive' ? 1 : b.type === 'arrive' ? -1 : a.at - b.at));
+      }
+    }
+    return { ...p, path, cum, length, maneuvers, entrance: { id: hit.entrance.id, lat: hit.entrance.lat, lng: hit.entrance.lng, along: hit.along } };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Hlasové pokyny – celé věty                                          */
+/* ------------------------------------------------------------------ */
+
+const NOUN: Record<TransitMode, [string, string]> = {
+  tram: ['Tramvaj', 'tramvaje'],
+  metro: ['Metro', 'metra'],
+  bus: ['Autobus', 'autobusu'],
+  trolleybus: ['Trolejbus', 'trolejbusu'],
+  train: ['Vlak', 'vlaku'],
+  ferry: ['Přívoz', 'přívozu'],
+  funicular: ['Lanovka', 'lanovky'],
+};
+
+/** „80 metrů“, „1,2 kilometru“ – pro čtení nahlas (žádné „m“). */
+export function spokenDistance(m: number): string {
+  if (m < 1000) {
+    const r = Math.max(10, Math.round(m / 10) * 10);
+    return `${r} metrů`;
+  }
+  const km = Math.round(m / 100) / 10;
+  if (Number.isInteger(km)) return `${km} ${km === 1 ? 'kilometr' : km <= 4 ? 'kilometry' : 'kilometrů'}`;
+  return `${String(km).replace('.', ',')} kilometru`;
+}
+
+/** Pokyn nahlas: „Za 80 metrů odbočte vlevo do ulice Vodičkova.“ */
+export function spokenInstruction(m: Maneuver, distance: number, targetName?: string): string {
+  if (m.type === 'arrive') return `Jste u cíle${targetName ? `, ${targetName}` : ''}.`;
+  const street = m.street && TURNS.has(m.type) ? ` do ulice ${m.street}` : '';
+  if (m.note) {
+    const verb = m.note === 'entrance' ? 'sejděte do metra' : 'vyjděte z metra';
+    const how = MEANS[m.type] ? ` ${MEANS[m.type]}` : '';
+    return distance < 15 ? `${capitalizeFirst(verb)}${how}.` : `Za ${spokenDistance(distance)} ${verb}${how}.`;
+  }
+  const action = phrase(m);
+  return distance < 15 ? `${capitalizeFirst(action)}${street}.` : `Za ${spokenDistance(distance)} ${action}${street}.`;
+}
+
+function platformWords(ride: RideLeg): string {
+  if (!ride.platform) return '';
+  return ride.mode === 'metro' || ride.mode === 'train' ? `kolej ${ride.platform}` : `nástupiště ${ride.platform}`;
+}
+
+/** Na začátku cesty: kam jít a čím a kdy to jede (hlavně směr – konečná stanice). */
+export function walkToStopSentence(target: WalkPhase['target'], ride: RideLeg | undefined): string {
+  if (!ride) return target.isStop ? `Jděte na zastávku ${target.name}.` : `Jděte do budovy ${target.name}.`;
+  const [nom] = NOUN[ride.mode] ?? ['Spoj', 'spoje'];
+  const where = platformWords(ride);
+  const go = ride.mode === 'metro' ? `Jděte do metra ${target.name}.` : `Jděte na zastávku ${target.name}${where ? `, ${where}` : ''}.`;
+  return `${go} ${nom} ${ride.line} směr ${ride.headsign} odjíždí ${vTime(new Date(ride.predictedDeparture))}${ride.mode === 'metro' && where ? ` z koleje ${ride.platform}` : ''}.`;
+}
+
+/** U zastávky / na nástupišti: do čeho nastoupit. */
+export function boardingSentence(ride: RideLeg, atStop = false): string {
+  const [, gen] = NOUN[ride.mode] ?? ['Spoj', 'spoje'];
+  const where = platformWords(ride);
+  const here = atStop ? (ride.mode === 'metro' ? 'Jste na nástupišti. ' : 'Jste na zastávce. ') : '';
+  return `${here}Nastupte do ${gen} ${ride.line} směr ${ride.headsign}${where ? `, ${where}` : ''}. Vystupujete na zastávce ${ride.toStop}.`;
 }

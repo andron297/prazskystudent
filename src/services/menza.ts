@@ -55,7 +55,7 @@ function cached(key: string, maxAge: number): MenzaResponse | null {
   return null;
 }
 
-export async function fetchMenza(ids: number[], from: string, days = 6): Promise<MenzaResponse> {
+export async function fetchMenza(ids: number[], from: string, days = 14): Promise<MenzaResponse> {
   const key = `${[...ids].sort((a, b) => a - b).join(',')}|${from}|${days}`;
   const hit = cached(key, TTL);
   if (hit) return hit;
@@ -71,7 +71,7 @@ export async function fetchMenza(ids: number[], from: string, days = 6): Promise
 
 export function useMenza(ids: number[], from: string, enabled = true): { data: MenzaResponse | null; error: string | null; loading: boolean } {
   const idsKey = ids.join(',');
-  const [state, setState] = useState<{ data: MenzaResponse | null; error: string | null; loading: boolean }>(() => ({ data: cached(`${[...ids].sort((a, b) => a - b).join(',')}|${from}|6`, 24 * 3_600_000), error: null, loading: false }));
+  const [state, setState] = useState<{ data: MenzaResponse | null; error: string | null; loading: boolean }>(() => ({ data: cached(`${[...ids].sort((a, b) => a - b).join(',')}|${from}|14`, 24 * 3_600_000), error: null, loading: false }));
   useEffect(() => {
     if (!enabled || !idsKey) return;
     let alive = true;

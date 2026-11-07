@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import { ArrowDown, ChevronDown, Flag, Footprints, MapPin, Navigation2 } from 'lucide-react';
 import type { Building, Itinerary, RideLeg, ScheduleEvent } from '../../types';
-import { formatTime } from '../../lib/dates';
+import { calendarDayDiff, formatTime, vTime } from '../../lib/dates';
 import { platformLabel, rideLegs } from '../../lib/transitPlanner';
 import { TRANSIT_STYLES } from '../../lib/urgency';
 import type { TransitPlanState } from '../../hooks/useTransitPlan';
@@ -78,10 +78,13 @@ export function TransitGlance({
       <span className="min-w-0 text-white/90">
         směr <strong className="font-bold text-white">{r.headsign}</strong>
       </span>
-      <span className="font-bold tabular">{formatTime(new Date(r.predictedDeparture))}</span>
+      <span className={cn('tabular', i === 0 ? 'rounded-full bg-white/18 px-2 py-0.5 font-black text-white ring-1 ring-inset ring-white/25' : 'font-bold')}>
+        {i === 0 ? `jede ${vTime(new Date(r.predictedDeparture))}` : formatTime(new Date(r.predictedDeparture))}
+      </span>
       <DelayChip delaySeconds={r.delaySeconds} className="bg-white/15 text-white dark:text-white" />
     </li>
   );
+  const hurry = Boolean(chosen && new Date(chosen.leaveAt).getTime() < now.getTime() - 30_000);
 
   return (
     <motion.section
@@ -114,7 +117,7 @@ export function TransitGlance({
 
       {(status === 'calm' || status === 'prepare' || status === 'critical') && chosen && plan ? (
         <div className="mt-4">
-          <p className="eyebrow text-white/70">{isLast && !plan.bufferMet ? 'Rezerva už nevyjde · vyrazte nejpozději za' : isLast ? 'Vyrazte nejpozději za' : 'Vyrazte za'}</p>
+          <p className="eyebrow text-white/70">{hurry ? 'Vyrazte hned a přidejte do kroku' : isLast && !plan.bufferMet ? 'Rezerva už nevyjde · vyrazte nejpozději za' : isLast ? 'Vyrazte nejpozději za' : 'Vyrazte za'}</p>
           <div className="mt-1.5" aria-live="polite">
             <BigCountdown seconds={secondsToLeave} />
           </div>
@@ -183,13 +186,20 @@ export function TransitGlance({
         </div>
       ) : status === 'missed' && plan ? (
         <div className="mt-4">
-          <p className="font-display text-[40px] leading-none">Ujelo to.</p>
+          <p className="font-display text-[40px] leading-none">Včas to nestihnete.</p>
           <p className="mt-2 text-[14px] text-white/85">
-            {plan.fastestLate ? `Nejdřív dorazíte v ${formatTime(new Date(plan.fastestLate.arriveAt))}${plan.lateByMinutes ? ` (+${plan.lateByMinutes} min)` : ''}.` : 'Žádný spoj už to nestihne.'}
+            {plan.fastestLate ? `Nejrychleji budete na místě ${vTime(new Date(plan.fastestLate.arriveAt))}${plan.lateByMinutes ? ` (o ${plan.lateByMinutes} min později)` : ''}.` : 'Žádný spoj už to nestihne.'}
           </p>
-          <button type="button" onClick={onDetail} className="mt-3 inline-flex items-center gap-1 text-[13px] font-semibold text-white hover:underline">
-            Co teď <ArrowDown className="size-3.5" aria-hidden />
-          </button>
+          <span className="mt-3 flex flex-wrap items-center gap-3">
+            {plan.fastestLate && (
+              <button type="button" onClick={() => startNavigation(plan.fastestLate!)} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white px-3.5 text-[13px] font-bold text-[#1d3a2a] shadow-md transition hover:brightness-95">
+                <Navigation2 className="size-4" aria-hidden /> Navigovat
+              </button>
+            )}
+            <button type="button" onClick={onDetail} className="inline-flex items-center gap-1 text-[13px] font-semibold text-white hover:underline">
+              Další možnosti <ArrowDown className="size-3.5" aria-hidden />
+            </button>
+          </span>
         </div>
       ) : status === 'on-site' ? (
         <div className="mt-4">
@@ -201,7 +211,7 @@ export function TransitGlance({
       ) : event && transit.tooFar ? (
         <div className="mt-4">
           <p className="font-display text-[44px] leading-none">{formatTime(new Date(event.start))}</p>
-          <p className="mt-2 text-[14px] text-white/85">Spoje dopočítám 3 hodiny předem. Do té doby máte klid.</p>
+          <p className="mt-2 text-[14px] text-white/85">{transit.windowStart ? `Spoj a odpočet odchodu ukážu ${calendarDayDiff(transit.windowStart, now) === 0 ? 'dnes' : 'zítra'} ${vTime(transit.windowStart)}.` : 'Spoj a odpočet odchodu ukážu s předstihem.'}</p>
         </div>
       ) : event && !building ? (
         <div className="mt-4">

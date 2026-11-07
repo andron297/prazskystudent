@@ -49,9 +49,6 @@ export function AccountView() {
         </SerifTitle>
         <Section icon={Cloud} title="Účty zatím nejsou zapnuté">
           <p className="text-muted">Data jsou teď jen v tomto zařízení. Jakmile správce aplikace zapne účty, přihlásíte se a data se budou bezpečně synchronizovat mezi zařízeními.</p>
-          <a href="#/nastaveni/server" className="mt-3 inline-block font-semibold text-accent hover:underline">
-            Návod pro správce
-          </a>
         </Section>
       </div>
     );

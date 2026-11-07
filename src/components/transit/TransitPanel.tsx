@@ -18,7 +18,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import type { Building as BuildingType, Itinerary, ScheduleEvent, Subject } from '../../types';
-import { formatTime, formatWeekdayShort, formatDayMonth } from '../../lib/dates';
+import { vTime, formatTime, formatWeekdayShort, formatDayMonth } from '../../lib/dates';
 import { googleMapsTransitUrl } from '../../lib/geo';
 import { explainItinerary, minutesEarly, rideLegs, routeSteps, type RouteStep, type TransitPlan } from '../../lib/transitPlanner';
 import { TRANSIT_STYLES } from '../../lib/urgency';
@@ -32,6 +32,7 @@ import { DelayChip, LineBadge, VehicleFlags } from './TransitBits';
 import { KIND_LABEL, transitStatusOf } from './transitStatus';
 import { usePlatformLookup } from './usePlatformLookup';
 import { BuildingOptions } from '../integrations/SchoolCard';
+import { useTripStore } from '../../store/tripStore';
 
 const SOURCE_LABEL: Record<string, string> = {
   demo: 'Simulace PID (ukázka)',
@@ -94,7 +95,9 @@ export function TransitPanel({
   const updateSettings = useAppStore((s) => s.updateSettings);
   const setLocationAlias = useAppStore((s) => s.setLocationAlias);
   const stop = useAppStore((s) => s.settings.originStop[s.settings.mode]);
-  const selectTrip = useUiStore((s) => s.selectTrip);
+  // „Pojedu tímto“ – volba se pamatuje a řídí odpočet nahoře.
+  const selectTrip = (eventId: string, it: Itinerary) =>
+    useTripStore.getState().choose({ itinerary: it, eventId, label: building?.name ?? event?.title ?? 'Cíl', coords: building?.coords });
   const platformFor = usePlatformLookup();
   const [showMath, setShowMath] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -185,7 +188,7 @@ export function TransitPanel({
 
           {status === 'idle' && transit.tooFar && eventStart && (
             <p className="rounded-[22px] bg-surface-2 p-4 text-sm text-muted">
-              {formatWeekdayShort(eventStart)} {formatDayMonth(eventStart)} v {formatTime(eventStart)} – odjezdy PID sahají jen pár hodin dopředu, spoje dopočítám 3 hodiny předem.
+              {formatWeekdayShort(eventStart)} {formatDayMonth(eventStart)} {vTime(eventStart)} – odjezdy PID sahají jen pár hodin dopředu, spoje dopočítám 3 hodiny předem.
             </p>
           )}
 
@@ -259,7 +262,7 @@ export function TransitPanel({
                 <ul className="space-y-1.5" role="radiogroup" aria-label="Spoje">
                   {options.map((it) => (
                     <li key={it.id}>
-                      <ConnectionOption it={it} plan={plan} selected={it.id === selected.id} eventStart={eventStart} now={now} buffer={settings.bufferMinutes} minMargin={minMargin} onSelect={() => selectTrip(event.id, it.id)} />
+                      <ConnectionOption it={it} plan={plan} selected={it.id === selected.id} eventStart={eventStart} now={now} buffer={settings.bufferMinutes} minMargin={minMargin} onSelect={() => selectTrip(event.id, it)} />
                     </li>
                   ))}
                 </ul>
@@ -272,7 +275,7 @@ export function TransitPanel({
                       <ul className="mt-1.5 space-y-1.5" role="radiogroup" aria-label="Dřívější spoje">
                         {earlier.map((it) => (
                           <li key={it.id}>
-                            <ConnectionOption it={it} plan={plan} selected={it.id === selected.id} eventStart={eventStart} now={now} buffer={settings.bufferMinutes} minMargin={minMargin} onSelect={() => selectTrip(event.id, it.id)} />
+                            <ConnectionOption it={it} plan={plan} selected={it.id === selected.id} eventStart={eventStart} now={now} buffer={settings.bufferMinutes} minMargin={minMargin} onSelect={() => selectTrip(event.id, it)} />
                           </li>
                         ))}
                       </ul>
@@ -280,7 +283,7 @@ export function TransitPanel({
                   </>
                 )}
                 <p className="mt-2 text-[11.5px] leading-snug text-subtle">
-                  Doporučený = nejpozdější spoj, se kterým jste v budově aspoň {settings.bufferMinutes} min předem. Poslední možný = v budově aspoň {minMargin} min předem.
+                  Doporučený = spoj, se kterým jste v budově aspoň {settings.bufferMinutes} min předem, s co nejméně přestupy a chůzí. Poslední možný = stihnete ho i bez rezervy. Klepnutím na spoj ho zvolíte – odpočet nahoře se pak řídí jím.
                 </p>
                 {options.length <= 1 && selected.source === 'estimate' && (
                   <p className="mt-2 rounded-[18px] bg-surface-2 p-3 text-[12.5px] text-muted">Bez dat PID je tohle jen odhad podle vzdálenosti. S živými daty tu uvidíte konkrétní spoje na výběr.</p>
@@ -291,10 +294,10 @@ export function TransitPanel({
 
           {status === 'missed' && plan && eventStart && (
             <div className="rounded-[22px] bg-surface-2 p-4">
-              <p className="font-display text-2xl">MHD už to včas nestihne</p>
+              <p className="font-display text-2xl">Včas to nestihnete</p>
               {plan.fastestLate && (
                 <p className="mt-1 text-sm text-muted">
-                  Nejrychleji v <strong className="text-fg tabular">{formatTime(new Date(plan.fastestLate.arriveAt))}</strong>
+                  Nejrychleji budete na místě <strong className="text-fg tabular">{vTime(new Date(plan.fastestLate.arriveAt))}</strong>
                   {plan.lateByMinutes ? ` – asi ${plan.lateByMinutes} min po začátku` : ''}.
                 </p>
               )}

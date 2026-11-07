@@ -17,6 +17,17 @@ export interface RealShot {
 
 export const MOODLE_SHOTS: RealShot[] = [
   {
+    src: '/guides/moodle-calendar.webp',
+    width: 1100,
+    height: 708,
+    alt: 'Moodle – stránka Kalendář, pod kalendářem zvýrazněný odkaz Import nebo export kalendářů',
+    caption: (
+      <>
+        V Moodlu otevřete <strong>Kalendář</strong> a pod ním klikněte na <strong>Import nebo export kalendářů</strong>, pak na <strong>Exportovat kalendář</strong>.
+      </>
+    ),
+  },
+  {
     src: '/guides/moodle-export-form.webp',
     width: 1100,
     height: 882,
@@ -77,3 +88,40 @@ export function RealScreens({ shots, source, className }: { shots: RealShot[]; s
     </div>
   );
 }
+
+/** SIS: kde je export rozvrhu a kam ho nahrát (ilustrace SISu, skutečná obrazovka Stihnuta). */
+export const SIS_SHOTS: RealShot[] = [
+  {
+    src: '/guides/sis-1.webp',
+    width: 1520,
+    height: 678,
+    alt: 'Ilustrace SISu – moduly, zvýrazněný Rozvrh NG',
+    caption: (
+      <>
+        Přihlaste se do <strong>SISu</strong> a otevřete <strong>Rozvrh NG</strong> (1).
+      </>
+    ),
+  },
+  {
+    src: '/guides/sis-2.webp',
+    width: 1520,
+    height: 714,
+    alt: 'Ilustrace Rozvrhu NG – tlačítko Export a volba iCalendar (.ics)',
+    caption: (
+      <>
+        Klikněte na <strong>Export</strong> (2) a zvolte <strong>iCalendar (.ics)</strong> (3). Stáhne se soubor s rozvrhem.
+      </>
+    ),
+  },
+  {
+    src: '/guides/sis-3.webp',
+    width: 1440,
+    height: 550,
+    alt: 'Stihnuto – tlačítko Nahrát rozvrh (.ics)',
+    caption: (
+      <>
+        Ve Stihnutu klikněte na <strong>Nahrát rozvrh (.ics)</strong> (4) a vyberte stažený soubor. Předměty, místnosti i sylaby se doplní samy.
+      </>
+    ),
+  },
+];

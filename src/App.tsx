@@ -23,6 +23,7 @@ import { useFocusTicker } from './hooks/useFocusTicker';
 import { useFacultyAutoDetect } from './hooks/useFacultyAutoDetect';
 import { MovedNotice } from './components/migration/MovedNotice';
 import { applySavedTestClock, useTestModeGuard } from './store/testStore';
+import { usePresentationStore } from './store/presentationStore';
 
 // Méně používané sekce se načítají až při otevření (menší první načtení PWA).
 const TransitMapView = lazy(() => import('./components/map/TransitMapView').then((m) => ({ default: m.TransitMapView })));
@@ -43,6 +44,7 @@ const PairClaimView = lazy(() => import('./components/account/PairDevice').then(
 const AppearanceView = lazy(() => import('./components/appearance/AppearanceView').then((m) => ({ default: m.AppearanceView })));
 const GuideView = lazy(() => import('./components/tour/GuideView').then((m) => ({ default: m.GuideView })));
 const SettingsView = lazy(() => import('./components/settings/SettingsView').then((m) => ({ default: m.SettingsView })));
+const PresentationMode = lazy(() => import('./components/presentation/PresentationMode').then((m) => ({ default: m.PresentationMode })));
 const QuickTour = lazy(() => import('./components/tour/QuickTour').then((m) => ({ default: m.QuickTour })));
 
 function ViewFallback() {
@@ -65,6 +67,7 @@ export default function App() {
   const connectOpen = useUiStore((s) => s.connectOpen);
   const editor = useUiStore((s) => s.editor);
   const navigation = useUiStore((s) => s.navigation);
+  const slideshow = usePresentationStore((s) => s.slideshow);
   const tour = useUiStore((s) => s.tour);
   const askStudyProfile = useUiStore((s) => s.askStudyProfile);
   const [connectMounted, setConnectMounted] = useState(false);
@@ -190,6 +193,11 @@ export default function App() {
           {navigation && (
             <Suspense fallback={null}>
               <LiveNavigation />
+            </Suspense>
+          )}
+          {slideshow && (
+            <Suspense fallback={null}>
+              <PresentationMode onClose={() => usePresentationStore.getState().setSlideshow(false)} />
             </Suspense>
           )}
           {askStudyProfile && (

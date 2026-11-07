@@ -9,7 +9,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { calendarDayDiff, formatTime, isSameDay, plural, toDate } from '../../lib/dates';
+import { vTime, calendarDayDiff, formatTime, isSameDay, plural, toDate } from '../../lib/dates';
 import { nameDayText, publicHoliday } from '../../lib/czechDays';
 import { visibleEvents } from '../../lib/dedupe';
 import { isRequirementComplete } from '../../lib/progress';
@@ -64,13 +64,13 @@ function dayFacts(now: Date): { hello: string; facts: Fact[] } {
     const n = today.length;
     facts.push({
       label: 'Dnes',
-      text: started ? `Právě probíhá výuka, dnes ještě ${n} ${plural(n, ['hodina', 'hodiny', 'hodin'])}` : `První výuka v ${formatTime(new Date(first.start))}${building ? ` · ${building.name}` : ''}`,
+      text: started ? `Právě probíhá výuka, dnes ještě ${n} ${plural(n, ['hodina', 'hodiny', 'hodin'])}` : `První výuka ${vTime(new Date(first.start))}${building ? ` · ${building.name}` : ''}`,
     });
   } else {
     const next = study[0];
     if (next && calendarDayDiff(new Date(next.start), now) <= 7) {
       const building = buildingForEvent(next, s.settings).building;
-      facts.push({ label: 'Další výuka', text: `${dayWord(new Date(next.start), now)} v ${formatTime(new Date(next.start))}${building ? ` · ${building.name}` : ''}` });
+      facts.push({ label: 'Další výuka', text: `${dayWord(new Date(next.start), now)} ${vTime(new Date(next.start))}${building ? ` · ${building.name}` : ''}` });
     } else facts.push({ label: 'Dnes', text: 'Žádná výuka v rozvrhu.' });
   }
 

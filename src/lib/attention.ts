@@ -5,7 +5,7 @@
  * bez vedlejších účinků (snadno se testuje), texty obyčejnou češtinou.
  */
 import type { Countdown, Milestone, Requirement, Subject, Task } from '../types';
-import { formatDeadline, formatTime, plural } from './dates';
+import { vTime, formatDeadline, plural } from './dates';
 import { isRequirementComplete } from './progress';
 
 export type AttentionLevel = 'now' | 'today' | 'soon' | 'info';
@@ -66,8 +66,8 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
         id: `leave|${input.leave.start.toISOString()}`,
         level: mins <= 15 ? 'now' : 'today',
         kind: 'leave',
-        title: mins <= 0 ? 'Vyrazte teď' : `Vyrazte v ${formatTime(input.leave.at)} (za ${mins} min)`,
-        detail: `${input.leave.title} v ${formatTime(input.leave.start)}${input.leave.place ? ` · ${input.leave.place}` : ''}`,
+        title: mins <= 0 ? 'Vyrazte teď' : `Vyrazte ${vTime(input.leave.at)} (za ${mins} min)`,
+        detail: `${input.leave.title} ${vTime(input.leave.start)}${input.leave.place ? ` · ${input.leave.place}` : ''}`,
         at: input.leave.at.toISOString(),
         action: { label: 'Trasa', href: '#/doprava' },
       });

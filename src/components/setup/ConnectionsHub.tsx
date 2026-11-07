@@ -1,19 +1,14 @@
 /**
- * Přehled propojení: u každé služby jedna věta, jasný stav a jedno tlačítko.
- * Soukromí a návod pro správce jsou v Nastavení (Data a soukromí, Server).
+ * Sdílené prvky propojení: ikony služeb (logo Google), karta Soukromí
+ * a návod pro správce serveru (jen pro správce v Nastavení → Server).
  */
 import { useState } from 'react';
 import { Check, ChevronDown, Copy, ExternalLink } from 'lucide-react';
-import { useConnections, type ServiceId, type ServiceStatus } from '../../hooks/useConnections';
-import { navigateTo } from '../../hooks/useAppShell';
-import { connectGoogle } from '../../services/syncCenter';
+import type { ServiceId } from '../../hooks/useConnections';
 import { useAppStore } from '../../store/appStore';
 import { confirmAction, toast, useUiStore } from '../../store/uiStore';
 import { Glyph, GlyphTile, type GlyphName } from '../ui/Glyph';
 import { cn } from '../ui/primitives';
-import { PlaylistPlayer } from '../music/PlaylistPlayer';
-import { StateDot } from './SetupWizard';
-import { ConnectionStatusLine, FlowBanner } from './ConnectionPulse';
 
 /** Oficiální logo Google „G“ (podle pravidel pro přihlašovací tlačítka). */
 export function GoogleG({ size = 24 }: { size?: number }) {
@@ -43,127 +38,6 @@ const VISUAL: Record<Exclude<ServiceId, 'google'>, GlyphName> = {
 export function ServiceVisual({ id, size = 34 }: { id: ServiceId; size?: number }) {
   if (id === 'google') return <GoogleG size={Math.round(size * 0.7)} />;
   return <Glyph name={VISUAL[id]} size={Math.round(size * 0.66)} />;
-}
-
-const STATE_LABEL: Record<ServiceStatus['state'], string> = {
-  auto: 'Funguje samo',
-  connected: 'Propojeno',
-  attention: 'Potřebuje 1 klik',
-  todo: 'Nepropojeno',
-  skipped: 'Přeskočeno',
-  unavailable: 'Zatím nejde',
-};
-
-const WIZARD_STEP: Partial<Record<ServiceId, string>> = { location: 'location', school: 'school', sis: 'sis', moodle: 'moodle', google: 'google', music: 'extras', notifications: 'extras', ai: 'ai' };
-
-export function ConnectionsHub() {
-  const { services, done, total, attention } = useConnections();
-  const openSetup = useUiStore((s) => s.openSetup);
-  const [busyGoogle, setBusyGoogle] = useState(false);
-  const firstTodo = services.find((s) => !s.optional && (s.state === 'todo' || s.state === 'skipped'));
-
-  const action = (s: ServiceStatus): { label: string; run: () => void } | null => {
-    if (s.state === 'auto') return null;
-    if (s.id === 'google' && s.state === 'attention')
-      return {
-        label: 'Potvrdit',
-        run: () => {
-          setBusyGoogle(true);
-          void connectGoogle({ reconnect: true }).finally(() => setBusyGoogle(false));
-        },
-      };
-    if (s.state === 'unavailable') return s.id === 'notifications' ? null : { label: 'Pro správce', run: () => navigateTo('nastaveni', 'server') };
-    if (s.id === 'ai') return { label: s.state === 'connected' ? 'Změnit' : 'Vložit klíč', run: () => openSetup('ai') };
-    if (s.id === 'music') return { label: s.state === 'connected' ? 'Změnit' : 'Vybrat', run: () => openSetup('extras') };
-    const step = WIZARD_STEP[s.id];
-    if (!step) return null;
-    if (s.id === 'google' && s.state === 'connected') return { label: 'Spravovat', run: () => document.getElementById('google')?.scrollIntoView({ behavior: 'smooth' }) };
-    return { label: s.state === 'connected' ? 'Změnit' : 'Propojit', run: () => openSetup(step) };
-  };
-
-  return (
-    <section className="space-y-4" aria-label="Přehled propojení">
-      <div className="card flex flex-col gap-4 rounded-[28px] p-5 sm:flex-row sm:items-center sm:p-6">
-        <div className="flex min-w-0 flex-1 items-center gap-4">
-          <ProgressRing done={done} total={total} />
-          <div className="min-w-0 flex-1">
-            <h2 className="font-display text-[30px] leading-none sm:text-[34px]">
-              Vaše <em className="text-moss">propojení</em>
-            </h2>
-            <p className="mt-1.5 text-[14.5px] text-muted">
-              {done === total ? 'Všechno důležité je propojené.' : `Hotovo ${done} z ${total}.`}
-              {attention > 0 && <strong className="text-amber-700 dark:text-amber-300"> {attention === 1 ? 'Jedna věc potřebuje' : `${attention} věci potřebují`} jedno kliknutí.</strong>}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => openSetup(firstTodo ? (WIZARD_STEP[firstTodo.id] ?? 'start') : 'start')}
-          className="inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-accent px-5 text-[15px] font-bold text-accent-fg shadow-[0_10px_24px_-12px_var(--accent)] hover:brightness-110"
-        >
-          {firstTodo ? 'Projít průvodce' : 'Spustit průvodce znovu'}
-        </button>
-      </div>
-
-      <FlowBanner visual={(id) => <ServiceVisual id={id} size={28} />} />
-
-      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {services.map((s) => {
-          const act = action(s);
-          return (
-            <li key={s.id} className={cn('card flex flex-col rounded-[24px] p-4', s.state === 'attention' && 'ring-2 ring-amber-400/70')}>
-              <div className="flex items-start gap-3">
-                <span className={cn('grid size-11 shrink-0 place-items-center rounded-[14px] ring-1 ring-inset', s.id === 'google' ? 'bg-white ring-line' : s.state === 'attention' ? 'bg-amber-500/12 text-amber-700 ring-amber-500/25 dark:text-amber-300' : s.state === 'auto' || s.state === 'connected' ? 'bg-accent-soft text-accent ring-accent/15' : 'bg-surface-2 text-muted ring-line')}>
-                  <ServiceVisual id={s.id} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[15.5px] font-bold leading-tight">{s.title}</span>
-                  <span className="mt-1 block text-[13.5px] leading-snug text-muted">{s.detail}</span>
-                  <ConnectionStatusLine s={s} />
-                </span>
-                <StateDot state={s.state} />
-              </div>
-              {s.id === 'music' && s.state === 'connected' && <PlaylistPlayer compact className="mt-3" />}
-              <div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-3">
-                <span className={cn('text-[12.5px] font-bold', s.state === 'auto' || s.state === 'connected' ? 'text-accent' : s.state === 'attention' ? 'text-amber-700 dark:text-amber-300' : 'text-subtle')}>
-                  {STATE_LABEL[s.state]}
-                  {s.optional && s.state !== 'auto' && s.state !== 'connected' ? ' · nepovinné' : ''}
-                </span>
-                {act && (
-                  <button
-                    type="button"
-                    onClick={act.run}
-                    disabled={s.id === 'google' && busyGoogle}
-                    className={cn(
-                      'inline-flex h-9 items-center rounded-full px-4 text-[13.5px] font-bold transition',
-                      s.state === 'attention' ? 'bg-amber-500 text-white hover:brightness-110' : s.state === 'connected' ? 'text-accent hover:bg-accent-soft' : 'bg-accent text-accent-fg hover:brightness-110',
-                    )}
-                  >
-                    {act.label}
-                  </button>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
-function ProgressRing({ done, total }: { done: number; total: number }) {
-  const r = 26;
-  const c = 2 * Math.PI * r;
-  const ratio = total ? done / total : 0;
-  return (
-    <span className="relative grid size-16 shrink-0 place-items-center" aria-label={`Propojeno ${done} z ${total}`}>
-      <svg viewBox="0 0 64 64" className="absolute inset-0 -rotate-90">
-        <circle cx="32" cy="32" r={r} fill="none" stroke="var(--line)" strokeWidth="6" />
-        <circle cx="32" cy="32" r={r} fill="none" stroke="var(--accent)" strokeWidth="6" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - ratio)} className="transition-[stroke-dashoffset] duration-700" />
-      </svg>
-      {done === total ? <Check className="size-6 text-accent" aria-hidden /> : <span className="font-display text-[20px] tabular">{done}/{total}</span>}
-    </span>
-  );
 }
 
 export function PrivacyCard() {

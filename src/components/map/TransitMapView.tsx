@@ -5,7 +5,7 @@ import { MapLibreMap, Marker, NavigationControl, setWorkerUrl, type GeoJSONSourc
 import { AnimatePresence, motion } from 'motion/react';
 import { Accessibility, Check, ChevronLeft, Crosshair, Footprints, GraduationCap, List, LoaderCircle, Map as MapIcon, MapPin, Search, Snowflake, Sparkles, X } from 'lucide-react';
 import type { TransitMode } from '../../types';
-import { formatTime } from '../../lib/dates';
+import { vTime, formatTime } from '../../lib/dates';
 import { formatDistance, haversineMeters, walkingMinutes } from '../../lib/geo';
 import { findStop, nearbyStops, platformsToGeoJSON, searchStops, sortLines, stopsToGeoJSON, type StopGroup } from '../../lib/stops';
 import { delayChipClasses, formatDelay } from '../../lib/urgency';
@@ -647,7 +647,7 @@ export function TransitMapView() {
                 {school && nextEvent && (
                   <p className="mt-3 flex items-center gap-2 text-[12.5px] text-muted">
                     <GraduationCap className="size-4 text-moss" aria-hidden />
-                    Další výuka: {school.name} v {formatTime(new Date(nextEvent.start))}
+                    Další výuka: {school.name} {vTime(new Date(nextEvent.start))}
                   </p>
                 )}
                 <ul className="mt-3 space-y-1">

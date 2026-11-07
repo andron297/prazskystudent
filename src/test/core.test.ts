@@ -81,8 +81,12 @@ describe('zpětný výpočet trasy', () => {
   it('turns red under 10 minutes and missed when nothing fits', () => {
     const later = new Date(base.getTime() + 12 * 60_000);
     expect(planJourney({ now: later, eventStart, bufferMinutes: 5, itineraries: its }).status).toBe('critical');
-    const tooLate = new Date(base.getTime() + 19 * 60_000);
-    const missed = planJourney({ now: tooLate, eventStart, bufferMinutes: 5, itineraries: its });
+    // Odchod minul o minutu, ale tramvaj jede až za 5 min – svižnou chůzí se stihne, není to „ujelo“.
+    const hurry = planJourney({ now: new Date(base.getTime() + 19 * 60_000), eventStart, bufferMinutes: 5, itineraries: its });
+    expect(hurry.status).toBe('critical');
+    expect(hurry.recommended?.id).toBe('c');
+    // Tramvaj odjíždí za 2,5 min a cesta na zastávku trvá 6 min – to už opravdu nejde.
+    const missed = planJourney({ now: new Date(base.getTime() + 21.5 * 60_000), eventStart, bufferMinutes: 5, itineraries: its });
     expect(missed.status).toBe('missed');
     expect(missed.fastestLate?.id).toBe('d');
     expect(missed.lateByMinutes).toBe(3);

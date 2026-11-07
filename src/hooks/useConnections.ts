@@ -15,6 +15,9 @@ import { useSyncStore } from '../services/syncCenter';
 
 export type ServiceId = 'weather' | 'transit' | 'location' | 'school' | 'sis' | 'moodle' | 'google' | 'music' | 'notifications' | 'ai';
 
+/** Služby na obrazovce Propojení (ostatní fungují samy, nebo se nastavují jinde). */
+export const MAIN_SERVICES: ServiceId[] = ['sis', 'moodle', 'google', 'music'];
+
 export type ServiceState =
   /** Funguje samo, nic není potřeba. */
   | 'auto'
@@ -102,7 +105,7 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
         : `${google.account?.email ?? 'Účet Google'}${google.lastSync ? ` · synchronizováno ${formatRelative(new Date(google.lastSync), now)}` : ''}`;
     } else if (!googleConfigured) {
       googleState = 'unavailable';
-      googleDetail = 'Správce aplikace ještě nezapnul přihlášení Googlem.';
+      googleDetail = 'Propojení s Googlem teď není k dispozici.';
     } else {
       googleState = pending('google');
       googleDetail = 'Rozvrh a termíny v Google Kalendáři, úkoly v Google Úkolech.';
@@ -189,9 +192,10 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
         since: ownAiKey ? connectedSince?.ai : undefined,
       },
     ];
-    const counted = services.filter((s) => !s.optional);
+    // Stejně jako obrazovka Propojení: počítají se jen služby, které se propojují.
+    const counted = services.filter((s) => MAIN_SERVICES.includes(s.id));
     const done = counted.filter((s) => s.state === 'auto' || s.state === 'connected').length;
-    const attention = services.filter((s) => s.state === 'attention').length;
+    const attention = counted.filter((s) => s.state === 'attention').length;
     return { services, done, total: counted.length, attention };
   }, [mode, origin, icsSources, moodle, google, googleEnabled, music, notify, ownAiKey, skipped, events, subjects, server, needsAuth, googleError, connectedSince, requirements, facultyId, buildings, mineIds]);
 }

@@ -24,6 +24,7 @@ export const SHARED_SETTING_KEYS = [
   'minMarginMinutes',
   'music',
   'notifyLeave',
+  'home',
   'notifyDeadlines',
   'walkSpeed',
   'accessibleOnly',

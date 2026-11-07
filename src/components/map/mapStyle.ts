@@ -21,7 +21,6 @@ const NATURE: Record<'light' | 'dark', Record<string, [string, string]>> = {
     highway_minor: ['line-color', '#e2dccd'],
     highway_major_inner: ['line-color', '#fbf9f4'],
     highway_major_casing: ['line-color', '#d8d1c0'],
-    railway_transit: ['line-color', '#d3cbb9'],
     railway: ['line-color', '#d3cbb9'],
   },
   dark: {
@@ -36,7 +35,6 @@ const NATURE: Record<'light' | 'dark', Record<string, [string, string]>> = {
     highway_major_inner: ['line-color', '#1e2b24'],
     highway_major_subtle: ['line-color', '#1a251f'],
     highway_path: ['line-color', '#162019'],
-    railway_transit: ['line-color', '#24302a'],
     railway: ['line-color', '#24302a'],
   },
 };
@@ -58,8 +56,27 @@ function localizeLabels(map: MapLibreMap) {
   }
 }
 
+/**
+ * Tramvajové koleje: podklad je kreslí stejně jako železnici (šrafované
+ * pražce). Tady jsou tenká plná linka v teplém tónu – na první pohled jiné
+ * než vlak.
+ */
+function tramTracks(map: MapLibreMap, theme: 'light' | 'dark') {
+  try {
+    if (map.getLayer('railway_transit_dashline')) map.setLayoutProperty('railway_transit_dashline', 'visibility', 'none');
+    if (map.getLayer('railway_transit')) {
+      map.setPaintProperty('railway_transit', 'line-color', theme === 'dark' ? '#5b4a3c' : '#cdb79c');
+      map.setPaintProperty('railway_transit', 'line-width', ['interpolate', ['linear'], ['zoom'], 13, 0.5, 16, 1.4, 19, 2.6]);
+      map.setPaintProperty('railway_transit', 'line-opacity', 0.9);
+    }
+  } catch {
+    /* jiný podklad */
+  }
+}
+
 export function applyNature(map: MapLibreMap, theme: 'light' | 'dark') {
   localizeLabels(map);
+  tramTracks(map, theme);
   for (const [layer, [prop, value]] of Object.entries(NATURE[theme])) {
     if (!map.getLayer(layer)) continue;
     try {

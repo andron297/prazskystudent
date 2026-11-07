@@ -134,7 +134,7 @@ export async function handleMenza(request: Request): Promise<Response> {
     if (ids.length === 0) throw new HttpError(400, 'bad_canteen', 'Vyberte aspoň jednu menzu.');
     const today = new Date().toISOString().slice(0, 10);
     const from = DATE.test(url.searchParams.get('from') ?? '') ? url.searchParams.get('from')! : today;
-    const days = Math.min(7, Math.max(1, Number(url.searchParams.get('days') ?? '6') || 6));
+    const days = Math.min(14, Math.max(1, Number(url.searchParams.get('days') ?? '6') || 6));
     const fromDate = new Date(`${from}T12:00:00Z`);
     if (Math.abs(fromDate.getTime() - Date.now()) > 14 * 86_400_000) throw new HttpError(400, 'bad_date', 'Jídelníček je jen na nejbližší dny.');
     const to = new Date(fromDate.getTime() + (days - 1) * 86_400_000).toISOString().slice(0, 10);

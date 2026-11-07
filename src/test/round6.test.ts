@@ -103,8 +103,8 @@ describe('Navigace: přechody, schody a vstup do metra (skutečná trasa Opletal
     expect(haversineMeters(where, { lat: 50.0828, lng: 14.4264 })).toBeLessThan(40);
     // Nástupiště se nehlásí jako ulice.
     expect(ms.some((m) => m.street === 'Můstek')).toBe(false);
-    expect(instructionText(entrance!, 60)).toEqual({ headline: 'Za 60 m vstup do metra', detail: 'Sejděte po schodech dolů' });
-    expect(instructionText(entrance!, 5).headline).toBe('Vstup do metra');
+    expect(instructionText(entrance!, 60)).toEqual({ headline: 'Za 60 m sejděte do metra', detail: 'Po schodech dolů' });
+    expect(instructionText(entrance!, 5).headline).toBe('Sejděte do metra');
     expect(instructionText(elevator!, 5).headline).toBe('Sjeďte výtahem dolů');
   });
 
@@ -117,5 +117,119 @@ describe('Navigace: přechody, schody a vstup do metra (skutečná trasa Opletal
   it('přechod u odbočení je jeden pokyn', () => {
     expect(instructionText({ at: 100, type: 'left', crossing: 'zebra' }, 40).headline).toBe('Za 40 m odbočte vlevo a přejděte po přechodu');
     expect(instructionText({ at: 100, type: 'right', crossing: 'signals', crossingFirst: true }, 5).headline).toBe('Přejděte na semaforu a odbočte vpravo');
+  });
+});
+
+import { dayPhrase, vTime } from '../lib/dates';
+
+describe('Předložka před časem', () => {
+  it('„ve“ před dvě, tři, čtyři, dvanáct až čtrnáct a dvacet až dvacet tři', () => {
+    const at = (h: number, m = 30) => vTime(new Date(2026, 10, 9, h, m));
+    expect(at(9)).toBe('v 9:30');
+    expect(at(13)).toBe('ve 13:30');
+    expect(at(14, 0)).toBe('ve 14:00');
+    expect(at(11)).toBe('v 11:30');
+    expect(at(20)).toBe('ve 20:30');
+    expect(at(17)).toBe('v 17:30');
+    expect(at(3)).toBe('ve 3:30');
+  });
+
+  it('den vůči dnešku: dnes, zítra, v pondělí, ve středu', () => {
+    const now = new Date(2026, 10, 9, 23, 50); // pondělí 9. 11. 2026
+    expect(dayPhrase(new Date(2026, 10, 9, 8, 0), now)).toBe('dnes');
+    expect(dayPhrase(new Date(2026, 10, 10, 0, 10), now)).toBe('zítra');
+    expect(dayPhrase(new Date(2026, 10, 11, 9, 0), now)).toBe('ve středu');
+    expect(dayPhrase(new Date(2026, 10, 16, 9, 0), now)).toBe('v pondělí');
+  });
+});
+
+import { boardingSentence, buildPhases, spokenInstruction, walkToStopSentence, withMetroEntrances, type WalkPhase } from '../lib/navigation';
+import type { MetroStation } from '../lib/metroEntrances';
+import type { Itinerary, RideLeg } from '../types';
+
+describe('Navigace: vstupy do metra z dat PID a věty nahlas', () => {
+  const stations = (JSON.parse(readFileSync(new URL('../../public/data/metro-entrances.json', import.meta.url), 'utf8')) as { stations: MetroStation[] }).stations;
+  const fixture = JSON.parse(readFileSync(new URL('./fixtures/walk-mustek.json', import.meta.url), 'utf8')) as { leg: { legGeometry: { points: string }; steps: Parameters<typeof compactSteps>[0] } };
+  const path = decodePolyline(fixture.leg.legGeometry.points, 7);
+  const steps = compactSteps(fixture.leg.steps).map((st) => ({ distance: st.d, street: st.s, dir: st.dir, level: st.l, way: st.w }));
+  const ride: RideLeg = {
+    kind: 'ride', line: 'B', mode: 'metro', headsign: 'Zličín', fromStop: 'Můstek', toStop: 'Jinonice', platform: '1',
+    scheduledDeparture: '2026-11-09T08:20:00.000Z', predictedDeparture: '2026-11-09T08:20:00.000Z', scheduledArrival: '2026-11-09T08:35:00.000Z', predictedArrival: '2026-11-09T08:35:00.000Z',
+    delaySeconds: 0, isAirConditioned: null, isWheelchairAccessible: null, tripId: 't1', fromCoords: path[path.length - 1], toCoords: { lat: 50.0453, lng: 14.3756 },
+  };
+  const trip: Itinerary = {
+    id: 'x', source: 'transitous', leaveAt: '2026-11-09T08:08:00.000Z', departAt: ride.predictedDeparture, arriveAt: '2026-11-09T08:45:00.000Z', walkToStopMinutes: 12, walkFromStopMinutes: 5, transfers: 0,
+    legs: [{ kind: 'walk', minutes: 12, from: 'Opletalova', to: 'Můstek', path, steps, fromCoords: path[0], toCoords: path[path.length - 1] }, ride],
+  } as unknown as Itinerary;
+
+  it('Můstek má v datech desítky vstupů a trasa vede vstupem E17 (Václavské náměstí u Vodičkovy)', () => {
+    expect(stations.find((s) => s.name === 'Můstek')!.entrances.length).toBeGreaterThan(15);
+    const phases = withMetroEntrances(buildPhases(trip, path[0], { name: 'Jinonice', coords: { lat: 50.0453, lng: 14.3756 } }), stations);
+    const walk = phases[0] as WalkPhase;
+    expect(walk.entrance?.id).toBe('E17');
+    const m = walk.maneuvers.find((x) => x.note === 'entrance');
+    expect(m?.entranceId).toBe('E17');
+    expect(Math.abs((m?.at ?? 0) - walk.entrance!.along)).toBeLessThan(1);
+  });
+
+  it('bez tvaru trasy vede přes nejbližší vstup', () => {
+    const bare = { ...trip, legs: [{ kind: 'walk', minutes: 12, from: 'Opletalova', to: 'Můstek', fromCoords: path[0], toCoords: path[path.length - 1] }, ride] } as unknown as Itinerary;
+    const walk = withMetroEntrances(buildPhases(bare, path[0], { name: 'Jinonice', coords: { lat: 50.0453, lng: 14.3756 } }), stations)[0] as WalkPhase;
+    expect(walk.path).toHaveLength(3);
+    expect(walk.maneuvers.map((x) => x.type)).toEqual(['depart', 'stairs-down', 'arrive']);
+  });
+
+  it('věty nahlas: metry, směr (konečná) a kolej', () => {
+    expect(spokenInstruction({ at: 0, type: 'left', street: 'Vodičkova' }, 83)).toBe('Za 80 metrů odbočte vlevo do ulice Vodičkova.');
+    expect(spokenInstruction({ at: 0, type: 'crossing', crossing: 'signals' }, 5)).toBe('Přejděte na semaforu.');
+    expect(spokenInstruction({ at: 0, type: 'stairs-down', note: 'entrance' }, 60)).toBe('Za 60 metrů sejděte do metra po schodech dolů.');
+    expect(spokenInstruction({ at: 0, type: 'right' }, 1240)).toBe('Za 1,2 kilometru odbočte vpravo.');
+    expect(walkToStopSentence({ name: 'Můstek', coords: path[0], isStop: true, platform: '1', mode: 'metro' }, ride)).toBe('Jděte do metra Můstek. Metro B směr Zličín odjíždí v 9:20 z koleje 1.');
+    expect(boardingSentence(ride, true)).toBe('Jste na nástupišti. Nastupte do metra B směr Zličín, kolej 1. Vystupujete na zastávce Jinonice.');
+    const tram: RideLeg = { ...ride, mode: 'tram', line: '22', headsign: 'Nádraží Hostivař', platform: 'A', fromStop: 'Drinopol', toStop: 'Národní divadlo', predictedDeparture: '2026-11-09T12:30:00.000Z' };
+    expect(walkToStopSentence({ name: 'Drinopol', coords: path[0], isStop: true, platform: 'A', mode: 'tram' }, tram)).toBe('Jděte na zastávku Drinopol, nástupiště A. Tramvaj 22 směr Nádraží Hostivař odjíždí ve 13:30.');
+  });
+});
+
+import { maskState } from '../lib/presentationMask';
+import { useAppStore as appStore } from '../store/appStore';
+import { usePresentationStore } from '../store/presentationStore';
+
+describe('Režim prezentace', () => {
+  it('vymyslí popisky, ale nechá časy a strukturu; stejný vstup = stejný výstup', () => {
+    const st = appStore.getState();
+    const base = {
+      ...st,
+      subjects: [{ id: 's1', name: 'Tajný předmět', code: 'JSB022', teacher: 'Doc. Skutečný', color: 'indigo', source: 'manual', createdAt: '', updatedAt: '' }],
+      events: [
+        { id: 'e1', subjectId: 's1', title: 'Tajný předmět – přednáška', start: '2026-11-09T08:30:00.000Z', end: '2026-11-09T10:00:00.000Z', kind: 'lecture', source: 'manual', createdAt: '', updatedAt: '' },
+        { id: 'e2', title: 'Rande s Petrou', location: 'Kavárna Slavia', start: '2026-11-09T17:00:00.000Z', end: '2026-11-09T18:00:00.000Z', kind: 'personal', source: 'manual', createdAt: '', updatedAt: '' },
+      ],
+      tasks: [{ id: 't1', title: 'Koupit dárek mámě', notes: 'soukromé', done: false, source: 'manual', createdAt: '', updatedAt: '' }],
+      settings: { ...st.settings, displayName: 'Ondro' },
+    } as unknown as ReturnType<typeof appStore.getState>;
+    const m = maskState(base);
+    expect(maskState(base)).toBe(m);
+    expect(m.subjects[0].name).not.toBe('Tajný předmět');
+    expect(m.subjects[0].code).not.toBe('JSB022');
+    expect(m.events[0].title).toBe(m.subjects[0].name);
+    expect(m.events[0].start).toBe(base.events[0].start);
+    expect(m.events[1].title).not.toContain('Petr');
+    expect(m.events[1].location).not.toContain('Slavia');
+    expect(m.tasks[0].title).not.toContain('dárek');
+    expect(m.tasks[0].notes).toBeUndefined();
+    expect(m.settings.displayName).toBe('');
+    expect(base.subjects[0].name).toBe('Tajný předmět');
+  });
+
+  it('v režimu prezentace se neukládají změny textů, odškrtnutí ano', () => {
+    const id = appStore.getState().addTask({ title: 'Skutečný úkol' } as never);
+    usePresentationStore.getState().setMasked(true);
+    appStore.getState().updateTask(id, { title: 'Přečíst 3. kapitolu' });
+    appStore.getState().toggleTask(id);
+    usePresentationStore.getState().setMasked(false);
+    const t = appStore.getState().tasks.find((x) => x.id === id)!;
+    expect(t.title).toBe('Skutečný úkol');
+    expect(t.done).toBe(true);
   });
 });

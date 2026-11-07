@@ -32,6 +32,8 @@ import { confirmAction, toast, useUiStore } from '../../store/uiStore';
 import { Menu } from '../ui/overlays';
 import { Button, Card, cn, Field, Segmented, Select, TextInput, Toggle } from '../ui/primitives';
 import { GoogleConnectGuide, GoogleTroubleshoot } from '../setup/GoogleGuide';
+import { isOwnerEmail } from '../../store/testStore';
+import { useAccount } from '../../services/account';
 
 const REMINDERS = [10080, 2880, 1440, 180, 120, 60, 30, 15, 10];
 
@@ -215,6 +217,7 @@ export function GoogleSection() {
   const connected = Boolean(g.enabled && gs.connectedAt);
   const clientId = googleClientIdFor();
   const needsSetup = mode === 'live' && !clientId;
+  const email = useAccount((st) => st.user?.email);
   const last = gs.history[0];
 
   const patch = (p: Partial<GoogleSyncSettings>) => updateGoogleSettings(p);
@@ -300,7 +303,11 @@ export function GoogleSection() {
               )}
             </div>
             {needsSetup ? (
-              <SetupGuide />
+              isOwnerEmail(email) ? (
+                <SetupGuide />
+              ) : (
+                <p className="rounded-[18px] bg-surface-2 p-4 text-[14px] text-muted">Propojení s Googlem teď není k dispozici. Rozvrh, úkoly i termíny fungují i bez něj.</p>
+              )
             ) : mode === 'demo' ? (
               <DemoGooglePreview />
             ) : (

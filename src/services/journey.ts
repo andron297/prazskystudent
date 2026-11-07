@@ -67,7 +67,7 @@ export async function planBetween(q: JourneyQuery, signal?: AbortSignal): Promis
     to: `${round(q.to.coords.lat)},${round(q.to.coords.lng)}`,
     time: q.time.toISOString().slice(0, 16) + ':00Z',
     arriveBy: q.arriveBy ? '1' : '0',
-    n: '7',
+    n: '9',
     ...(q.wheelchair ? { wheelchair: '1' } : {}),
     ...(q.cursor ? { cursor: q.cursor } : {}),
   });

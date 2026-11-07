@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { Check, LoaderCircle, type LucideIcon } from 'lucide-react';
@@ -96,7 +97,19 @@ export interface CardProps extends Omit<ComponentProps<'section'>, 'title'> {
   padded?: boolean;
 }
 
+/** Uvnitř rozbalené služby (Propojení) se karty vykreslí bez rámečku a nadpisu. */
+export const CardBareContext = createContext(false);
+
 export function Card({ title, icon: Icon, action, padded = true, eyebrow, className, children, ...rest }: CardProps & { eyebrow?: ReactNode }) {
+  const bare = useContext(CardBareContext);
+  if (bare) {
+    return (
+      <div className={cn('min-w-0', className)} {...(rest as Record<string, unknown>)}>
+        {action && <div className="mb-3 flex justify-end">{action}</div>}
+        {children}
+      </div>
+    );
+  }
   return (
     <section className={cn('card min-w-0 rounded-[26px]', padded && 'p-4 sm:p-5', className)} {...rest}>
       {(title || action) && (

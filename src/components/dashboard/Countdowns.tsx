@@ -6,7 +6,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Countdown } from '../../types';
-import { addDays, calendarDayDiff, formatDayMonth, formatTime, isDateKey, plural, startOfDay, toDate, toDateKey } from '../../lib/dates';
+import { vTime, addDays, calendarDayDiff, formatDayMonth, isDateKey, plural, startOfDay, toDate, toDateKey } from '../../lib/dates';
 import { uid } from '../../lib/id';
 import { usePlanData } from '../../hooks/usePlanData';
 import { useNow } from '../../hooks/useNow';
@@ -61,7 +61,7 @@ function progressOf(c: Countdown, now: Date): number {
 
 function whenLabel(c: Countdown): string {
   const d = toDate(c.at);
-  return `${formatDayMonth(d)}${!isDateKey(c.at) ? ` v ${formatTime(d)}` : ''}`;
+  return `${formatDayMonth(d)}${!isDateKey(c.at) ? ` ${vTime(d)}` : ''}`;
 }
 
 export function CountdownEditor() {

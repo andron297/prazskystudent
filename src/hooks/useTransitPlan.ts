@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Building, Itinerary, ScheduleEvent, TransitResult } from '../types';
 import { haversineMeters } from '../lib/geo';
 import { applyMargins, dedupeByTrip, DEFAULT_MARGINS, pickItinerary, planJourney, type TransitPlan } from '../lib/transitPlanner';
+import { countdownStart, previousEvent } from '../lib/transitWindow';
+import { buildingForEvent } from '../store/selectors';
+import { resolveChosen, useTripStore } from '../store/tripStore';
+import { useWeather } from '../services/weather';
+import { useVisibleEvents } from './useVisibleEvents';
 import { createApi } from '../services/api';
 import { errorMessage } from '../services/http';
 import { useAppStore } from '../store/appStore';
@@ -21,6 +26,8 @@ export interface TransitPlanState {
   onSite: boolean;
   /** Událost je moc daleko na živé odjezdové tabule (Live režim). */
   tooFar: boolean;
+  /** Od kdy se ukáže odpočet (nejdřív 4 h předem, po předchozí výuce). */
+  windowStart: Date | null;
   refresh: () => void;
 }
 
@@ -29,7 +36,8 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
   const settings = useAppStore((s) => s.settings);
   const server = useUiStore((s) => s.server);
   const now = useNow(1000);
-  const origin = useOrigin();
+  const realOrigin = useOrigin();
+  const events = useVisibleEvents();
   const [result, setResult] = useState<TransitResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +57,17 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
 
   const eventStartMs = event ? new Date(event.start).getTime() : 0;
   const minutesUntil = event ? (eventStartMs - now.getTime()) / 60_000 : 0;
-  const tooFar = settings.mode === 'live' && minutesUntil > 180;
+  const windowStart = useMemo(() => (event ? countdownStart(event, events) : null), [event, events]);
+  const tooFar = settings.mode === 'live' && Boolean(windowStart && now < windowStart);
+  // Po předchozí akci (nebo na jejím konci) jedu z jejího místa, pokud nevím přesnou polohu z GPS.
+  const prev = useMemo(() => (event ? previousEvent(event, events) : null), [event, events]);
+  const prevBuilding = prev && !prev.online ? buildingForEvent(prev, settings).building : null;
+  const fromPrev =
+    prevBuilding && (realOrigin.source !== 'gps' || realOrigin.usingFallback) && now.getTime() >= new Date(prev!.start).getTime() && now.getTime() <= new Date(prev!.end).getTime() + 45 * 60_000;
+  const origin = useMemo<ResolvedOrigin>(
+    () => (fromPrev && prevBuilding ? { ...realOrigin, coords: prevBuilding.coords, label: prevBuilding.name } : realOrigin),
+    [fromPrev, prevBuilding, realOrigin],
+  );
   const onSite = Boolean(building && haversineMeters(origin.coords, building.coords) < 300);
   const refreshEvery = settings.mode === 'demo' ? 15_000 : 30_000;
   const bucket = Math.floor(now.getTime() / refreshEvery);
@@ -87,6 +105,15 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
   const prep = settings.prepMinutes ?? DEFAULT_MARGINS.prep;
   const itineraries = useMemo(() => (result ? dedupeByTrip(result.itineraries.map((it) => applyMargins(it, { ...DEFAULT_MARGINS, prep }))) : []), [result, prep]);
 
+  // Za deště, mrazu nebo vedra doporučit méně chůze.
+  const { forecast } = useWeather(origin.coords, Boolean(event));
+  const badWeather = useMemo(() => {
+    if (!forecast?.hourly.length || !event) return false;
+    const t = eventStartMs - 30 * 60_000;
+    const h = forecast.hourly.reduce((best, x) => (Math.abs(x.time.getTime() - t) < Math.abs(best.time.getTime() - t) ? x : best), forecast.hourly[0]);
+    return h.precipProb >= 50 || h.feels <= -2 || h.feels >= 30;
+  }, [forecast, event, eventStartMs]);
+
   const plan = useMemo(() => {
     if (!event || !result) return null;
     return planJourney({
@@ -97,12 +124,17 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
       itineraries,
       accessibleOnly: settings.accessibleOnly,
       preferAirConditioned: settings.preferAirConditioned,
+      badWeather,
     });
-  }, [event, result, itineraries, now, settings.bufferMinutes, settings.minMarginMinutes, settings.accessibleOnly, settings.preferAirConditioned]);
+  }, [event, result, itineraries, now, settings.bufferMinutes, settings.minMarginMinutes, settings.accessibleOnly, settings.preferAirConditioned, badWeather]);
 
-  const selectedId = useUiStore((s) => (event ? s.selectedTrip[event.id] : undefined));
-  const selected = useMemo(() => pickItinerary(plan, selectedId, now), [plan, selectedId, now]);
+  // Spoj, který si student zvolil („Pojedu tímto“) – v Dopravě nebo v detailu pod odpočtem.
+  const chosenTrip = useTripStore((s) => (event ? s.byEvent[event.id] : undefined));
+  const selected = useMemo(() => {
+    const live = plan ? [...plan.upcoming, ...plan.earlier, ...(plan.lastCall ? [plan.lastCall] : [])] : [];
+    return resolveChosen(chosenTrip, live, now) ?? pickItinerary(plan, null, now);
+  }, [plan, chosenTrip, now]);
 
   const refresh = useCallback(() => setManual((m) => m + 1), []);
-  return { plan, selected, result, loading, error, origin, onSite, tooFar, refresh };
+  return { plan, selected, result, loading, error, origin, onSite, tooFar, windowStart, refresh };
 }

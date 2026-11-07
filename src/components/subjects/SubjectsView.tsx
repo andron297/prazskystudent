@@ -4,7 +4,7 @@ import { ArrowLeft, BookOpen, CalendarDays, Combine, ExternalLink, GraduationCap
 import type { Subject, SubjectColor } from '../../types';
 import { requirementToCalendarItem } from '../../lib/calendarExport';
 import { SUBJECT_COLOR_CLASSES, SUBJECT_COLORS, nextSubjectColor } from '../../lib/colors';
-import { formatDeadline, formatTime, formatWeekdayShort, formatDayMonth, plural } from '../../lib/dates';
+import { vTime, formatDeadline, formatTime, formatWeekdayShort, formatDayMonth, plural } from '../../lib/dates';
 import { uid } from '../../lib/id';
 import { sisSubjectUrl } from '../../lib/sisImport';
 import { isRequirementComplete, subjectProgress } from '../../lib/progress';
@@ -172,7 +172,7 @@ function SubjectGrid() {
                   <CalendarDays className="size-3.5 shrink-0" aria-hidden />
                   {nextClass ? (
                     <span className="truncate">
-                      {formatWeekdayShort(new Date(nextClass.start))} {formatDayMonth(new Date(nextClass.start))} v {formatTime(new Date(nextClass.start))}
+                      {formatWeekdayShort(new Date(nextClass.start))} {formatDayMonth(new Date(nextClass.start))} {vTime(new Date(nextClass.start))}
                       {place?.building ? ` · ${place.building.name}${place.room ? ` ${place.room}` : ''}` : ''}
                     </span>
                   ) : (

@@ -30,9 +30,10 @@ import {
 } from 'lucide-react';
 import { platformLabel } from '../../lib/transitPlanner';
 import type { LatLng } from '../../types';
-import { formatTime, plural } from '../../lib/dates';
+import { vTime, formatTime, plural } from '../../lib/dates';
 import { haversineMeters } from '../../lib/geo';
-import { buildPhases, formatDistance, instructionText, isVertical, nextManeuver, slackMinutes, WALK_SPEED_MS, type Maneuver, type ManeuverType, type NavPhase, type NavWayMap, type RidePhase, type WalkPhase } from '../../lib/navigation';
+import { boardingSentence, buildPhases, formatDistance, instructionText, isVertical, nextManeuver, slackMinutes, spokenInstruction, walkToStopSentence, withMetroEntrances, WALK_SPEED_MS, type Maneuver, type ManeuverType, type NavPhase, type NavWayMap, type RidePhase, type WalkPhase } from '../../lib/navigation';
+import { loadMetroStations, type MetroStation } from '../../lib/metroEntrances';
 import { fetchWayInfo, itineraryWayIds } from '../../services/wayInfo';
 import { CrossingIcon, ElevatorIcon, EscalatorIcon, MetroIcon, StairsDownIcon, StairsIcon, StairsUpIcon } from './ManeuverIcons';
 import { bearing, pathLength, pointAlong, projectOnPath } from '../../lib/polyline';
@@ -283,7 +284,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
       cancelled = true;
     };
   }, [target.itinerary]);
-  const phases = useMemo(() => {
+  const basePhases = useMemo(() => {
     // Spoje bez souřadnic (ukázka, záložní plánovač) doplníme z dat zastávek PID.
     const legs = target.itinerary.legs.map((l) => {
       if (l.kind !== 'ride' || !stopData) return l;
@@ -295,6 +296,13 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     });
     return buildPhases({ ...target.itinerary, legs }, target.origin, building, target.event?.start, ways);
   }, [target, stopData, ways]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Vstupy do metra z dat PID: pokyn „sejděte do metra“ přesně u vstupu, kterým trasa vede.
+  const [stations, setStations] = useState<MetroStation[] | null>(null);
+  const needsStations = basePhases.some((p) => p.kind === 'walk' && p.target.mode === 'metro');
+  useEffect(() => {
+    if (needsStations) void loadMetroStations().then(setStations);
+  }, [needsStations]);
+  const phases = useMemo(() => (stations ? withMetroEntrances(basePhases, stations) : basePhases), [basePhases, stations]);
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [arrived, setArrived] = useState(false);
   const [following, setFollowing] = useState(true);
@@ -431,7 +439,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     if (next.distance < 40 && !spoken.current.has(key) && next.maneuver.type !== 'arrive') {
       spoken.current.add(key);
       buzz([60]);
-      if (voice) speak(instructionText(next.maneuver, next.distance).headline);
+      if (voice) speak(spokenInstruction(next.maneuver, next.distance, walk.target.name));
     }
   }, [walk, next, offRoute, phaseIndex, voice]);
   useEffect(() => {
@@ -440,13 +448,28 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     if (rideState.left <= 1 && !spoken.current.has(key)) {
       spoken.current.add(key);
       buzz([200, 100, 200, 100, 200]);
-      if (voice) speak(`Příští zastávka ${ride.ride.toStop}. Vystupujete.`);
+      if (voice) speak(`Příští zastávka ${ride.ride.toStop}. Připravte se k výstupu.`);
     }
   }, [rideState, ride, phaseIndex, voice]);
   useEffect(() => {
-    if (phase?.kind === 'walk' && phase.target.isStop && voice && phaseIndex === 0) speak(`Jděte na zastávku ${phase.target.name}${phase.target.platform ? `, ${platformLabel(phase.target.mode, phase.target.platform)}` : ''}.`);
-    if (phase?.kind === 'ride' && voice) speak(`Nastupte do ${phase.ride.mode === 'tram' ? 'tramvaje' : phase.ride.mode === 'metro' ? 'metra' : phase.ride.mode === 'bus' ? 'autobusu' : 'spoje'} ${phase.ride.line}. Vystupujete na zastávce ${phase.ride.toStop}.`);
+    if (!voice || !phase) return;
+    if (phase.kind === 'walk') {
+      const nr = phases[phaseIndex + 1];
+      speak(walkToStopSentence(phase.target, nr?.kind === 'ride' ? nr.ride : undefined));
+    }
+    if (phase.kind === 'ride') speak(boardingSentence(phase.ride));
   }, [phaseIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  // U zastávky (na nástupišti) jednou řeknout, do čeho nastoupit.
+  useEffect(() => {
+    if (!walk || !walk.target.isStop || !voice) return;
+    const near = remaining < 18 || (directDistance !== null && directDistance < 22);
+    const key = `atstop:${phaseIndex}`;
+    const nr = phases[phaseIndex + 1];
+    if (near && nr?.kind === 'ride' && !spoken.current.has(key)) {
+      spoken.current.add(key);
+      speak(boardingSentence(nr.ride, true));
+    }
+  }, [walk, remaining, directDistance, phaseIndex, phases, voice]);
 
   /* --------------------------------- mapa --------------------------------- */
 
@@ -524,9 +547,13 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     (map.getSource('nav-route') as GeoJSONSource | undefined)?.setData(routeGeoJSON(phases, phaseIndex));
     (map.getSource('nav-points') as GeoJSONSource | undefined)?.setData(pointsGeoJSON(phases));
     for (const mk of metroRefs.current) mk.remove();
-    metroRefs.current = pointsGeoJSON(phases)
-      .features.filter((f) => f.properties.kind === 'entrance' || f.properties.kind === 'exit')
-      .map((f) => new Marker({ element: metroMarker(f.properties.kind === 'exit') }).setLngLat(f.geometry.coordinates).addTo(map));
+    // Vstup do metra na skutečném místě (data PID), jinak tam, kde trasa klesá pod zem.
+    const exact = phases.flatMap((p) => (p.kind === 'walk' && p.entrance ? [[p.entrance.lng, p.entrance.lat] as [number, number]] : []));
+    const fromRoute = pointsGeoJSON(phases).features.filter((f) => f.properties.kind === 'entrance' || f.properties.kind === 'exit');
+    metroRefs.current = [
+      ...exact.map((c) => new Marker({ element: metroMarker(false) }).setLngLat(c).addTo(map)),
+      ...fromRoute.filter((f) => f.properties.kind === 'exit' || exact.length === 0).map((f) => new Marker({ element: metroMarker(f.properties.kind === 'exit') }).setLngLat(f.geometry.coordinates).addTo(map)),
+    ];
     targetRef.current?.remove();
     const p = phases[phaseIndex];
     if (p) {
@@ -572,7 +599,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
   const instruction =
     walk && next
       ? next.maneuver.type === 'arrive' && next.distance >= 15
-        ? { headline: walk.target.isStop ? `Jděte na zastávku ${walk.target.name}` : `Jděte do budovy ${walk.target.name}`, detail: `${formatDistance(next.distance)}${walk.target.platform ? ` · ${platformLabel(walk.target.mode, walk.target.platform)}` : ''}` }
+        ? { headline: walk.target.mode === 'metro' ? (walk.entrance && walk.entrance.along < walk.length - 30 && along < walk.entrance.along ? `Jděte ke vstupu do metra ${walk.target.name}` : `Jděte na nástupiště ${walk.target.name}`) : walk.target.isStop ? `Jděte na zastávku ${walk.target.name}` : `Jděte do budovy ${walk.target.name}`, detail: `${formatDistance(next.distance)}${walk.target.platform ? ` · ${platformLabel(walk.target.mode, walk.target.platform)}` : ''}` }
         : instructionText(next.maneuver, next.distance, walk.target.name)
       : null;
   const bearingToTarget = walk && fix ? bearing(fix.coords, walk.target.coords) : null;
@@ -615,7 +642,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
                 </span>
                 <div className="min-w-0">
                   <p className="font-display text-[26px] leading-none">Jste tam</p>
-                  <p className="mt-1 text-[14px] text-white/80">{target.event ? `Výuka začíná v ${formatTime(new Date(target.event.start))}.` : 'Navigace je u konce.'}</p>
+                  <p className="mt-1 text-[14px] text-white/80">{target.event ? `Výuka začíná ${vTime(new Date(target.event.start))}.` : 'Navigace je u konce.'}</p>
                 </div>
               </>
             ) : walk ? (
@@ -711,7 +738,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
             <>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="eyebrow text-subtle">{walk.target.isStop ? 'Jdete na zastávku' : 'Jdete do budovy'}</p>
+                  <p className="eyebrow text-subtle">{walk.target.mode === 'metro' ? 'Jdete do metra' : walk.target.isStop ? 'Jdete na zastávku' : 'Jdete do budovy'}</p>
                   <p className="mt-0.5 truncate text-[19px] font-bold leading-tight">
                     {walk.target.name}
                     {walk.target.platform && <span className="text-muted"> · {platformLabel(walk.target.mode, walk.target.platform)}</span>}
@@ -726,7 +753,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
                     <p className="font-display text-[30px] leading-none tabular">
                       {secondsLeft <= 0 ? 'teď' : secondsLeft >= 5400 ? `${Math.floor(secondsLeft / 3600)} h ${Math.round((secondsLeft % 3600) / 60)} min` : secondsLeft >= 600 ? `${Math.round(secondsLeft / 60)} min` : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`}
                     </p>
-                    <p className="text-[12px] text-muted tabular">{deadlineDate!.toDateString() === now.toDateString() ? '' : `${deadlineDate!.toLocaleDateString('cs-CZ', { weekday: 'long' })} `}v {formatTime(deadlineDate!)}</p>
+                    <p className="text-[12px] text-muted tabular">{deadlineDate!.toDateString() === now.toDateString() ? '' : `${deadlineDate!.toLocaleDateString('cs-CZ', { weekday: 'long' })} `}{vTime(deadlineDate!)}</p>
                   </div>
                 )}
               </div>

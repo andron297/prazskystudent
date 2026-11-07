@@ -8,7 +8,7 @@ import { motion } from 'motion/react';
 import { Building2, ListTodo, MapPin, MonitorPlay, Moon, Sun } from 'lucide-react';
 import type { Building, Itinerary, RideLeg, ScheduleEvent, Subject } from '../../types';
 import { SUBJECT_COLOR_CLASSES } from '../../lib/colors';
-import { addDays, formatDayMonth, formatTime, formatWeekdayShort, isSameDay, plural, startOfDay } from '../../lib/dates';
+import { dayPhrase, vTime, addDays, formatDayMonth, formatTime, formatWeekdayShort, isSameDay, plural, startOfDay } from '../../lib/dates';
 import { buildTaskRows, dueMoment, type TaskRow } from '../../lib/taskList';
 import { rideLegs } from '../../lib/transitPlanner';
 import { planTripTo } from '../../store/journeyStore';
@@ -19,6 +19,8 @@ import { buildingForEvent, subjectMap } from '../../store/selectors';
 import { cn } from '../ui/primitives';
 import { LineBadge } from '../transit/TransitBits';
 import { KIND_LABEL } from '../transit/transitStatus';
+import { countdownStart } from '../../lib/transitWindow';
+import { appNow } from '../../store/clockStore';
 
 const DAY_PREP = ['V neděli', 'V pondělí', 'V úterý', 'Ve středu', 'Ve čtvrtek', 'V pátek', 'V sobotu'];
 
@@ -34,14 +36,14 @@ function Departure({ itinerary }: { itinerary: Itinerary }) {
   const ride = rideLegs(itinerary)[0] as RideLeg | undefined;
   return (
     <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px]">
-      <span className="font-bold">Vyrazte v {formatTime(new Date(itinerary.leaveAt))}</span>
+      <span className="font-bold">Vyrazte {vTime(new Date(itinerary.leaveAt))}</span>
       {ride ? (
         <>
           <span className="opacity-60">·</span>
           <LineBadge ride={ride} size="sm" />
           <span className="opacity-90">
             ze zastávky <strong className="font-semibold">{ride.fromStop}</strong>
-            {ride.platform ? ` (nástupiště ${ride.platform})` : ''} v {formatTime(new Date(ride.predictedDeparture))}
+            {ride.platform ? ` (nástupiště ${ride.platform})` : ''} {vTime(new Date(ride.predictedDeparture))}
           </span>
         </>
       ) : (
@@ -111,15 +113,16 @@ function dueText(t: TaskRow, now: Date): string {
 /** Kdy a kde se ukáže doprava na další výuku + možnost naplánovat cestu hned. */
 function TransitHint({ event }: { event: ScheduleEvent }) {
   const settings = useAppStore((s) => s.settings);
+  const events = useVisibleEvents();
   const { building } = buildingForEvent(event, settings);
   if (!building || event.online) return null;
   const start = new Date(event.start);
-  const from = new Date(start.getTime() - 3 * 3_600_000);
+  const from = countdownStart(event, events);
   const arrive = new Date(start.getTime() - settings.bufferMinutes * 60_000);
   return (
     <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[18px] bg-white/[0.07] px-4 py-3">
       <p className="min-w-0 flex-1 text-[13.5px] leading-snug opacity-90">
-        Spoj a odpočet odchodu se ukáže nahoře na hlavní stránce {formatWeekdayShort(from)} od {formatTime(from)} (3 hodiny před výukou).
+        Spoj a odpočet odchodu se ukáže nahoře na hlavní stránce {dayPhrase(from, appNow())} {vTime(from)}.
       </p>
       <button type="button" onClick={() => planTripTo(building.name, building.coords, building.address, arrive)} className="shrink-0 rounded-full bg-[#e7d6b5] px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a2a] hover:brightness-105">
         Naplánovat cestu

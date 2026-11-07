@@ -45,6 +45,17 @@ export const GOOGLE_SHOTS: RealShot[] = [
       </>
     ),
   },
+  {
+    src: '/guides/google-7.webp',
+    width: 1520,
+    height: 744,
+    alt: 'Kalendář Google – v Mých kalendářích je Stihnuto · studium a v Úkolech seznam Stihnuto',
+    caption: (
+      <>
+        Hotovo. V Kalendáři Google přibude <strong>Stihnuto · studium</strong> (1) s rozvrhem a termíny, v Úkolech seznam <strong>Stihnuto</strong> (2). Změny se propisují oběma směry.
+      </>
+    ),
+  },
 ];
 
 export const GOOGLE_BLOCKED_SHOT: RealShot = {
@@ -176,12 +187,7 @@ export function GoogleTroubleshoot({ defaultOpen, className }: { defaultOpen?: '
                 {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
                 {copied ? 'Zkopírováno' : 'Zkopírovat zprávu pro správce'}
               </button>
-              <details className="text-[13px]">
-                <summary className="cursor-pointer font-semibold text-accent">Provozujete aplikaci vy? Postup pro správce</summary>
-                <div className="mt-3">
-                  <AdminFix />
-                </div>
-              </details>
+
             </>
           )}
         </div>

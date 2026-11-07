@@ -38,6 +38,8 @@ import { keyOf, pruneTombstones } from '../lib/sync/keys';
 import type { LocalOp } from '../lib/sync/mapping';
 import { createDemoSeed } from '../services/demo/seed';
 import type { MoodleSyncResult } from '../services/moodleSync';
+import { usePresentationStore } from './presentationStore';
+import { maskState, touchesText } from '../lib/presentationMask';
 
 export const DEFAULT_GOOGLE: GoogleSyncSettings = {
   enabled: false,
@@ -273,6 +275,11 @@ function initialData(): AppData & { meta: AppMeta } {
   };
 }
 
+/** V režimu prezentace se neukládají změny textů (mohly by obsahovat vymyšlené popisky). */
+function presentationLocked(patch?: object): boolean {
+  return usePresentationStore.getState().masked && (!patch || touchesText(patch));
+}
+
 function mapRequirement(list: Requirement[], id: string, fn: (r: Requirement) => Requirement): Requirement[] {
   return list.map((r) => (r.id === id ? { ...fn(r), updatedAt: nowIso() } : r));
 }
@@ -371,7 +378,7 @@ function tomb(tombstones: Record<string, string>, keys: string[]): Record<string
 
 const PERSIST_KEY = 'stihnu:v1';
 
-export const useAppStore = create<AppState>()(
+const rawAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       ...initialData(),
@@ -396,6 +403,7 @@ export const useAppStore = create<AppState>()(
           })),
         })),
       renameSubtask: (requirementId, subtaskId, title) =>
+        presentationLocked() ? undefined :
         set((s) => ({
           requirements: mapRequirement(s.requirements, requirementId, (r) => ({
             ...r,
@@ -418,7 +426,7 @@ export const useAppStore = create<AppState>()(
             return { ...r, done: target, subtasks: r.subtasks.map((st) => ({ ...st, done: target })) };
           }),
         })),
-      upsertRequirement: (requirement) => set((s) => ({ requirements: upsertById(s.requirements, [{ ...requirement, updatedAt: nowIso() }]) })),
+      upsertRequirement: (requirement) => (presentationLocked() ? undefined : set((s) => ({ requirements: upsertById(s.requirements, [{ ...requirement, updatedAt: nowIso() }]) }))),
       addRequirements: (requirements) => set((s) => ({ requirements: upsertById(s.requirements, requirements.map((r) => ({ ...r, updatedAt: r.updatedAt ?? nowIso() }))) })),
       removeRequirement: (requirementId) =>
         set((s) => {
@@ -432,7 +440,7 @@ export const useAppStore = create<AppState>()(
 
       /* ------------------------------- předměty ------------------------------- */
 
-      upsertSubject: (subject) => set((s) => ({ subjects: upsertById(s.subjects, [{ ...subject, updatedAt: nowIso() }]) })),
+      upsertSubject: (subject) => (presentationLocked() ? undefined : set((s) => ({ subjects: upsertById(s.subjects, [{ ...subject, updatedAt: nowIso() }]) }))),
       removeSubject: (subjectId) => {
         const { materials } = get();
         for (const m of materials) if (m.subjectId === subjectId && m.blobKey) void deleteBlob(m.blobKey);
@@ -539,6 +547,7 @@ export const useAppStore = create<AppState>()(
 
       addMaterial: (material) => set((s) => ({ materials: [...s.materials, { ...material, updatedAt: material.updatedAt ?? nowIso() }] })),
       updateMaterial: (materialId, patch) =>
+        presentationLocked(patch) ? undefined :
         set((s) => ({
           materials: s.materials.map((m) => (m.id === materialId ? { ...m, ...patch, updatedAt: nowIso() } : m)),
         })),
@@ -577,6 +586,7 @@ export const useAppStore = create<AppState>()(
         return id;
       },
       updateEvent: (eventId, patch) =>
+        presentationLocked(patch) ? undefined :
         set((s) => ({
           events: s.events.map((e) => (e.id === eventId ? { ...e, ...patch, updatedAt: nowIso() } : e)).sort((a, b) => a.start.localeCompare(b.start)),
         })),
@@ -628,7 +638,7 @@ export const useAppStore = create<AppState>()(
         set((s) => ({ tasks: [task, ...s.tasks] }));
         return id;
       },
-      updateTask: (taskId, patch) => set((s) => ({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, ...patch, updatedAt: nowIso() } : t)) })),
+      updateTask: (taskId, patch) => (presentationLocked(patch) ? undefined : set((s) => ({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, ...patch, updatedAt: nowIso() } : t)) }))),
       toggleTask: (taskId) =>
         set((s) => ({
           tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done, completedAt: !t.done ? nowIso() : undefined, updatedAt: nowIso() } : t)),
@@ -1016,6 +1026,19 @@ export const useAppStore = create<AppState>()(
     },
   ),
 );
+
+/**
+ * Hook úložiště. V režimu prezentace vrací data s vymyšlenými popisky
+ * (getState() i zápisy pracují vždy se skutečnými daty).
+ */
+function useAppStoreView<T>(selector?: (s: AppState) => T): T {
+  const masked = usePresentationStore((p) => p.masked);
+  return rawAppStore((s) => {
+    const view = masked ? maskState(s) : s;
+    return (selector ? selector(view) : view) as T;
+  });
+}
+export const useAppStore = Object.assign(useAppStoreView, rawAppStore) as unknown as typeof rawAppStore;
 
 /** Sloučí uložené nastavení s výchozím (včetně vnořených objektů nových verzí). */
 export function mergeSettings(base: Settings, patch: Partial<Settings>): Settings {

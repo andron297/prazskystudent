@@ -35,9 +35,8 @@ import type { IcsSource } from '../../types';
 import { LOCATION_PRESETS } from '../../lib/buildings';
 import { uid } from '../../lib/id';
 import { isMoodleCalendarUrl } from '../../lib/moodleIcs';
-import { MUSIC_PICKS, isSpotifyUrl, spotifyInfo } from '../../lib/music';
 import { AI_KEY_PAGES, AI_NAMES, providerForKey } from '../../lib/aiProvider';
-import { MOODLE_SHOTS, RealScreens } from './RealScreens';
+import { MOODLE_SHOTS, RealScreens, SIS_SHOTS } from './RealScreens';
 import { useConnections, type ServiceId, type ServiceStatus } from '../../hooks/useConnections';
 import { importSisIcsFile } from '../../services/icsFileImport';
 import { connectGoogle, refreshIcsSource } from '../../services/syncCenter';
@@ -50,6 +49,7 @@ import { detectFaculty } from '../../lib/buildings';
 import { facultyById } from '../../lib/campus';
 import { useVisibleEvents } from '../../hooks/useVisibleEvents';
 import { GoogleConnectGuide, GoogleTroubleshoot } from './GoogleGuide';
+import { MusicPicker } from '../music/MusicPicker';
 
 type StepId = 'start' | 'auto' | 'location' | 'sis' | 'school' | 'moodle' | 'google' | 'extras' | 'ai' | 'done';
 const STEPS: StepId[] = ['start', 'auto', 'location', 'sis', 'school', 'moodle', 'google', 'extras', 'ai', 'done'];
@@ -455,6 +455,7 @@ function SisStep({ onDone }: { onDone: () => void }) {
           <>Nahrajte ho sem tlačítkem níže – najdete ho ve Stažených souborech.</>,
         ]}
       />
+      <RealScreens className="mt-4" shots={SIS_SHOTS.slice(0, 2)} source="Ilustrace SISu – skutečný vzhled se může mírně lišit." />
       <div
         className="mt-4 rounded-[24px] border-2 border-dashed border-line-strong p-4 text-center"
         onDragOver={(e) => e.preventDefault()}
@@ -589,8 +590,8 @@ function GoogleStep({ onDone }: { onDone: () => void }) {
       </StepHead>
       {status.state === 'unavailable' ? (
         <div className="rounded-[20px] bg-surface-2 p-4 text-[15px]">
-          <p className="font-bold">Tohle musí jednou zapnout správce aplikace.</p>
-          <p className="mt-1 text-muted">Návod pro správce je v Nastavení → Server aplikace. Klidně tento krok přeskočte – vše ostatní funguje i bez Googlu.</p>
+          <p className="font-bold">Propojení s Googlem teď není k dispozici.</p>
+          <p className="mt-1 text-muted">Klidně tento krok přeskočte – rozvrh, úkoly, termíny i doprava fungují i bez Googlu.</p>
         </div>
       ) : status.state === 'connected' ? (
         <Success>Propojeno – {status.detail}</Success>
@@ -612,10 +613,8 @@ function GoogleStep({ onDone }: { onDone: () => void }) {
 }
 
 function ExtrasStep({ onDone }: { onDone: (ids: ServiceId[]) => void }) {
-  const music = useAppStore((s) => s.settings.music);
   const notify = useAppStore((s) => s.settings.notifyLeave);
   const updateSettings = useAppStore((s) => s.updateSettings);
-  const [link, setLink] = useState('');
   const notifySupported = typeof window !== 'undefined' && 'Notification' in window;
   const enableNotify = async () => {
     if (!notifySupported) return;
@@ -634,55 +633,7 @@ function ExtrasStep({ onDone }: { onDone: (ids: ServiceId[]) => void }) {
         Vyberte si hudbu na učení a na cestu a nechte si říct, kdy vyrazit.
       </StepHead>
       <p className="mb-2.5 text-[15px] font-bold">Hudba ze Spotify (bez přihlašování)</p>
-      <div className="grid grid-cols-2 gap-2">
-        {MUSIC_PICKS.map((p) => {
-          const active = music?.url === p.url;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => {
-                updateSettings({ music: { url: p.url, title: p.title } });
-                onDone(['music']);
-              }}
-              aria-pressed={active}
-              className={cn('rounded-[18px] p-3.5 text-left ring-1 ring-inset transition', active ? 'bg-accent text-accent-fg ring-accent' : 'bg-surface ring-line hover:bg-surface-2')}
-            >
-              <span className="block text-[15px] font-bold">{p.title}</span>
-              <span className={cn('text-[13px]', active ? 'opacity-90' : 'text-muted')}>{p.mood}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="mt-2 flex gap-2">
-        <input
-          value={link}
-          onChange={(e) => setLink(e.target.value)}
-          placeholder="…nebo vložte odkaz na svůj playlist"
-          className="h-12 flex-1 rounded-[16px] bg-surface px-4 text-[14.5px] ring-1 ring-inset ring-line-strong outline-none focus:ring-2 focus:ring-accent"
-          aria-label="Odkaz na playlist Spotify"
-        />
-        <button
-          type="button"
-          onClick={async () => {
-            if (!isSpotifyUrl(link)) {
-              toast.error('Vložte odkaz ze Spotify (Sdílet → Kopírovat odkaz).');
-              return;
-            }
-            const info = await spotifyInfo(link.trim());
-            if (!info.ok) {
-              toast.error('Tenhle playlist Spotify do přehrávače nepustí – je soukromý nebo je to osobní mix. Zvolte veřejný playlist.');
-              return;
-            }
-            updateSettings({ music: { url: link.trim(), title: info.title ?? 'Můj playlist' } });
-            setLink('');
-            onDone(['music']);
-          }}
-          className="h-12 rounded-[16px] bg-accent px-4 text-[14.5px] font-bold text-accent-fg"
-        >
-          Uložit
-        </button>
-      </div>
+      <MusicPicker onPicked={() => onDone(['music'])} />
       <div className="mt-6 rounded-[22px] bg-surface p-4 ring-1 ring-inset ring-line">
         <p className="flex items-center gap-2 text-[16px] font-bold">
           <BellRing className="size-5 text-accent" aria-hidden /> Upozornit mě, kdy vyrazit

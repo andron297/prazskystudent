@@ -100,7 +100,7 @@ export function drivePickerAvailable(): boolean {
 export async function pickFromDrive(): Promise<PickedDriveItem[]> {
   const apiKey = useUiStore.getState().server.googlePickerKey;
   const clientId = googleClientIdFor();
-  if (!apiKey || !clientId) throw new Error('Výběr z Disku zatím správce aplikace nezapnul. Vložte odkaz ručně.');
+  if (!apiKey || !clientId) throw new Error('Výběr z Disku zatím není k dispozici. Vložte odkaz ručně.');
   const fileScope = GOOGLE_SCOPES.drive[0];
   if (!hasScopes([fileScope])) {
     const settings = useAppStore.getState().settings.google;

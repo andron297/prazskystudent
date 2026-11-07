@@ -182,7 +182,7 @@ export function friendlyAuthError(message: string): string {
   if (m.includes('email not confirmed')) return 'Nejdřív potvrďte e-mail – odkaz vám přišel do schránky.';
   if (m.includes('already registered') || m.includes('already been registered')) return 'Tenhle e-mail už má účet – přihlaste se.';
   if (m.includes('rate limit') || m.includes('too many')) return 'Moc pokusů za sebou. Zkuste to prosím za chvíli.';
-  if (m.includes('provider is not enabled') || m.includes('unsupported provider')) return 'Přihlášení přes Google ještě správce nezapnul.';
+  if (m.includes('provider is not enabled') || m.includes('unsupported provider')) return 'Přihlášení přes Google teď není k dispozici – použijte e-mail.';
   if (m.includes('nonce')) return 'Přihlášení přes Google se nepovedlo ověřit. Zkuste to prosím znovu.';
   return 'Přihlášení se nepovedlo. Zkuste to prosím znovu.';
 }

@@ -13,6 +13,7 @@ import type { Itinerary, RideLeg } from '../types';
 import { formatTime } from './dates';
 import { WALK_RELUCTANCE } from './stopIndex';
 import { transitStatusFromSeconds, type TransitStatus } from './urgency';
+import { catchability, TRANSFER_MINUTES } from './journeyRank';
 
 export interface PlanInput {
   now: Date;
@@ -24,6 +25,8 @@ export interface PlanInput {
   itineraries: Itinerary[];
   accessibleOnly?: boolean;
   preferAirConditioned?: boolean;
+  /** Prší, mrzne nebo je vedro – chůze se počítá víc. */
+  badWeather?: boolean;
 }
 
 export interface TransitPlan {
@@ -72,13 +75,14 @@ export const DEFAULT_MIN_MARGIN = 3;
 
 /**
  * „Nepohodlí“ spoje v minutách: chůze nad 6 min se počítá dvojnásob
- * (WALK_RELUCTANCE) a každý přestup jako 4 min. Doporučený spoj je ten, který
- * dovolí vyrazit nejpozději PO odečtení nepohodlí – ne autobus s přestupem
- * a čtvrthodinou pěšky, který ušetří dvě minuty.
+ * (WALK_RELUCTANCE), za špatného počasí už od 3 min, a každý přestup jako
+ * 7 min – méně přestupů má přednost před malou časovou úsporou. Doporučený
+ * spoj je ten, který dovolí vyrazit nejpozději PO odečtení nepohodlí.
  */
-export function itineraryPenalty(it: Itinerary): number {
+export function itineraryPenalty(it: Itinerary, badWeather = false): number {
   const walk = it.legs.reduce((sum, l) => sum + (l.kind === 'walk' ? l.minutes : 0), 0);
-  return Math.max(0, walk - 6) * (WALK_RELUCTANCE - 1) + it.transfers * 4;
+  const walkCost = badWeather ? Math.max(0, walk - 3) * WALK_RELUCTANCE : Math.max(0, walk - 6) * (WALK_RELUCTANCE - 1);
+  return walkCost + it.transfers * TRANSFER_MINUTES;
 }
 
 /** Minuty, o které je student v budově před začátkem. */
@@ -94,16 +98,19 @@ export function planJourney(input: PlanInput): TransitPlan {
   const deadline = new Date(startMs - buffer * 60_000);
   const hardDeadline = new Date(startMs - minMargin * 60_000);
 
-  const pool = input.itineraries.filter(
-    (it) => (!input.accessibleOnly || isAccessibleItinerary(it)) && ms(it.leaveAt) >= nowMs - 20_000,
-  );
+  // Spoje, které už ze zastávky odjely, vůbec nenabízet; ty, na které se dá
+  // ještě doběhnout (svižnější chůzí), ano.
+  const pool = input.itineraries.filter((it) => (!input.accessibleOnly || isAccessibleItinerary(it)) && catchability(it, input.now) !== 'gone');
   // Od nejpozdějšího odchodu; při stejném odchodu dřív v cíli.
   const byLeaveDesc = (a: Itinerary, b: Itinerary) => ms(b.leaveAt) - ms(a.leaveAt) || ms(a.arriveAt) - ms(b.arriveAt);
-  const reachable = pool.filter((it) => ms(it.arriveAt) <= hardDeadline.getTime());
+  let reachable = pool.filter((it) => ms(it.arriveAt) <= hardDeadline.getTime());
+  // Bez rezervy, ale pořád včas (na poslední chvíli) – to ještě není „ujelo“.
+  if (reachable.length === 0) reachable = pool.filter((it) => ms(it.arriveAt) <= startMs);
+  const penalty = (it: Itinerary) => itineraryPenalty(it, input.badWeather);
   // Nesmyslně nepohodlné varianty (o hodně víc chůze/přestupů než nejlepší) vůbec nenabízet.
-  const minPenalty = Math.min(Number.POSITIVE_INFINITY, ...reachable.map(itineraryPenalty));
-  const feasible = reachable.filter((it) => itineraryPenalty(it) <= minPenalty + 8).sort(byLeaveDesc);
-  const score = (it: Itinerary) => ms(it.leaveAt) - itineraryPenalty(it) * 60_000;
+  const minPenalty = Math.min(Number.POSITIVE_INFINITY, ...reachable.map(penalty));
+  const feasible = reachable.filter((it) => penalty(it) <= minPenalty + 10).sort(byLeaveDesc);
+  const score = (it: Itinerary) => ms(it.leaveAt) - penalty(it) * 60_000;
 
   const empty: TransitPlan = {
     status: 'no-data',
@@ -135,7 +142,11 @@ export function planJourney(input: PlanInput): TransitPlan {
   }
 
   const lastCall = feasible[0];
-  const withBuffer = feasible.filter((it) => ms(it.arriveAt) <= deadline.getTime()).sort((a, b) => score(b) - score(a) || ms(a.arriveAt) - ms(b.arriveAt));
+  // Doporučovat spoje, na které se dá jít normálním krokem; „doběhnout“ jen když jiný není.
+  const relaxed = (it: Itinerary) => catchability(it, input.now) === 'ok';
+  const bufferOk = feasible.filter((it) => ms(it.arriveAt) <= deadline.getTime());
+  const calmChoices = bufferOk.filter(relaxed);
+  const withBuffer = (calmChoices.length || feasible.some(relaxed) ? calmChoices : bufferOk).sort((a, b) => score(b) - score(a) || ms(a.arriveAt) - ms(b.arriveAt));
   let recommended: Itinerary | null = withBuffer[0] ?? null;
   if (recommended && input.preferAirConditioned && firstRide(recommended)?.isAirConditioned !== true) {
     const base = recommended;
@@ -298,7 +309,7 @@ export function pickItinerary(plan: TransitPlan | null, selectedId: string | nul
   if (!plan || !plan.lastCall) return null;
   if (selectedId) {
     const chosen = plan.upcoming.find((it) => it.id === selectedId) ?? plan.earlier.find((it) => it.id === selectedId) ?? (plan.lastCall.id === selectedId ? plan.lastCall : undefined);
-    if (chosen && ms(chosen.leaveAt) >= now.getTime() - 20_000) return chosen;
+    if (chosen && catchability(chosen, now) !== 'gone') return chosen;
   }
   return plan.recommended ?? plan.lastCall;
 }

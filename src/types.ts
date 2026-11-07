@@ -432,6 +432,8 @@ export interface Settings {
   google: GoogleSyncSettings;
   /** Hudba na učení a na cestu (odkaz na playlist Spotify – bez přihlášení). */
   music?: { url: string; title?: string } | null;
+  /** Domov – kam „Domů“ po výuce (adresa nebo místo). */
+  home?: { label: string; coords: LatLng } | null;
   /** Upozornění v telefonu/prohlížeči, kdy vyrazit. */
   notifyLeave?: boolean;
   /** Upozornění na termíny (večer předem a 3 hodiny před). */

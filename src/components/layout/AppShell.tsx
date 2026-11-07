@@ -12,6 +12,7 @@ import { useAppStore } from '../../store/appStore';
 import { useAccount } from '../../services/account';
 import { useClockStore } from '../../store/clockStore';
 import { activeSimulations, isOwnerEmail, useTestStore } from '../../store/testStore';
+import { usePresentationStore } from '../../store/presentationStore';
 import { useUiStore } from '../../store/uiStore';
 import { Glyph } from '../ui/Glyph';
 import { Menu } from '../ui/overlays';
@@ -131,6 +132,22 @@ function DemoClockChip() {
   );
 }
 
+/** Režim prezentace: popisky jsou vymyšlené – ať to presenter ví a umí ho jedním klepnutím vypnout. */
+function PresentationRibbon() {
+  const masked = usePresentationStore((p) => p.masked);
+  if (!masked) return null;
+  return (
+    <div className="border-b border-line bg-fg text-canvas">
+      <div className="mx-auto flex max-w-[1320px] items-center gap-3 px-4 py-1.5 text-[12.5px] sm:px-6 lg:px-8">
+        <span className="min-w-0 flex-1 truncate font-semibold">Režim prezentace – názvy jsou vymyšlené, úpravy se neukládají</span>
+        <button type="button" onClick={() => usePresentationStore.getState().setMasked(false)} className="shrink-0 rounded-full bg-canvas/15 px-3 py-0.5 font-bold hover:bg-canvas/25">
+          Vypnout
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Výrazný štítek, když správce něco simuluje (čas, polohu, chůzi, počasí). */
 function TestBadge() {
   const email = useAccount((s) => s.user?.email);
@@ -178,6 +195,7 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
       {/* Horní lišta */}
       <header className={cn('glass-strong z-30 shrink-0 border-b border-line pt-[env(safe-area-inset-top)]', fullBleed ? 'relative' : 'sticky top-0')}>
         <DemoRibbon />
+        <PresentationRibbon />
         <div className={cn('mx-auto flex h-14 items-center gap-3 px-4 sm:px-6 lg:h-16 lg:px-8', !fullBleed && 'max-w-[1320px]')}>
           <a href="#/dnes" className="flex shrink-0 items-center gap-2.5">
             <BrandMark className="size-8 lg:size-9" />

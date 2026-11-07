@@ -5,12 +5,12 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowDownUp, Building2, ChevronDown, ChevronUp, Clock, Footprints, GraduationCap, History, LoaderCircle, LocateFixed, MapPin, Navigation2, RefreshCw, Search, TrainFront, X } from 'lucide-react';
+import { ArrowDownUp, Building2, Check, ChevronDown, ChevronUp, Clock, CloudRain, Footprints, GraduationCap, History, LoaderCircle, LocateFixed, MapPin, Navigation2, RefreshCw, Search, TrainFront, X } from 'lucide-react';
 import type { Itinerary, RideLeg, WalkLeg } from '../../types';
-import { calendarDayDiff, capitalize, formatDayMonth, formatDuration, formatRelative, formatTime, formatWeekdayShort, isSameDay, plural, toLocalInputValue, fromLocalInputValue } from '../../lib/dates';
+import { vTime, calendarDayDiff, capitalize, formatDayMonth, formatDuration, formatRelative, formatTime, formatWeekdayShort, isSameDay, plural, toLocalInputValue, fromLocalInputValue } from '../../lib/dates';
 import { haversineMeters } from '../../lib/geo';
 import { searchStops } from '../../lib/stops';
-import { modeNoun, rideLegs, platformLabel } from '../../lib/transitPlanner';
+import { rideLegs, platformLabel } from '../../lib/transitPlanner';
 import { useNow } from '../../hooks/useNow';
 import { useOrigin } from '../../hooks/useOrigin';
 import { useVisibleEvents } from '../../hooks/useVisibleEvents';
@@ -21,10 +21,13 @@ import { useAppStore } from '../../store/appStore';
 import { appNow } from '../../store/clockStore';
 import { useJourneyStore } from '../../store/journeyStore';
 import { buildingForEvent, isTransitTarget } from '../../store/selectors';
-import { useUiStore } from '../../store/uiStore';
+import { toast, useUiStore } from '../../store/uiStore';
 import { cn } from '../ui/primitives';
 import { myBuildings } from '../../lib/campus';
 import { DelayChip, LineBadge } from './TransitBits';
+import { BADGE_LABEL, catchability, rankJourneys, tripKey, type JourneyBadge } from '../../lib/journeyRank';
+import { useWeather } from '../../services/weather';
+import { useTripStore } from '../../store/tripStore';
 
 const KIND_ICON = { gps: LocateFixed, origin: MapPin, stop: TrainFront, address: MapPin, place: MapPin, building: Building2, recent: History } as const;
 
@@ -164,7 +167,23 @@ function stepsOf(it: Itinerary) {
   return it.legs.filter((l) => l.kind === 'ride' || (l as WalkLeg).minutes > 0);
 }
 
-function ItineraryCard({ it, selected, onSelect, now, badge }: { it: Itinerary; selected: boolean; onSelect: () => void; now: Date; badge?: string }) {
+function ItineraryCard({
+  it,
+  selected,
+  onSelect,
+  now,
+  badges,
+  chosen,
+  onChoose,
+}: {
+  it: Itinerary;
+  selected: boolean;
+  onSelect: () => void;
+  now: Date;
+  badges: JourneyBadge[];
+  chosen: boolean;
+  onChoose: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const rides = rideLegs(it);
   const first = rides[0];
@@ -172,47 +191,73 @@ function ItineraryCard({ it, selected, onSelect, now, badge }: { it: Itinerary; 
   const arrive = new Date(it.arriveAt);
   const minutes = Math.round((arrive.getTime() - leave.getTime()) / 60_000);
   const walk = it.legs.filter((l): l is WalkLeg => l.kind === 'walk').reduce((s, l) => s + l.minutes, 0);
-  const past = leave.getTime() < now.getTime() - 60_000;
+  const hurry = catchability(it, now) === 'hurry';
+  const departs = first ? new Date(first.predictedDeparture) : null;
   const startNav = () => {
     const origin = useJourneyStore.getState().from;
     if (!origin) return;
     useUiStore.getState().startNavigation({ itinerary: it, event: null, building: null, origin });
   };
   return (
-    <motion.li layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: past ? 0.5 : 1, y: 0 }} className={cn('rounded-[20px] ring-1 ring-inset transition-colors', selected ? 'bg-accent-soft ring-accent/40' : 'bg-surface ring-line hover:ring-line-strong')}>
+    <motion.li layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={cn('rounded-[20px] ring-1 ring-inset transition-colors', selected ? 'bg-accent-soft ring-accent/40' : 'bg-surface ring-line hover:ring-line-strong', chosen && 'ring-2 ring-accent')}>
       <button type="button" onClick={onSelect} className="block w-full px-4 pb-3 pt-3.5 text-left">
+        {(badges.length > 0 || chosen) && (
+          <span className="mb-2 flex flex-wrap gap-1.5">
+            {chosen && <span className="rounded-full bg-fg px-2 py-px text-[10.5px] font-black text-canvas">Pojedete tímto</span>}
+            {badges.map((b) => (
+              <span key={b} className={cn('rounded-full px-2 py-px text-[10.5px] font-black', b === 'recommended' ? 'bg-accent text-accent-fg' : 'bg-surface-2 text-fg ring-1 ring-inset ring-line-strong')}>
+                {BADGE_LABEL[b]}
+              </span>
+            ))}
+          </span>
+        )}
         <span className="flex items-baseline gap-2">
+          <span className="text-[11px] font-black uppercase tracking-[0.1em] text-subtle">odchod</span>
           <span className="font-display text-[26px] leading-none tabular">{formatTime(leave)}</span>
           <span className="text-muted">→</span>
           <span className="font-display text-[26px] leading-none tabular">{formatTime(arrive)}</span>
           <span className="ml-auto text-[13px] font-bold tabular">{formatDuration(minutes)}</span>
         </span>
+        {first && departs ? (
+          <span className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[14px] bg-surface-2 px-2.5 py-2 ring-1 ring-inset ring-line">
+            <LineBadge ride={first} size="sm" />
+            <span className="min-w-0 text-[13.5px]">
+              jede <strong className="tabular text-fg">{vTime(departs)}</strong> z <strong className="text-fg">{first.fromStop}</strong>
+              {first.platform ? <span className="text-muted"> · {platformLabel(first.mode, first.platform)}</span> : null}
+              <span className="text-muted"> · směr {first.headsign}</span>
+            </span>
+            <DelayChip delaySeconds={first.delaySeconds} />
+          </span>
+        ) : (
+          <span className="mt-2.5 block text-[13.5px] text-muted">Celou cestu pěšky</span>
+        )}
+        {hurry && (
+          <span className="mt-2 block rounded-[12px] bg-amber-500/12 px-2.5 py-1.5 text-[12.5px] font-bold text-amber-800 ring-1 ring-inset ring-amber-500/30 dark:text-amber-300">
+            Doporučený odchod už minul – stihnete ho, když vyrazíte hned a přidáte do kroku.
+          </span>
+        )}
         <span className="mt-2.5 block">
           <LegBar it={it} />
         </span>
         <span className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] text-muted">
-          {badge && <span className="rounded-full bg-accent px-2 py-px text-[10.5px] font-black text-accent-fg">{badge}</span>}
-          {first ? (
-            <span>
-              {modeNoun(first.mode).charAt(0).toUpperCase() + modeNoun(first.mode).slice(1)} {first.line} z <strong className="text-fg">{first.fromStop}</strong>
-              {first.platform ? ` (${platformLabel(first.mode, first.platform)})` : ''} v {formatTime(new Date(first.predictedDeparture))}
-            </span>
-          ) : (
-            <span>Celou cestu pěšky</span>
-          )}
-          {first && <DelayChip delaySeconds={first.delaySeconds} />}
-          <span>· {it.transfers === 0 ? 'bez přestupu' : `${it.transfers} ${plural(it.transfers, ['přestup', 'přestupy', 'přestupů'])}`}</span>
+          <span>{it.transfers === 0 ? 'bez přestupu' : `${it.transfers} ${plural(it.transfers, ['přestup', 'přestupy', 'přestupů'])}`}</span>
           <span>· {walk} min pěšky</span>
-          {!past && <span className="font-semibold text-accent">· vyrazit {formatRelative(leave, now)}</span>}
+          {!hurry && leave.getTime() > now.getTime() && <span className="font-semibold text-accent">· vyrazit {formatRelative(leave, now)}</span>}
         </span>
       </button>
-      <div className="flex items-center gap-1 border-t border-line px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-1 border-t border-line px-2 py-1.5">
         <button type="button" onClick={() => setOpen((v) => !v)} className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12.5px] font-bold text-muted hover:bg-surface-2 hover:text-fg" aria-expanded={open}>
           {open ? <ChevronUp className="size-4" aria-hidden /> : <ChevronDown className="size-4" aria-hidden />} Podrobnosti
         </button>
-        <button type="button" onClick={startNav} className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-[12.5px] font-bold text-accent-fg hover:brightness-110">
-          <Navigation2 className="size-3.5" aria-hidden /> Navigovat
-        </button>
+        <span className="ml-auto flex items-center gap-1">
+          <button type="button" onClick={onChoose} aria-pressed={chosen} className={cn('inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-bold transition', chosen ? 'bg-fg text-canvas' : 'text-accent ring-1 ring-inset ring-accent/40 hover:bg-accent-soft')}>
+            {chosen ? <Check className="size-3.5" aria-hidden /> : null}
+            {chosen ? 'Pojedu tímto' : 'Pojedu tímto'}
+          </button>
+          <button type="button" onClick={startNav} className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-[12.5px] font-bold text-accent-fg hover:brightness-110">
+            <Navigation2 className="size-3.5" aria-hidden /> Navigovat
+          </button>
+        </span>
       </div>
       <AnimatePresence initial={false}>
         {open && (
@@ -333,6 +378,9 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
   const [lecture, setLecture] = useState<string | null>(null);
   const selected = useJourneyStore((s) => s.selected);
   const touched = useRef(false);
+  const [more, setMore] = useState<{ busy: 'prev' | 'next' | null; error: string | null }>({ busy: null, error: null });
+  const tripsByEvent = useTripStore((s) => s.byEvent);
+  const adhocTrip = useTripStore((s) => s.adhoc);
 
   const myPlace: Place = useMemo(
     () => ({ kind: origin.source === 'gps' && !origin.usingFallback ? 'gps' : 'origin', label: origin.source === 'gps' && !origin.usingFallback ? 'Moje poloha' : origin.label, detail: origin.source === 'gps' ? 'podle GPS' : 'výchozí místo', coords: origin.coords }),
@@ -436,25 +484,70 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
     if (!from || !to) return;
     const cursor = dir === 'prev' ? extra.prev : extra.next;
     if (!cursor) return;
+    setMore({ busy: dir, error: null });
     try {
       const r = await planBetween({ from, to, time: queryTime(), arriveBy, cursor, wheelchair: settings.accessibleOnly });
       setExtra((x) => (dir === 'prev' ? { ...x, before: [...r.itineraries, ...x.before], prev: r.previous } : { ...x, after: [...x.after, ...r.itineraries], next: r.next }));
+      setMore({ busy: null, error: r.itineraries.length ? null : dir === 'next' ? 'Další spoje už plánovač nenašel.' : 'Dřívější spoje plánovač nenašel.' });
     } catch (e) {
-      setError(errorMessage(e));
+      setMore({ busy: null, error: errorMessage(e) });
     }
   };
 
+  // Spoje, které už ze zastávky odjely, vůbec neukazovat.
   const list = useMemo(() => {
     const seen = new Set<string>();
     return [...extra.before, ...(result?.itineraries ?? []), ...extra.after]
       .filter((it) => (seen.has(it.id) ? false : (seen.add(it.id), true)))
+      .filter((it) => catchability(it, now) !== 'gone')
       .sort((a, b) => a.leaveAt.localeCompare(b.leaveAt));
-  }, [result, extra]);
+  }, [result, extra, now]);
 
   const lectureEvent = lecture ? events.find((e) => e.id === lecture) : undefined;
-  const fastest = list.length ? list.reduce((best, it) => (new Date(it.arriveAt).getTime() - new Date(it.leaveAt).getTime() < new Date(best.arriveAt).getTime() - new Date(best.leaveAt).getTime() ? it : best), list[0]) : null;
   const deadline = lectureEvent ? new Date(lectureEvent.start).getTime() - settings.bufferMinutes * 60_000 : null;
-  const recommended = deadline ? [...list].reverse().find((it) => new Date(it.arriveAt).getTime() <= deadline && new Date(it.leaveAt).getTime() >= now.getTime()) : null;
+
+  // Počasí v době cesty: za deště, mrazu nebo vedra doporučit méně chůze.
+  const { forecast } = useWeather(from?.coords ?? origin.coords, Boolean(from && to));
+  const badWeather = useMemo(() => {
+    if (!forecast?.hourly.length) return false;
+    const t = queryTime().getTime();
+    const h = forecast.hourly.reduce((best, x) => (Math.abs(x.time.getTime() - t) < Math.abs(best.time.getTime() - t) ? x : best), forecast.hourly[0]);
+    return h.precipProb >= 50 || h.feels <= -2 || h.feels >= 30;
+  }, [forecast, queryTime]);
+  const ranks = useMemo(
+    () => rankJourneys(list, { now, arriveBy: deadline ? new Date(deadline) : arriveBy ? fromLocalInputValue(timeValue) : null, from: queryTime(), badWeather }),
+    [list, now, deadline, arriveBy, timeValue, queryTime, badWeather],
+  );
+
+  // Ke které výuce cesta vede (aby „Pojedu tímto“ řídilo odpočet na hlavní stránce).
+  const eventForTo = useMemo(() => {
+    if (lectureEvent) return lectureEvent;
+    if (!to) return null;
+    const t = now.getTime();
+    return (
+      events
+        .filter((e) => isTransitTarget(e) && new Date(e.start).getTime() > t && new Date(e.start).getTime() - t < 24 * 3_600_000)
+        .sort((a, b) => a.start.localeCompare(b.start))
+        .find((e) => {
+          const b = buildingForEvent(e, settings).building;
+          return b && haversineMeters(b.coords, to.coords) < 300;
+        }) ?? null
+    );
+  }, [lectureEvent, to, events, now, settings]);
+  const chosenTrip = eventForTo ? tripsByEvent[eventForTo.id] : adhocTrip && to && adhocTrip.coords && haversineMeters(adhocTrip.coords, to.coords) < 300 ? adhocTrip : null;
+  const chosenKey = chosenTrip ? tripKey(chosenTrip.itinerary) : null;
+  const choose = (it: Itinerary) => {
+    if (!to) return;
+    const store = useTripStore.getState();
+    if (chosenKey === tripKey(it)) {
+      if (eventForTo) store.clearEvent(eventForTo.id);
+      else store.clearAdhoc();
+      toast.info('Volba je zrušená – odpočet se zase řídí doporučeným spojem.');
+      return;
+    }
+    store.choose({ itinerary: it, eventId: eventForTo?.id, label: to.label, coords: to.coords });
+    toast.success(eventForTo ? 'Hotovo – odpočet na hlavní stránce se teď řídí tímto spojem.' : 'Cesta je naplánovaná – odpočet najdete na hlavní stránce.');
+  };
 
   const swap = () => {
     touched.current = true;
@@ -530,7 +623,7 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
 
       {lectureEvent && deadline && (
         <p className="rounded-[16px] bg-accent-soft px-3.5 py-2.5 text-[13px] text-accent">
-          Na přednášku v {formatTime(new Date(lectureEvent.start))} – chcete být na místě {settings.bufferMinutes} min předem, tedy do {formatTime(new Date(deadline))}.
+          Na přednášku {vTime(new Date(lectureEvent.start))} – chcete být na místě {settings.bufferMinutes} min předem, tedy do {formatTime(new Date(deadline))}.
         </p>
       )}
 
@@ -542,9 +635,14 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
 
       {to && (
         <div>
+          {badWeather && list.length > 1 && (
+            <p className="mb-2 flex items-center gap-2 rounded-[14px] bg-sky-500/10 px-3 py-2 text-[12.5px] text-sky-900 ring-1 ring-inset ring-sky-500/20 dark:text-sky-200">
+              <CloudRain className="size-4 shrink-0" aria-hidden /> Venku je nevlídno – doporučený spoj má co nejméně chůze.
+            </p>
+          )}
           {extra.prev && (
-            <button type="button" onClick={() => void loadMore('prev')} className="mb-2 w-full rounded-full py-2 text-[12.5px] font-bold text-muted hover:bg-surface-2 hover:text-fg">
-              Dřívější spoje
+            <button type="button" onClick={() => void loadMore('prev')} disabled={more.busy !== null} className="mb-2 inline-flex w-full items-center justify-center gap-1.5 rounded-full py-2 text-[12.5px] font-bold text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-60">
+              {more.busy === 'prev' && <LoaderCircle className="size-3.5 animate-spin" aria-hidden />} Dřívější spoje
             </button>
           )}
           {status === 'loading' && list.length === 0 ? (
@@ -564,16 +662,19 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
                   now={now}
                   selected={selected?.id === it.id}
                   onSelect={() => useJourneyStore.setState((s) => ({ selected: it, focusTick: s.focusTick + 1 }))}
-                  badge={recommended?.id === it.id ? 'Doporučený' : fastest?.id === it.id && list.length > 2 ? 'Nejrychlejší' : undefined}
+                  badges={(['recommended', 'simplest', 'fastest'] as JourneyBadge[]).filter((b) => ranks[b] === it.id)}
+                  chosen={chosenKey === tripKey(it)}
+                  onChoose={() => choose(it)}
                 />
               ))}
             </ul>
           )}
           {extra.next && list.length > 0 && (
-            <button type="button" onClick={() => void loadMore('next')} className="mt-2 w-full rounded-full py-2 text-[12.5px] font-bold text-muted hover:bg-surface-2 hover:text-fg">
-              Pozdější spoje
+            <button type="button" onClick={() => void loadMore('next')} disabled={more.busy !== null} className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-bold text-accent ring-1 ring-inset ring-line hover:bg-surface-2 disabled:opacity-60">
+              {more.busy === 'next' && <LoaderCircle className="size-3.5 animate-spin" aria-hidden />} Pozdější spoje
             </button>
           )}
+          {more.error && <p className="mt-2 rounded-[14px] bg-surface-2 px-3 py-2 text-[12.5px] text-muted">{more.error}</p>}
           {result && (
             <p className="mt-2 flex items-center gap-1.5 px-1 text-[11.5px] text-subtle">
               <RefreshCw className="size-3" aria-hidden /> Živě se zpožděním, obnoveno {formatRelative(new Date(result.fetchedAt), new Date())}. Data: Transitous, PID.

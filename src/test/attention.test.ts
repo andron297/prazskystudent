@@ -11,7 +11,7 @@ const base = (over: Partial<AttentionInput> = {}): AttentionInput => ({ now, req
 describe('co je potřeba udělat', () => {
   it('odchod brzy je „teď“, za hodinu „dnes“', () => {
     const soon = buildAttention(base({ leave: { at: new Date(2026, 10, 6, 13, 10), title: 'Seminář', start: new Date(2026, 10, 6, 14, 0), place: 'Hollar' } }));
-    expect(soon[0]).toMatchObject({ kind: 'leave', level: 'now', title: 'Vyrazte v 13:10 (za 10 min)' });
+    expect(soon[0]).toMatchObject({ kind: 'leave', level: 'now', title: 'Vyrazte ve 13:10 (za 10 min)' });
     const later = buildAttention(base({ leave: { at: new Date(2026, 10, 6, 14, 0), title: 'Přednáška', start: new Date(2026, 10, 6, 15, 0) } }));
     expect(later[0].level).toBe('today');
     expect(buildAttention(base({ leave: { at: new Date(2026, 10, 6, 18, 0), title: 'X', start: new Date(2026, 10, 6, 19, 0) } }))).toHaveLength(0);

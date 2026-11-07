@@ -5,7 +5,7 @@
  */
 import { useEffect } from 'react';
 import type { Itinerary, ScheduleEvent } from '../types';
-import { formatTime } from '../lib/dates';
+import { vTime } from '../lib/dates';
 import { rideLegs } from '../lib/transitPlanner';
 import { useAppStore } from '../store/appStore';
 
@@ -25,7 +25,7 @@ export function leaveMessage(it: Itinerary): string {
   const first = rideLegs(it)[0];
   if (!first) return `Pěšky ${it.walkToStopMinutes} min.`;
   const platform = first.platform ? `, nástupiště ${first.platform}` : '';
-  return `${first.line} směr ${first.headsign} v ${formatTime(new Date(first.predictedDeparture))} ze zastávky ${first.fromStop}${platform}.`;
+  return `${first.line} směr ${first.headsign} ${vTime(new Date(first.predictedDeparture))} ze zastávky ${first.fromStop}${platform}.`;
 }
 
 export function useLeaveReminder(event: ScheduleEvent | null | undefined, itinerary: Itinerary | null | undefined, now: Date): void {

@@ -257,8 +257,9 @@ export async function handleTransit(request: Request): Promise<Response> {
       const wheelchair = params.get('wheelchair') === '1';
       // Stránkování „dřívější / pozdější spoje“ – kurzor vrací sám plánovač.
       const cursor = params.get('cursor');
-      if (cursor && !/^[\w=+/-]{1,600}$/.test(cursor)) throw new HttpError(400, 'bad_cursor', 'Neplatný kurzor.');
-      const count = Math.min(10, Math.max(3, Number(params.get('n')) || 6));
+      // Kurzor plánovače vypadá jako „LATER|1794212880“ nebo „EARLIER|1794211200“.
+      if (cursor && !/^(?:EARLIER|LATER)\|\d{9,13}$/.test(cursor) && !/^[\w=+/|-]{1,600}$/.test(cursor)) throw new HttpError(400, 'bad_cursor', 'Neplatný kurzor.');
+      const count = Math.min(12, Math.max(3, Number(params.get('n')) || 6));
       const data = await upstream<{ itineraries?: { startTime?: string; endTime?: string; transfers?: number; legs?: RawLeg[] }[]; nextPageCursor?: string; previousPageCursor?: string }>('plan', {
         fromPlace: `${from.lat},${from.lon}`,
         toPlace: `${to.lat},${to.lon}`,

@@ -6,11 +6,12 @@ import { useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { navigateTo, type View } from '../../hooks/useAppShell';
 import { useUiStore } from '../../store/uiStore';
-import { MOODLE_SHOTS, RealScreens } from '../setup/RealScreens';
+import { MOODLE_SHOTS, RealScreens, SIS_SHOTS } from '../setup/RealScreens';
 import { GOOGLE_SHOTS, GoogleTroubleshoot } from '../setup/GoogleGuide';
 import { SettingsBack } from '../settings/SettingsBack';
+import { usePresentationStore } from '../../store/presentationStore';
 import { Glyph, GlyphTile, type GlyphName } from '../ui/Glyph';
-import { cn, Segmented, SerifTitle } from '../ui/primitives';
+import { Segmented, SerifTitle } from '../ui/primitives';
 
 interface Section {
   id: string;
@@ -41,8 +42,9 @@ const SECTIONS: Section[] = [
     title: 'Dnes: kdy vyrazit a co vás čeká',
     lead: 'Úvodní obrazovka ukazuje jen to, co právě potřebujete.',
     points: [
-      'Velký odpočet říká, za jak dlouho vyrazit, ze které zastávky (i nástupiště) a čím jet. Počítá s vaší rezervou.',
-      'Nahoře čas, datum a kdo má svátek; fotka Prahy se mění podle denní doby.',
+      'Velký odpočet říká, za jak dlouho vyrazit, ze které zastávky (i nástupiště) a kdy spoj skutečně jede. Objeví se nejdřív 4 hodiny předem, a když máte před tím výuku, až ke konci ní.',
+      'Pod fotkou jsou termíny na dnešek a zítra (po termínu červeně) – rovnou je odškrtnete tlačítkem Hotovo.',
+      'Když vám skončí výuka, karta Kam dál nabídne cestu na další bod programu z kalendáře, nebo domů (domov nastavíte v Nastavení → Doprava, cesta a domov).',
       'Karta „Dnes vás čeká“: budova, učebna, spoj a úkoly k dnešním předmětům. Večer se přepne na zítřek.',
     ],
     view: 'dnes',
@@ -66,9 +68,10 @@ const SECTIONS: Section[] = [
     title: 'Doprava: vyhledávač spojení',
     lead: 'Jako IDOS – odkud kamkoli, se zpožděním v reálném čase.',
     points: [
-      'Zadejte zastávku, adresu nebo místo. Uvidíte všechny varianty, přestupy, chůzi a dobu cesty, i dřívější a pozdější spoje.',
-      'U každého spoje je nástupiště (tramvaj a autobus: písmeno sloupku, metro a vlak: kolej).',
-      'Když se blíží přednáška, nastaví se sám: cesta do budovy s příjezdem včas a doporučený spoj.',
+      'Zadejte zastávku, adresu nebo místo. Uvidíte všechny varianty s přestupy a chůzí, další načtete tlačítkem Pozdější spoje.',
+      'Štítky Doporučený, Nejjednodušší (nejméně přestupů a chůze) a Nejrychlejší. Méně přestupů má přednost před malou časovou úsporou; za deště nebo mrazu doporučím méně chůze.',
+      'U každého spoje je čas odchodu z domu a výrazně i to, kdy spoj skutečně jede ze zastávky (nástupiště, u metra a vlaku kolej). Spoje, které už odjely, se neukazují.',
+      'Tlačítkem „Pojedu tímto“ si spoj zvolíte – odpočet na hlavní stránce se pak řídí jím.',
     ],
     view: 'doprava',
   },
@@ -78,9 +81,9 @@ const SECTIONS: Section[] = [
     title: 'Navigace až na nástupiště',
     lead: 'Pěšky po chodnících a přechodech, ve 3D a po směru chůze.',
     points: [
-      'Klepněte na Navigovat. Mapa se natočí ve směru chůze, ukáže budovy ve 3D a pokyny typu „za 80 m odbočte vlevo“.',
-      'Dovede vás přesně ke správnému sloupku nebo nástupišti; ve voze upozorní, kde vystoupit, a pak dovede do budovy.',
-      'Pokyny umí číst nahlas a přepínač 2D/3D je vpravo na mapě.',
+      'Klepněte na Navigovat. Mapa se natočí ve směru chůze, ukáže budovy ve 3D a pokyny jako „za 80 m odbočte vlevo a přejděte po přechodu“.',
+      'Zná přechody (i se semaforem), schody, eskalátory a výtahy. Do metra vás pošle přesně tím vstupem, kterým vede trasa – podle dat PID o všech vstupech do stanic.',
+      'Nahlas mluví celými větami: kam jít, čím jet, směr (konečnou stanici) i kolej nebo nástupiště. Ve voze upozorní, kde vystoupit, a pak dovede do budovy.',
     ],
     view: 'doprava',
   },
@@ -103,6 +106,7 @@ const SECTIONS: Section[] = [
     title: 'Předměty, sylaby a Google Disk',
     lead: 'U každého předmětu je všechno pohromadě.',
     points: [
+      'Předmět přidáte jen kódem nebo názvem – název, kredity, zakončení, vyučující i sylabus dohledám ve veřejném SISu.',
       'Sylabus a podmínky zakončení ze SISu – povinnosti, váhy a termíny z nich vytáhne AI, zdarma a bez klíče.',
       'Materiály z Moodlu, vlastní soubory, poznámky a odkazy.',
       'Google Disk: nahrajte soubor do složky předmětu, založte nový dokument, tabulku nebo prezentaci a uvidíte, kdo ho naposledy upravil.',
@@ -124,6 +128,7 @@ const SECTIONS: Section[] = [
     lead: 'Pomodoro, playlist na učení a odpočty do důležitých dnů.',
     points: [
       'Soustředění 25/5, 50/10 nebo 15/3 běží dál i na jiných stránkách; na konci cinkne a pošle upozornění. Ukazuje i dnešní minuty a sérii dní.',
+      'Když potřebujete zpomalit, je tu i krátké dechové cvičení (v kartě Soustředění).',
       'Playlist ze Spotify bez přihlašování – na telefonu se otevře rovnou v aplikaci Spotify.',
       'Odpočty do zkouškového, státnic nebo prázdnin, v posledních dvou dnech na minuty.',
     ],
@@ -150,7 +155,7 @@ const SECTIONS: Section[] = [
     points: [
       'Výchozí je Menza Arnošta z Pardubic; vyberte si až čtyři oblíbené (hvězdička = hlavní).',
       'U menzy vidíte, jak daleko od ní právě jste, a tlačítkem Trasa vás tam dovedu.',
-      'Studentské ceny, alergeny a víc dní dopředu.',
+      'Studentské ceny, alergeny a jídelníček na všechny dny, které menza vypsala (až dva týdny dopředu).',
     ],
     view: 'dnes',
   },
@@ -238,6 +243,9 @@ export function GuideView() {
             <button type="button" onClick={() => openSetup('start')} className="glass-photo inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14.5px] font-bold text-white">
               Propojit SIS, Moodle a Google
             </button>
+            <button type="button" onClick={() => usePresentationStore.getState().setSlideshow(true)} className="glass-photo inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14.5px] font-bold text-white">
+              Prezentace na plátno
+            </button>
             <a href="/brand/stihnuto-brand-kit.zip" download className="glass-photo inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14.5px] font-bold text-white">
               Logo a prvky ke stažení
             </a>
@@ -310,7 +318,8 @@ export function GuideView() {
             ]}
           />
         </div>
-        <div className={cn('mt-4 grid gap-4', (guide === 'moodle' || guide === 'google') && 'md:grid-cols-[1.3fr_1fr] md:items-start')}>
+        <div className="mt-4 grid gap-4 md:grid-cols-[1.3fr_1fr] md:items-start">
+          {guide === 'sis' && <RealScreens shots={SIS_SHOTS} source="Obrázky SISu jsou ilustrace, poslední obrazovka je skutečné Stihnuto." />}
           {guide === 'moodle' && <RealScreens shots={MOODLE_SHOTS} source="Skutečné obrazovky Moodlu 5 (veřejná ukázka moodledemo.net) – Moodle UK vypadá stejně." />}
           {guide === 'google' && <RealScreens shots={GOOGLE_SHOTS} source="Ilustrace podle oken Googlu – skutečná okna se mohou drobně lišit." />}
           <div className="space-y-3 text-[14.5px] leading-relaxed">

@@ -8,9 +8,13 @@ import { LOCATION_PRESETS } from '../../lib/buildings';
 import { uid } from '../../lib/id';
 import { isMoodleCalendarUrl } from '../../lib/moodleIcs';
 import { sisBookmarklet } from '../../lib/sisImport';
-import { ConnectionsHub } from '../setup/ConnectionsHub';
+import { ServiceVisual } from '../setup/ConnectionsHub';
+import { ConnectionStatusLine } from '../setup/ConnectionPulse';
+import { MusicPicker } from '../music/MusicPicker';
+import { PlaylistPlayer } from '../music/PlaylistPlayer';
+import { useConnections, type ServiceId } from '../../hooks/useConnections';
 import { SettingsBack } from '../settings/SettingsBack';
-import { MOODLE_SHOTS, RealScreens } from '../setup/RealScreens';
+import { MOODLE_SHOTS, RealScreens, SIS_SHOTS } from '../setup/RealScreens';
 import { AI_NAMES, providerForKey } from '../../lib/aiProvider';
 import { navigateTo } from '../../hooks/useAppShell';
 import { testGolemioKey } from '../../services/api';
@@ -20,10 +24,12 @@ import { importSisIcsFile, type SisFileResult } from '../../services/icsFileImpo
 import { pickPersisted, useAppStore } from '../../store/appStore';
 import { appNow, useClockStore } from '../../store/clockStore';
 import { confirmAction, toast, useUiStore } from '../../store/uiStore';
-import { Button, Card, Chip, cn, Field, SerifTitle, Segmented, Select, TextInput, Toggle } from '../ui/primitives';
+import { Button, Card, CardBareContext, Chip, cn, Field, Segmented, Select, TextInput, Toggle } from '../ui/primitives';
 import { BuildingsEditor } from './BuildingsEditor';
 import { GoogleSection } from './GoogleSection';
 import { MoodleConnect } from './MoodleConnect';
+import { isOwnerEmail } from '../../store/testStore';
+import { useAccount } from '../../services/account';
 
 /* ------------------------------------------------------------------ */
 /* Pomocné prvky                                                       */
@@ -303,6 +309,7 @@ function SisSection() {
       <div className="space-y-4">
         <div>
           <p className="mb-2 text-[14px] font-bold">Rozvrh ze SISu</p>
+          <RealScreens shots={SIS_SHOTS} source="Obrázky SISu jsou ilustrace (skutečný vzhled se může mírně lišit), poslední obrazovka je skutečné Stihnuto." className="mb-4" />
           <Steps
             items={[
               <>
@@ -341,7 +348,7 @@ function SisSection() {
                 </Select>
               </>
             )}
-            <Button size="sm" variant="ghost" icon={CalendarDays} onClick={() => openConnect('ics')}>
+            <Button size="sm" variant="ghost" icon={CalendarDays} onClick={() => openConnect('ics')} className="h-auto min-h-8 whitespace-normal py-1.5 text-left">
               Pokročilý import (náhled, přiřazení míst, Google)
             </Button>
           </div>
@@ -375,7 +382,7 @@ function SisSection() {
           </div>
         </div>
 
-        <Button variant="secondary" icon={ScrollText} onClick={() => openConnect('parser')}>
+        <Button variant="secondary" icon={ScrollText} onClick={() => openConnect('parser')} className="h-auto min-h-10 max-w-full whitespace-normal py-2 text-left">
           Harmonogram fakulty a texty sylabů
         </Button>
       </div>
@@ -658,14 +665,14 @@ export function AppSection() {
         </Card>
       </div>
 
-      <p className="flex items-center gap-2 px-1 text-xs text-muted">
+      {isOwnerEmail(useAccount.getState().user?.email) && <p className="flex items-center gap-2 px-1 text-xs text-muted">
         <ServerCog className="size-3.5 shrink-0" aria-hidden />
         {!serverChecked
           ? 'Zjišťuji serverové funkce…'
           : server.reachable
             ? `Server běží · ${[server.golemio && 'Golemio', server.google && 'Google Maps', server.googleClientId && 'Google přihlášení', server.aiProvider && 'AI'].filter(Boolean).join(', ') || 'bez serverových klíčů'}`
             : 'Server aplikace je nedostupný – vlastní data potřebují aplikaci nasazenou na Vercelu.'}
-      </p>
+      </p>}
     </div>
   );
 }
@@ -674,43 +681,113 @@ export function AppSection() {
 /* Obrazovka                                                           */
 /* ------------------------------------------------------------------ */
 
+const MAIN: { id: ServiceId; key: string; what: string }[] = [
+  { id: 'sis', key: 'sis', what: 'Rozvrh, předměty, sylaby a zkoušky' },
+  { id: 'moodle', key: 'moodle', what: 'Úkoly, testy a termíny z kurzů' },
+  { id: 'google', key: 'google', what: 'Kalendář, Úkoly a Disk – i v telefonu' },
+  { id: 'music', key: 'hudba', what: 'Playlist ze Spotify na učení a na cestu' },
+];
+
+const PILL: Record<string, { label: string; cls: string }> = {
+  connected: { label: 'Propojeno', cls: 'bg-accent-soft text-accent' },
+  auto: { label: 'Funguje samo', cls: 'bg-accent-soft text-accent' },
+  attention: { label: 'Potřebuje 1 klik', cls: 'bg-amber-500/15 text-amber-800 dark:text-amber-300' },
+  todo: { label: 'Nepropojeno', cls: 'bg-surface-2 text-muted' },
+  skipped: { label: 'Nepropojeno', cls: 'bg-surface-2 text-muted' },
+  unavailable: { label: 'Zatím nejde', cls: 'bg-surface-2 text-subtle' },
+};
+
+function MusicPanel() {
+  const music = useAppStore((s) => s.settings.music);
+  return (
+    <div className="space-y-3">
+      {music && <PlaylistPlayer compact />}
+      <MusicPicker />
+      <p className="text-[12.5px] text-subtle">Bez přihlašování ke Spotify. Na telefonu se playlist otevře rovnou v aplikaci Spotify.</p>
+    </div>
+  );
+}
+
+/** Propojení: jen služby, které je potřeba propojit. Každá na jednom místě – rozbalením. */
 export function ConnectionsView({ section }: { section?: string }) {
-  const settings = useAppStore((s) => s.settings);
-  const gs = useAppStore((s) => s.googleSync[s.settings.mode]);
+  const { services, done } = useConnections();
+  const openSetup = useUiStore((s) => s.openSetup);
+  const initial = MAIN.find((m) => m.key === section || m.id === section)?.key ?? null;
+  const [open, setOpen] = useState<string | null>(initial);
 
   useEffect(() => {
-    if (!section) return;
-    const t = setTimeout(() => document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
+    if (!initial) return;
+    setOpen(initial);
+    const t = setTimeout(() => document.getElementById(`svc-${initial}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
     return () => clearTimeout(t);
-  }, [section]);
+  }, [initial]);
+
+  const status = (id: ServiceId) => services.find((x) => x.id === id);
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-3xl space-y-4">
       <SettingsBack />
-      <header className="relative overflow-hidden rounded-[32px] bg-forest px-6 py-9 text-white sm:px-10 sm:py-12">
-        <img src="/images/path-1200.webp" alt="" className="absolute inset-0 size-full object-cover opacity-60" />
-        <div className="photo-scrim absolute inset-0" />
-        <div className="relative">
-          <p className="eyebrow text-white/75">Propojení</p>
-          <SerifTitle as="h1" className="mt-2 text-[48px] text-white sm:text-[64px] [&_em]:text-[#e7d6b5]">
-            Všechno <em>na jednom</em> místě
-          </SerifTitle>
-          <p className="mt-3 max-w-lg text-[15px] text-white/85">Počasí a doprava fungují samy. Rozvrh, Moodle a Google propojíte v průvodci za pár minut – pak se o to stará Stihnuto.</p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-[44px] leading-none sm:text-[52px]">Propojení</h1>
+          <p className="mt-2 max-w-xl text-[14.5px] leading-relaxed text-muted">Odkud se berou vaše předměty, termíny a úkoly. Klepněte na službu – všechno k ní je na jednom místě.</p>
         </div>
+        <span className="rounded-full bg-surface-2 px-3 py-1 text-[13px] font-bold ring-1 ring-inset ring-line">
+          Propojeno {done} ze {MAIN.length}
+        </span>
       </header>
 
-      <ConnectionsHub />
+      <ul className="space-y-3">
+        {MAIN.map((m) => {
+          const s = status(m.id);
+          const isOpen = open === m.key;
+          const pill = PILL[s?.state ?? 'todo'] ?? PILL.todo;
+          return (
+            <li key={m.key} id={`svc-${m.key}`} className={cn('card scroll-mt-24 overflow-hidden rounded-[24px]', s?.state === 'attention' && 'ring-2 ring-amber-400/70')}>
+              <button type="button" onClick={() => setOpen(isOpen ? null : m.key)} aria-expanded={isOpen} className="flex w-full items-center gap-3.5 p-4 text-left transition hover:bg-surface-2/50 sm:p-5">
+                <span className={cn('grid size-12 shrink-0 place-items-center rounded-[16px] ring-1 ring-inset', m.id === 'google' ? 'bg-white ring-line' : 'bg-accent-soft text-accent ring-accent/15')}>
+                  <ServiceVisual id={m.id} size={36} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-[17px] font-bold">{s?.title ?? m.key}</span>
+                    <span className={cn('rounded-full px-2 py-0.5 text-[11.5px] font-bold', pill.cls)}>{pill.label}</span>
+                  </span>
+                  <span className="mt-0.5 block text-[13.5px] text-muted">{s && (s.state === 'connected' || s.state === 'attention') ? s.detail : m.what}</span>
+                  {s && (s.since || s.lastFlow) && <ConnectionStatusLine s={s} />}
+                </span>
+                <ChevronDown className={cn('size-5 shrink-0 text-subtle transition', isOpen && 'rotate-180')} aria-hidden />
+              </button>
+              <AnimatePresence initial={false}>
+                {isOpen && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <div className="border-t border-line p-4 sm:p-5">
+                      <CardBareContext.Provider value={true}>
+                        {m.id === 'sis' && <SisSection />}
+                        {m.id === 'moodle' && <MoodleSection />}
+                        {m.id === 'google' && <GoogleSection />}
+                        {m.id === 'music' && <MusicPanel />}
+                      </CardBareContext.Provider>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </li>
+          );
+        })}
+      </ul>
 
-      <h2 className="px-1 pt-4 font-display text-[28px]">
-        Podrobné <em className="text-moss">nastavení</em>
-      </h2>
-      <GoogleSection />
-      <div className="grid gap-5 xl:grid-cols-2">
-        <MoodleSection />
-        <SisSection />
+      <div className="card flex flex-wrap items-center gap-3 rounded-[22px] p-4">
+        <p className="min-w-0 flex-1 text-[14px]">
+          <strong>Raději krok za krokem?</strong> <span className="text-muted">Průvodce vás provede všemi službami za pár minut.</span>
+        </p>
+        <button type="button" onClick={() => openSetup('start')} className="rounded-full bg-accent px-4 py-2 text-[13.5px] font-bold text-accent-fg hover:brightness-110">
+          Spustit průvodce
+        </button>
       </div>
-      <p className="flex items-center justify-center gap-2 pb-4 text-center text-xs text-subtle">
-        <Database className="size-3.5 shrink-0" aria-hidden /> Data jsou v tomto zařízení{gs.connectedAt && settings.google.drive.enabled ? ' a ve vašem Google Disku' : ''}. Škola a budovy, doprava, počasí a upozornění jsou v Nastavení.
+
+      <p className="flex items-start justify-center gap-2 pb-4 text-center text-[12.5px] leading-relaxed text-subtle">
+        <Database className="mt-0.5 size-3.5 shrink-0" aria-hidden /> Počasí, doprava a jídelníček fungují samy – nic se propojovat nemusí. Škola a budovy, upozornění a umělá inteligence jsou v Nastavení.
       </p>
     </div>
   );
