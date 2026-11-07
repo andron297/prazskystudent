@@ -26,6 +26,7 @@ import { cn } from '../ui/primitives';
 import { myBuildings } from '../../lib/campus';
 import { DelayChip, LineBadge } from './TransitBits';
 import { BADGE_LABEL, catchability, rankJourneys, tripKey, type JourneyBadge } from '../../lib/journeyRank';
+import { servesEvent } from '../../lib/transitWindow';
 import { useWeather } from '../../services/weather';
 import { useTripStore } from '../../store/tripStore';
 
@@ -534,19 +535,23 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
         }) ?? null
     );
   }, [lectureEvent, to, events, now, settings]);
-  const chosenTrip = eventForTo ? tripsByEvent[eventForTo.id] : adhocTrip && to && adhocTrip.coords && haversineMeters(adhocTrip.coords, to.coords) < 300 ? adhocTrip : null;
-  const chosenKey = chosenTrip ? tripKey(chosenTrip.itinerary) : null;
+  const eventChoice = eventForTo ? tripsByEvent[eventForTo.id] : undefined;
+  const adhocChoice = adhocTrip && to && adhocTrip.coords && haversineMeters(adhocTrip.coords, to.coords) < 300 ? adhocTrip : null;
+  const chosenKeys = new Set([eventChoice, adhocChoice].filter(Boolean).map((t) => tripKey(t!.itinerary)));
   const choose = (it: Itinerary) => {
     if (!to) return;
     const store = useTripStore.getState();
-    if (chosenKey === tripKey(it)) {
-      if (eventForTo) store.clearEvent(eventForTo.id);
-      else store.clearAdhoc();
+    const key = tripKey(it);
+    if (chosenKeys.has(key)) {
+      if (eventForTo && eventChoice && tripKey(eventChoice.itinerary) === key) store.clearEvent(eventForTo.id);
+      if (adhocChoice && tripKey(adhocChoice.itinerary) === key) store.clearAdhoc();
       toast.info('Volba je zrušená – odpočet se zase řídí doporučeným spojem.');
       return;
     }
-    store.choose({ itinerary: it, eventId: eventForTo?.id, label: to.label, coords: to.coords });
-    toast.success(eventForTo ? 'Hotovo – odpočet na hlavní stránce se teď řídí tímto spojem.' : 'Cesta je naplánovaná – odpočet najdete na hlavní stránce.');
+    // K výuce spoj patří, jen když s ním dorazíte včas a ne o půl dne dřív.
+    const forEvent = eventForTo && servesEvent(it, eventForTo) ? eventForTo : null;
+    store.choose({ itinerary: it, eventId: forEvent?.id, label: to.label, coords: to.coords });
+    toast.success(forEvent ? 'Hotovo – odpočet na hlavní stránce se teď řídí tímto spojem.' : 'Cesta je naplánovaná – najdete ji nahoře na hlavní stránce.');
   };
 
   const swap = () => {
@@ -663,7 +668,7 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
                   selected={selected?.id === it.id}
                   onSelect={() => useJourneyStore.setState((s) => ({ selected: it, focusTick: s.focusTick + 1 }))}
                   badges={(['recommended', 'simplest', 'fastest'] as JourneyBadge[]).filter((b) => ranks[b] === it.id)}
-                  chosen={chosenKey === tripKey(it)}
+                  chosen={chosenKeys.has(tripKey(it))}
                   onChoose={() => choose(it)}
                 />
               ))}

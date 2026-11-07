@@ -20,6 +20,7 @@ import { cn } from '../ui/primitives';
 import { LineBadge } from '../transit/TransitBits';
 import { KIND_LABEL } from '../transit/transitStatus';
 import { countdownStart } from '../../lib/transitWindow';
+import { useTripStore } from '../../store/tripStore';
 import { appNow } from '../../store/clockStore';
 
 const DAY_PREP = ['V neděli', 'V pondělí', 'V úterý', 'Ve středu', 'Ve čtvrtek', 'V pátek', 'V sobotu'];
@@ -116,8 +117,9 @@ function TransitHint({ event }: { event: ScheduleEvent }) {
   const events = useVisibleEvents();
   const { building } = buildingForEvent(event, settings);
   if (!building || event.online) return null;
+  const chosen = useTripStore((s) => s.byEvent[event.id]);
   const start = new Date(event.start);
-  const from = countdownStart(event, events);
+  const from = countdownStart(event, events, chosen?.itinerary);
   const arrive = new Date(start.getTime() - settings.bufferMinutes * 60_000);
   return (
     <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[18px] bg-white/[0.07] px-4 py-3">

@@ -57,7 +57,9 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
 
   const eventStartMs = event ? new Date(event.start).getTime() : 0;
   const minutesUntil = event ? (eventStartMs - now.getTime()) / 60_000 : 0;
-  const windowStart = useMemo(() => (event ? countdownStart(event, events) : null), [event, events]);
+  // Spoj, který si student zvolil („Pojedu tímto“) – v Dopravě nebo v detailu pod odpočtem.
+  const chosenTrip = useTripStore((s) => (event ? s.byEvent[event.id] : undefined));
+  const windowStart = useMemo(() => (event ? countdownStart(event, events, chosenTrip?.itinerary) : null), [event, events, chosenTrip]);
   const tooFar = settings.mode === 'live' && Boolean(windowStart && now < windowStart);
   // Po předchozí akci (nebo na jejím konci) jedu z jejího místa, pokud nevím přesnou polohu z GPS.
   const prev = useMemo(() => (event ? previousEvent(event, events) : null), [event, events]);
@@ -128,8 +130,6 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
     });
   }, [event, result, itineraries, now, settings.bufferMinutes, settings.minMarginMinutes, settings.accessibleOnly, settings.preferAirConditioned, badWeather]);
 
-  // Spoj, který si student zvolil („Pojedu tímto“) – v Dopravě nebo v detailu pod odpočtem.
-  const chosenTrip = useTripStore((s) => (event ? s.byEvent[event.id] : undefined));
   const selected = useMemo(() => {
     const live = plan ? [...plan.upcoming, ...plan.earlier, ...(plan.lastCall ? [plan.lastCall] : [])] : [];
     return resolveChosen(chosenTrip, live, now) ?? pickItinerary(plan, null, now);

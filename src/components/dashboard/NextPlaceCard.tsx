@@ -38,22 +38,24 @@ function TripLine({ it, now }: { it: Itinerary; now: Date }) {
   const ride = firstRideOf(it);
   const leave = new Date(it.leaveAt);
   return (
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
-      {ride ? (
-        <>
-          <LineBadge ride={ride} size="sm" />
-          <span>
-            jede <strong className="tabular">{vTime(new Date(ride.predictedDeparture))}</strong> z <strong>{ride.fromStop}</strong>
-            {ride.platform ? <span className="text-muted"> · {platformLabel(ride.mode, ride.platform)}</span> : null}
-          </span>
-        </>
-      ) : (
-        <span>Pěšky celou cestu</span>
-      )}
-      <span className="text-muted">
-        · {leave.getTime() > now.getTime() + 30_000 ? `vyrazit ${formatRelative(leave, now)}` : 'vyrazit hned'} · na místě {vTime(new Date(it.arriveAt))}
-      </span>
-    </p>
+    <div className="space-y-1 text-[13px]">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        {ride ? (
+          <>
+            <LineBadge ride={ride} size="sm" />
+            <span>
+              jede <strong className="tabular">{vTime(new Date(ride.predictedDeparture))}</strong> z <strong>{ride.fromStop}</strong>
+              {ride.platform ? <span className="text-muted"> · {platformLabel(ride.mode, ride.platform)}</span> : null}
+            </span>
+          </>
+        ) : (
+          <span>Pěšky celou cestu</span>
+        )}
+      </p>
+      <p className="text-muted">
+        {leave.getTime() > now.getTime() + 30_000 ? `Vyrazit ${formatRelative(leave, now)}` : 'Vyrazit hned'} · na místě {vTime(new Date(it.arriveAt))}
+      </p>
+    </div>
   );
 }
 
@@ -63,21 +65,25 @@ function PlannedTrip({ now }: { now: Date }) {
   const origin = useOrigin();
   if (!adhoc || catchability(adhoc.itinerary, now) === 'gone') return null;
   return (
-    <section className="card flex flex-wrap items-center gap-3 rounded-[22px] px-4 py-3.5" aria-label="Naplánovaná cesta">
-      <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-bold">Cesta: {adhoc.label}</p>
-        <TripLine it={adhoc.itinerary} now={now} />
+    <section className="card rounded-[22px] px-4 py-3.5" aria-label="Naplánovaná cesta">
+      <div className="flex items-start gap-2">
+        <p className="min-w-0 flex-1 pt-1 text-[14.5px] font-bold">Cesta: {adhoc.label}</p>
+        <button type="button" onClick={() => useTripStore.getState().clearAdhoc()} className="-mr-1.5 grid size-9 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-fg" aria-label="Zrušit naplánovanou cestu">
+          <X className="size-4" aria-hidden />
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={() => useUiStore.getState().startNavigation({ itinerary: adhoc.itinerary, event: null, building: null, origin: origin.coords })}
-        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-3.5 text-[13px] font-bold text-accent-fg hover:brightness-110"
-      >
-        <Navigation2 className="size-4" aria-hidden /> Navigovat
-      </button>
-      <button type="button" onClick={() => useTripStore.getState().clearAdhoc()} className="grid size-9 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-fg" aria-label="Zrušit naplánovanou cestu">
-        <X className="size-4" aria-hidden />
-      </button>
+      <div className="mt-1 flex flex-wrap items-end gap-x-3 gap-y-2.5">
+        <div className="min-w-0 flex-1 basis-[220px]">
+          <TripLine it={adhoc.itinerary} now={now} />
+        </div>
+        <button
+          type="button"
+          onClick={() => useUiStore.getState().startNavigation({ itinerary: adhoc.itinerary, event: null, building: null, origin: origin.coords })}
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-accent px-3.5 text-[13px] font-bold text-accent-fg hover:brightness-110"
+        >
+          <Navigation2 className="size-4" aria-hidden /> Navigovat
+        </button>
+      </div>
     </section>
   );
 }
