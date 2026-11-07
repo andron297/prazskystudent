@@ -168,7 +168,7 @@ export function MoodleConnect() {
 
       {result && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-2xl p-4">
-          <p className="font-semibold">Hotovo – propojeno s účtem {result.site.fullname ?? result.site.firstname}. 🎓</p>
+          <p className="font-semibold">Hotovo – propojeno s účtem {result.site.fullname ?? result.site.firstname}.</p>
           <div className="mt-3 grid grid-cols-3 gap-3 text-center">
             {[
               { n: result.stats.courses, label: 'předmětů', extra: result.stats.newSubjects ? `${result.stats.newSubjects} nový` : 'spárováno' },

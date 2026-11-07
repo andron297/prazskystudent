@@ -89,7 +89,7 @@ export async function connectGoogle(options: { reconnect?: boolean } = {}): Prom
       const backend = await backendFor('live', serverFlow());
       const account = await backend.profile();
       app.patchGoogleSync('live', { account, connectedAt: app.googleSync.live.connectedAt ?? new Date().toISOString(), scopes: info.scopes });
-      if (!info.persistent && serverFlow()) toast.info('Přihlášení platí hodinu – pro trvalou synchronizaci odeber Stihnu v účtu Google a propojte znovu.');
+      if (!info.persistent && serverFlow()) toast.info('Přihlášení platí hodinu – pro trvalou synchronizaci odeberte Stihnuto v účtu Google a propojte znovu.');
     } else {
       const backend = await backendFor('demo', false);
       const account = await backend.profile();
@@ -179,7 +179,7 @@ async function exportMaterials(backend: GoogleBackend, mode: AppMode, notes: str
   const pending = app.materials.filter((m) => (mode === 'demo' || !m.demo) && (m.kind === 'note' || m.kind === 'upload') && m.driveSyncedAt !== (m.updatedAt ?? m.createdAt));
   if (pending.length === 0) return 0;
   const gs = app.googleSync[mode];
-  const root = gs.containers.driveFolderId ?? (await backend.ensureFolder(conf.folderName || 'Stihnu'));
+  const root = gs.containers.driveFolderId ?? (await backend.ensureFolder(conf.folderName || 'Stihnuto'));
   const folders: Record<string, string> = { ...gs.containers.subjectFolders };
   let exported = 0;
   for (const m of pending.slice(0, 25)) {
@@ -324,7 +324,7 @@ export async function runGoogleSync(options: { manual?: boolean; allowMassDelete
     if (options.manual) {
       const changed = report.pushed.created + report.pushed.updated + report.pushed.deleted + report.pulled.created + report.pulled.updated + report.pulled.deleted;
       if (report.errors.length) toast.error(`Synchronizace s chybami: ${report.errors[0]}`);
-      else toast.success(changed ? `Synchronizováno · ${changed} ${changed === 1 ? 'změna' : changed < 5 ? 'změny' : 'změn'}` : 'Vše je aktuální ✓');
+      else toast.success(changed ? `Synchronizováno · ${changed} ${changed === 1 ? 'změna' : changed < 5 ? 'změny' : 'změn'}` : 'Vše je aktuální.');
     }
     return report;
   } catch (error) {

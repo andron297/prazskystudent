@@ -1,6 +1,6 @@
 /**
  * Import ze SISu bez přístupu aplikace k SISu: student otevře stránku ve svém
- * prohlížeči (přihlášený), klikne na záložku „→ Stihnu“ (nebo text zkopíruje)
+ * prohlížeči (přihlášený), klikne na záložku „→ Stihnuto“ (nebo text zkopíruje)
  * a aplikace z textu stránky vytáhne sylabus předmětu nebo termíny zkoušek.
  */
 import type { SubjectSyllabus } from '../types';
@@ -264,6 +264,6 @@ export function sisSubjectUrl(code: string): string {
  * Aplikace přijme zprávu jen z domén *.cuni.cz a jen po vlastním pozdravu.
  */
 export function sisBookmarklet(appOrigin: string): string {
-  const code = `(function(){var a='${appOrigin}',w=window.open(a+'/#/import','stihnu');if(!w){alert('Povolte vyskakovací okna pro Stihnu');return}var d={type:'stihnu-sis',url:location.href,title:document.title,text:document.body.innerText.slice(0,400000)};var n=0,t=setInterval(function(){n++;try{w.postMessage(d,a)}catch(e){}if(n>40)clearInterval(t)},250);window.addEventListener('message',function(e){if(e.origin===a&&e.data==='stihnu-ok')clearInterval(t)})})();`;
+  const code = `(function(){var a='${appOrigin}',w=window.open(a+'/#/import','stihnu');if(!w){alert('Povolte vyskakovací okna pro Stihnuto');return}var d={type:'stihnu-sis',url:location.href,title:document.title,text:document.body.innerText.slice(0,400000)};var n=0,t=setInterval(function(){n++;try{w.postMessage(d,a)}catch(e){}if(n>40)clearInterval(t)},250);window.addEventListener('message',function(e){if(e.origin===a&&e.data==='stihnu-ok')clearInterval(t)})})();`;
   return `javascript:${encodeURIComponent(code)}`;
 }

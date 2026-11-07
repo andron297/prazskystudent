@@ -1,52 +1,31 @@
 import { useId, useMemo, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import {
-  BookOpen,
-  CircleHelp,
-  CalendarDays,
-  CloudAlert,
-  Clock,
-  FastForward,
-  ArrowRight,
-  FlaskConical,
-  House,
-  LogIn,
-  ShieldCheck,
-  LoaderCircle,
-  Monitor,
-  Moon,
-  Plus,
-  RefreshCw,
-  RotateCcw,
-  Settings2,
-  Sun,
-  Timer,
-  TramFront,
-  type LucideIcon,
-} from 'lucide-react';
+import { BookOpen, CalendarDays, Clock, FastForward, ArrowRight, FlaskConical, House, Plus, RotateCcw, Timer, TramFront, type LucideIcon } from 'lucide-react';
 import { AlertsButton } from '../notifications/AlertsCenter';
 import { FocusChip } from '../focus/FocusCard';
 import { ViewBoundary } from './ViewBoundary';
-import type { ThemePref } from '../../types';
-import { formatRelative, formatTime } from '../../lib/dates';
+import { formatTime } from '../../lib/dates';
 import { buildTaskRows, dueGroup } from '../../lib/taskList';
 import { navigateTo, type View } from '../../hooks/useAppShell';
 import { useNow } from '../../hooks/useNow';
-import { runGoogleSync, useSyncStore } from '../../services/syncCenter';
 import { useAppStore } from '../../store/appStore';
 import { useAccount } from '../../services/account';
 import { useClockStore } from '../../store/clockStore';
+import { activeSimulations, isOwnerEmail, useTestStore } from '../../store/testStore';
 import { useUiStore } from '../../store/uiStore';
+import { Glyph } from '../ui/Glyph';
 import { Menu } from '../ui/overlays';
-import { cn, IconButton } from '../ui/primitives';
+import { cn } from '../ui/primitives';
 
 const NAV: { view: View; label: string; icon: LucideIcon }[] = [
   { view: 'dnes', label: 'Dnes', icon: House },
   { view: 'plan', label: 'Plán', icon: CalendarDays },
   { view: 'doprava', label: 'Doprava', icon: TramFront },
   { view: 'predmety', label: 'Předměty', icon: BookOpen },
-  { view: 'propojeni', label: 'Propojení', icon: Settings2 },
 ];
+
+/** Stránky, které patří pod Nastavení (ozubené kolo je pak zvýrazněné). */
+const SETTINGS_VIEWS: View[] = ['nastaveni', 'propojeni', 'ucet', 'vzhled', 'pruvodce', 'import'];
 
 /** Počet úkolů a termínů po termínu a na dnešek (odznak v navigaci). */
 function useUrgentCount(): number {
@@ -76,35 +55,6 @@ export function BrandMark({ className }: { className?: string }) {
   );
 }
 
-function ThemeToggle() {
-  const theme = useAppStore((s) => s.settings.theme);
-  const updateSettings = useAppStore((s) => s.updateSettings);
-  const next: Record<ThemePref, ThemePref> = { system: 'light', light: 'dark', dark: 'system' };
-  const Icon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Monitor;
-  const label = theme === 'light' ? 'Světlý motiv' : theme === 'dark' ? 'Tmavý motiv' : 'Motiv podle systému';
-  return <IconButton icon={Icon} label={`${label} (přepnout)`} size="sm" onClick={() => updateSettings({ theme: next[theme] })} className="rounded-full" />;
-}
-
-function ModeSwitch() {
-  const mode = useAppStore((s) => s.settings.mode);
-  const openSetup = useUiStore((s) => s.openSetup);
-  const demo = mode === 'demo';
-  return (
-    <button
-      type="button"
-      onClick={() => (demo ? openSetup('start') : navigateTo('propojeni'))}
-      className={cn(
-        'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-bold ring-1 ring-inset transition-colors',
-        demo ? 'bg-sand/25 text-clay ring-sand/50 hover:bg-sand/35' : 'bg-accent-soft text-accent ring-accent/25 hover:bg-accent/15',
-      )}
-      title={demo ? 'Prohlížíte ukázku – klikněte a nastavte si svoje data' : 'Vaše data – přehled propojení'}
-    >
-      {demo ? <FlaskConical className="size-3.5" aria-hidden /> : <ShieldCheck className="size-3.5" aria-hidden />}
-      {demo ? 'Ukázka' : 'Moje data'}
-    </button>
-  );
-}
-
 /** Výrazný pruh: ukázková data nejsou vaše. */
 export function DemoRibbon() {
   const mode = useAppStore((s) => s.settings.mode);
@@ -117,9 +67,7 @@ export function DemoRibbon() {
           <FlaskConical className="size-3.5" aria-hidden /> Ukázka
         </span>
         <span className="min-w-0 flex-1 text-[13px] font-semibold text-[#5c4322] dark:text-[#f0dcb8]">Předměty, rozvrh i úkoly jsou vymyšlené – jen na vyzkoušení.</span>
-        <span className="sm:hidden">
-          <DemoClockChip />
-        </span>
+        <DemoClockChip />
         <button
           type="button"
           onClick={() => openSetup('start')}
@@ -129,27 +77,6 @@ export function DemoRibbon() {
         </button>
       </div>
     </div>
-  );
-}
-
-function AccountButton() {
-  const status = useAccount((s) => s.status);
-  const user = useAccount((s) => s.user);
-  const syncing = useAccount((s) => s.syncing);
-  if (status === 'off' || status === 'loading') return null;
-  if (status !== 'ready' || !user) {
-    return (
-      <a href="#/ucet" className="inline-flex h-8 items-center gap-1.5 rounded-full bg-accent px-3 text-[12.5px] font-bold text-accent-fg hover:brightness-110">
-        <LogIn className="size-3.5" aria-hidden /> Přihlásit se
-      </a>
-    );
-  }
-  const initials = (user.name ?? user.email).split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((x) => x[0]?.toUpperCase()).join('');
-  return (
-    <a href="#/ucet" data-tour="account" className="relative inline-flex size-8 items-center justify-center overflow-hidden rounded-full bg-accent-soft text-[12px] font-bold text-accent ring-2 ring-accent/30" title={`Účet: ${user.email}`} aria-label="Účet">
-      {user.avatar ? <img src={user.avatar} alt="" className="size-full object-cover" referrerPolicy="no-referrer" /> : initials}
-      {syncing && <span className="absolute -bottom-0.5 -right-0.5 size-2.5 animate-pulse rounded-full bg-accent ring-2 ring-[var(--surface)]" aria-hidden />}
-    </a>
   );
 }
 
@@ -204,29 +131,40 @@ function DemoClockChip() {
   );
 }
 
-/** Stav synchronizace s Googlem – jedno kliknutí = synchronizovat teď. */
-export function SyncChip({ compact = false }: { compact?: boolean }) {
-  const mode = useAppStore((s) => s.settings.mode);
-  const enabled = useAppStore((s) => s.settings.google.enabled);
-  const gs = useAppStore((s) => s.googleSync[s.settings.mode]);
-  const { running, needsAuth, lastError } = useSyncStore();
-  const now = useNow(30_000);
-  if (!enabled || !gs.connectedAt) return null;
-  const label = running ? 'Synchronizuji' : needsAuth ? 'Přihlásit' : lastError ? 'Chyba' : gs.lastSync ? formatRelative(new Date(gs.lastSync), mode === 'demo' ? new Date() : now).replace('před ', '') : 'Google';
-  const Icon = running ? LoaderCircle : needsAuth || lastError ? CloudAlert : RefreshCw;
+/** Výrazný štítek, když správce něco simuluje (čas, polohu, chůzi, počasí). */
+function TestBadge() {
+  const email = useAccount((s) => s.user?.email);
+  const gps = useTestStore((s) => s.gps);
+  const walkSim = useTestStore((s) => s.walkSim);
+  const weather = useTestStore((s) => s.weather);
+  const clock = useTestStore((s) => s.clock);
+  const simulated = useClockStore((s) => s.simulated);
+  const demo = useAppStore((s) => s.settings.mode === 'demo');
+  if (!isOwnerEmail(email)) return null;
+  const sims = activeSimulations({ gps, walkSim, weather, clock: clock && simulated && !demo ? clock : null });
+  if (sims.length === 0) return null;
   return (
-    <button
-      type="button"
-      onClick={() => (needsAuth ? navigateTo('propojeni', 'google') : void runGoogleSync({ manual: true }))}
-      className={cn(
-        'inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold ring-1 ring-inset transition-colors',
-        needsAuth || lastError ? 'bg-amber-500/12 text-amber-800 ring-amber-500/30 dark:text-amber-300' : 'bg-surface-2 text-muted ring-line hover:text-fg',
-      )}
-      title={needsAuth ? 'Přihlášení ke Googlu vypršelo' : lastError ?? 'Synchronizovat s Googlem teď'}
+    <a href="#/nastaveni/test" className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full bg-amber-500/15 px-3 text-[12px] font-bold text-amber-800 ring-1 ring-inset ring-amber-500/35 dark:text-amber-300" title={`Testovací režim: ${sims.join(', ')}`}>
+      <FlaskConical className="size-3.5 shrink-0" aria-hidden />
+      <span className="sm:hidden">Test</span>
+      <span className="hidden max-w-40 truncate sm:inline">Test · {sims.join(', ')}</span>
+    </a>
+  );
+}
+
+/** Nastavení: všechno kromě hlavních sekcí (propojení, účet, vzhled, průvodce…). */
+function SettingsButton({ active }: { active: boolean }) {
+  return (
+    <a
+      href="#/nastaveni"
+      data-tour="settings"
+      aria-current={active ? 'page' : undefined}
+      className={cn('inline-flex size-9 items-center justify-center rounded-full transition-colors', active ? 'bg-accent text-accent-fg' : 'text-muted hover:bg-surface-2 hover:text-fg')}
+      aria-label="Nastavení"
+      title="Nastavení"
     >
-      <Icon className={cn('size-3.5', running && 'animate-spin')} aria-hidden />
-      {!compact && <span className="max-w-28 truncate">{label}</span>}
-    </button>
+      <Glyph name="gear" size={20} strokeWidth={1.8} />
+    </a>
   );
 }
 
@@ -244,7 +182,7 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
           <a href="#/dnes" className="flex shrink-0 items-center gap-2.5">
             <BrandMark className="size-8 lg:size-9" />
             <span className="font-display wordmark text-[24px] leading-none tracking-tight lg:text-[26px]">
-              Stih<em className="text-moss">nu</em>
+              Stihnu<em className="text-moss">to</em>
             </span>
           </a>
           <nav className="mx-auto hidden items-center gap-1 rounded-full bg-surface-2/70 p-1 ring-1 ring-inset ring-line lg:flex" aria-label="Hlavní navigace" data-tour="nav">
@@ -254,7 +192,6 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
                 <a
                   key={item.view}
                   href={`#/${item.view}`}
-                  data-tour={item.view === 'propojeni' ? 'connections' : undefined}
                   aria-current={active ? 'page' : undefined}
                   className={cn('relative flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13.5px] font-semibold transition-colors', active ? 'text-accent-fg' : 'text-muted hover:text-fg')}
                 >
@@ -267,18 +204,8 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
             })}
           </nav>
           <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-1.5 lg:ml-0">
+            <TestBadge />
             <FocusChip />
-            <span className="hidden sm:contents">
-              <SyncChip />
-            </span>
-            <div className="hidden items-center gap-1.5 sm:flex">
-              <DemoClockChip />
-              <ModeSwitch />
-            </div>
-            <AccountButton />
-            <span className="hidden sm:contents">
-              <ThemeToggle />
-            </span>
             <button
               type="button"
               onClick={() => openEditor({ type: 'quick' })}
@@ -288,12 +215,7 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
               <Plus className="size-4" aria-hidden /> Přidat
             </button>
             <AlertsButton />
-            <a href="#/pruvodce" className="hidden size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-fg sm:inline-flex" aria-label="Průvodce aplikací" title="Průvodce aplikací">
-              <CircleHelp className="size-[18px]" aria-hidden />
-            </a>
-            <a href="#/propojeni" data-tour="connections" className="inline-flex size-8 items-center justify-center rounded-full text-muted hover:bg-surface-2 hover:text-fg lg:hidden" aria-label="Propojení a nastavení">
-              <Settings2 className="size-[18px]" aria-hidden />
-            </a>
+            <SettingsButton active={SETTINGS_VIEWS.includes(view)} />
           </div>
         </div>
       </header>

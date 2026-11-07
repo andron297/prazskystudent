@@ -3,7 +3,7 @@
  * jízda s upozorněním, kdy vystoupit, a pěšky až do budovy. Poloha z GPS,
  * displej nezhasne, pokyny umí i nahlas. Bez GPS jde projít ručně.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { MapLibreMap, Marker, setWorkerUrl, type GeoJSONSource, type LngLatBoundsLike } from 'maplibre-gl';
@@ -19,7 +19,6 @@ import {
   CornerUpLeft,
   CornerUpRight,
   Flag,
-  Footprints,
   LocateFixed,
   MoveUpLeft,
   MoveUpRight,
@@ -28,19 +27,21 @@ import {
   Volume2,
   VolumeX,
   X,
-  type LucideIcon,
 } from 'lucide-react';
 import { platformLabel } from '../../lib/transitPlanner';
 import type { LatLng } from '../../types';
 import { formatTime, plural } from '../../lib/dates';
 import { haversineMeters } from '../../lib/geo';
-import { buildPhases, formatDistance, instructionText, nextManeuver, slackMinutes, WALK_SPEED_MS, type ManeuverType, type NavPhase, type RidePhase, type WalkPhase } from '../../lib/navigation';
+import { buildPhases, formatDistance, instructionText, isVertical, nextManeuver, slackMinutes, WALK_SPEED_MS, type Maneuver, type ManeuverType, type NavPhase, type NavWayMap, type RidePhase, type WalkPhase } from '../../lib/navigation';
+import { fetchWayInfo, itineraryWayIds } from '../../services/wayInfo';
+import { CrossingIcon, ElevatorIcon, EscalatorIcon, MetroIcon, StairsDownIcon, StairsIcon, StairsUpIcon } from './ManeuverIcons';
 import { bearing, pathLength, pointAlong, projectOnPath } from '../../lib/polyline';
 import { useResolvedTheme } from '../../hooks/useAppShell';
 import { useNow } from '../../hooks/useNow';
 import { stopCoords } from '../../lib/stops';
 import { useStops } from '../../services/stops';
 import { useAppStore } from '../../store/appStore';
+import { useTestStore } from '../../store/testStore';
 import { useUiStore, type NavigationTarget } from '../../store/uiStore';
 import { cn } from '../ui/primitives';
 import { LineBadge } from '../transit/TransitBits';
@@ -48,7 +49,9 @@ import { applyNature, STYLE_URL } from '../map/mapStyle';
 
 setWorkerUrl(workerUrl);
 
-const ICON: Record<ManeuverType, LucideIcon> = {
+type IconComponent = ComponentType<{ className?: string }>;
+
+const ICON: Record<ManeuverType, IconComponent> = {
   depart: Navigation2,
   straight: ArrowUp,
   'slight-left': MoveUpLeft,
@@ -58,9 +61,21 @@ const ICON: Record<ManeuverType, LucideIcon> = {
   right: CornerUpRight,
   'sharp-right': ArrowRight,
   uturn: Undo2,
-  stairs: Footprints,
+  crossing: CrossingIcon,
+  stairs: StairsIcon,
+  'stairs-up': StairsUpIcon,
+  'stairs-down': StairsDownIcon,
+  escalator: EscalatorIcon,
+  'escalator-up': (p: { className?: string }) => <EscalatorIcon {...p} dir="up" />,
+  'escalator-down': (p: { className?: string }) => <EscalatorIcon {...p} dir="down" />,
+  elevator: ElevatorIcon,
+  'elevator-up': (p: { className?: string }) => <ElevatorIcon {...p} dir="up" />,
+  'elevator-down': (p: { className?: string }) => <ElevatorIcon {...p} dir="down" />,
   arrive: Flag,
 };
+
+/** Ikona pokynu: u vstupu do metra a výstupu z něj značka metra. */
+const iconFor = (m: Maneuver): IconComponent => (m.note ? MetroIcon : ICON[m.type]);
 
 const COMPASS = ['na sever', 'na severovýchod', 'na východ', 'na jihovýchod', 'na jih', 'na jihozápad', 'na západ', 'na severozápad'];
 const compassWord = (deg: number) => COMPASS[Math.round(deg / 45) % 8];
@@ -201,6 +216,30 @@ function targetMarker(label: string, color: string): HTMLElement {
   return el;
 }
 
+/** Body na pěší trase: přechody, schody/eskalátory/výtahy a vstup do metra (výstup z něj). */
+function pointsGeoJSON(phases: NavPhase[]) {
+  const features: { type: 'Feature'; properties: { kind: string }; geometry: { type: 'Point'; coordinates: [number, number] } }[] = [];
+  for (const p of phases) {
+    if (p.kind !== 'walk') continue;
+    for (const m of p.maneuvers) {
+      const kind = m.note ? m.note : m.type === 'crossing' || m.crossing ? 'crossing' : isVertical(m.type) ? 'vertical' : null;
+      if (!kind) continue;
+      const c = pointAlong(p.path, m.at, p.cum);
+      features.push({ type: 'Feature', properties: { kind }, geometry: { type: 'Point', coordinates: [c.lng, c.lat] } });
+    }
+  }
+  return { type: 'FeatureCollection' as const, features };
+}
+
+/** Značka vstupu do metra / výstupu z něj (jako na stanicích: M ve čtverci). */
+function metroMarker(exit: boolean): HTMLElement {
+  const el = document.createElement('div');
+  el.title = exit ? 'Výstup z metra' : 'Vstup do metra';
+  el.style.cssText = 'display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:#c8102e;color:#fff;font:800 15px/1 Manrope Variable,system-ui;border:2px solid #fff;box-shadow:0 6px 16px -6px rgb(0 0 0/.55)';
+  el.textContent = 'M';
+  return el;
+}
+
 function routeGeoJSON(phases: NavPhase[], active: number) {
   return {
     type: 'FeatureCollection' as const,
@@ -227,6 +266,23 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
   const speed = WALK_SPEED_MS[walkSpeed];
   const building = target.building ? { name: target.building.name, coords: target.building.coords } : { name: target.event?.title ?? 'Cíl', coords: target.origin };
   const { stops: stopData } = useStops();
+  /** Co je která cesta (přechod, schody, eskalátor…) – doplní se z mapových dat po startu. */
+  const [ways, setWays] = useState<NavWayMap | undefined>(undefined);
+  useEffect(() => {
+    const ids = itineraryWayIds(target.itinerary);
+    if (ids.length === 0) return;
+    let cancelled = false;
+    fetchWayInfo(ids)
+      .then((w) => {
+        if (!cancelled) setWays(w);
+      })
+      .catch(() => {
+        /* bez mapových dat zůstanou pokyny z geometrie */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [target.itinerary]);
   const phases = useMemo(() => {
     // Spoje bez souřadnic (ukázka, záložní plánovač) doplníme z dat zastávek PID.
     const legs = target.itinerary.legs.map((l) => {
@@ -237,8 +293,8 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
         toCoords: l.toCoords ?? stopCoords(stopData, l.toStop, { platform: l.toPlatform }),
       };
     });
-    return buildPhases({ ...target.itinerary, legs }, target.origin, building, target.event?.start);
-  }, [target, stopData]); // eslint-disable-line react-hooks/exhaustive-deps
+    return buildPhases({ ...target.itinerary, legs }, target.origin, building, target.event?.start, ways);
+  }, [target, stopData, ways]); // eslint-disable-line react-hooks/exhaustive-deps
   const [phaseIndex, setPhaseIndex] = useState(0);
   const [arrived, setArrived] = useState(false);
   const [following, setFollowing] = useState(true);
@@ -258,7 +314,12 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     }
   });
   const [showSteps, setShowSteps] = useState(false);
-  const { fix: gpsFix, status: gpsStatus } = usePrecisePosition(!demo);
+  const simGps = useTestStore((s) => s.gps);
+  const walkSim = useTestStore((s) => s.walkSim);
+  const simWalkSpeed = useTestStore((s) => s.walkSpeed);
+  const simulate = demo || walkSim;
+  const { fix: realFix, status: gpsStatus } = usePrecisePosition(!simulate && !simGps);
+  const gpsFix: Fix | null = simGps && !simulate ? { coords: { lat: simGps.lat, lng: simGps.lng }, accuracy: 5, heading: null, speed: 0, at: Date.now() } : realFix;
   const compass = useCompass();
   useWakeLock();
 
@@ -266,24 +327,24 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
   const simStart = useRef(Date.now());
   const [simTick, setSimTick] = useState(0);
   useEffect(() => {
-    if (!demo) return;
+    if (!simulate) return;
     const t = setInterval(() => setSimTick((x) => x + 1), 1000);
     return () => clearInterval(t);
-  }, [demo]);
+  }, [simulate]);
   useEffect(() => {
     simStart.current = Date.now();
   }, [phaseIndex]);
   const phase = phases[Math.min(phaseIndex, phases.length - 1)] as NavPhase | undefined;
   const fix: Fix | null = useMemo(() => {
-    if (!demo || !phase) return gpsFix;
+    if (!simulate || !phase) return gpsFix;
     const elapsed = (Date.now() - simStart.current) / 1000;
     const len = phase.kind === 'walk' ? phase.length : 0;
-    const along = phase.kind === 'walk' ? Math.min(len, elapsed * 4) : 0;
+    const along = phase.kind === 'walk' ? Math.min(len, elapsed * (demo ? 4 : simWalkSpeed)) : 0;
     const rideFraction = Math.min(1, elapsed / 25);
     const coords = phase.kind === 'walk' ? pointAlong(phase.path, along, phase.cum) : pointAlong(phase.path, rideFraction * pathLength(phase.path));
     const ahead = phase.kind === 'walk' ? pointAlong(phase.path, along + 10, phase.cum) : coords;
     return { coords, accuracy: 8, heading: bearing(coords, ahead), speed: 1.4, at: Date.now() };
-  }, [demo, gpsFix, phase, simTick]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [simulate, gpsFix, phase, simTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const heading = compass.heading ?? fix?.heading ?? null;
 
@@ -393,6 +454,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
   const mapRef = useRef<MapLibreMap | null>(null);
   const meRef = useRef<Marker | null>(null);
   const targetRef = useRef<Marker | null>(null);
+  const metroRefs = useRef<Marker[]>([]);
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
@@ -429,6 +491,10 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
       map.addLayer({ id: 'nav-ride-casing', type: 'line', source: 'nav-route', filter: ['==', ['get', 'kind'], 'ride'], paint: { 'line-color': '#ffffff', 'line-width': 9, 'line-opacity': 0.9 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
       map.addLayer({ id: 'nav-ride', type: 'line', source: 'nav-route', filter: ['==', ['get', 'kind'], 'ride'], paint: { 'line-color': ['get', 'color'], 'line-width': 6, 'line-opacity': ['case', ['==', ['get', 'done'], 1], 0.35, 1] }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
       map.addLayer({ id: 'nav-walk', type: 'line', source: 'nav-route', filter: ['==', ['get', 'kind'], 'walk'], paint: { 'line-color': '#2f6b4a', 'line-width': 5, 'line-dasharray': [0.2, 1.6], 'line-opacity': ['case', ['==', ['get', 'done'], 1], 0.35, 1] }, layout: { 'line-cap': 'round', 'line-join': 'round' } });
+      // Přechody (bílá kolečka s tmavým okrajem) a schody, eskalátory, výtahy (hnědé tečky).
+      map.addSource('nav-points', { type: 'geojson', data: pointsGeoJSON(phases) });
+      map.addLayer({ id: 'nav-crossings', type: 'circle', source: 'nav-points', filter: ['==', ['get', 'kind'], 'crossing'], paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 15, 3, 18, 6], 'circle-color': '#ffffff', 'circle-stroke-color': '#1f2a24', 'circle-stroke-width': 2 } });
+      map.addLayer({ id: 'nav-vertical', type: 'circle', source: 'nav-points', filter: ['==', ['get', 'kind'], 'vertical'], paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 15, 2.5, 18, 5], 'circle-color': '#a36f45', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1.5 } });
       const stops = phases.flatMap((p) => (p.kind === 'ride' ? p.stops : []));
       map.addSource('nav-stops', { type: 'geojson', data: { type: 'FeatureCollection', features: stops.map((s) => ({ type: 'Feature', properties: { name: s.name }, geometry: { type: 'Point', coordinates: [s.coords.lng, s.coords.lat] } })) } });
       map.addLayer({ id: 'nav-stops', type: 'circle', source: 'nav-stops', paint: { 'circle-radius': 4.5, 'circle-color': '#ffffff', 'circle-stroke-color': '#2f6b4a', 'circle-stroke-width': 2.5 } });
@@ -456,6 +522,11 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     const map = mapRef.current;
     if (!map || !mapReady) return;
     (map.getSource('nav-route') as GeoJSONSource | undefined)?.setData(routeGeoJSON(phases, phaseIndex));
+    (map.getSource('nav-points') as GeoJSONSource | undefined)?.setData(pointsGeoJSON(phases));
+    for (const mk of metroRefs.current) mk.remove();
+    metroRefs.current = pointsGeoJSON(phases)
+      .features.filter((f) => f.properties.kind === 'entrance' || f.properties.kind === 'exit')
+      .map((f) => new Marker({ element: metroMarker(f.properties.kind === 'exit') }).setLngLat(f.geometry.coordinates).addTo(map));
     targetRef.current?.remove();
     const p = phases[phaseIndex];
     if (p) {
@@ -497,7 +568,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
   /* -------------------------------- vzhled -------------------------------- */
 
   if (!phase) return null;
-  const Icon = next ? ICON[next.maneuver.type] : Navigation2;
+  const Icon = next ? iconFor(next.maneuver) : Navigation2;
   const instruction =
     walk && next
       ? next.maneuver.type === 'arrive' && next.distance >= 15
@@ -514,7 +585,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     slack === null
       ? null
       : slack >= 1.5
-        ? { text: `Stíháte s rezervou ${Math.floor(slack)} min`, tone: 'bg-emerald-700 text-white' }
+        ? { text: slack >= 120 ? 'Stíháte s velkou rezervou' : `Stíháte s rezervou ${Math.floor(slack)} min`, tone: 'bg-emerald-700 text-white' }
         : slack >= -0.5
           ? { text: 'Je to těsné – přidejte do kroku', tone: 'bg-amber-600 text-white' }
           : { text: walk?.target.isStop ? 'Tenhle spoj asi nestihnete' : 'Na začátek to asi nestihnete', tone: 'bg-red-600 text-white' };
@@ -653,9 +724,9 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
                   <div className="shrink-0 text-right">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-subtle">{walk.target.isStop ? 'Odjezd za' : 'Začátek za'}</p>
                     <p className="font-display text-[30px] leading-none tabular">
-                      {secondsLeft <= 0 ? 'teď' : secondsLeft >= 600 ? `${Math.round(secondsLeft / 60)} min` : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`}
+                      {secondsLeft <= 0 ? 'teď' : secondsLeft >= 5400 ? `${Math.floor(secondsLeft / 3600)} h ${Math.round((secondsLeft % 3600) / 60)} min` : secondsLeft >= 600 ? `${Math.round(secondsLeft / 60)} min` : `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`}
                     </p>
-                    <p className="text-[12px] text-muted tabular">v {formatTime(deadlineDate!)}</p>
+                    <p className="text-[12px] text-muted tabular">{deadlineDate!.toDateString() === now.toDateString() ? '' : `${deadlineDate!.toLocaleDateString('cs-CZ', { weekday: 'long' })} `}v {formatTime(deadlineDate!)}</p>
                   </div>
                 )}
               </div>
@@ -676,7 +747,7 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
                   {walk.maneuvers
                     .filter((m) => m.type !== 'depart')
                     .map((m) => {
-                      const MIcon = ICON[m.type];
+                      const MIcon = iconFor(m);
                       const passed = m.at < along - 5;
                       return (
                         <li key={m.at} className={cn('flex items-center gap-2', passed && 'opacity-45')}>

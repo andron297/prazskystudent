@@ -17,7 +17,7 @@ export async function handleIcs(request: Request): Promise<Response> {
         method: 'GET',
         headers: {
           accept: 'text/calendar, text/plain;q=0.9, */*;q=0.5',
-          'user-agent': 'Stihnu/1.0 (iCal bridge)',
+          'user-agent': 'Stihnuto/1.0 (iCal bridge)',
         },
       },
       { timeoutMs: 12_000, maxRedirects: 3 },

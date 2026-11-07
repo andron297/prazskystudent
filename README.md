@@ -1,4 +1,4 @@
-# Stihnu – studium, MHD a Google v jedné aplikaci
+# Stihnuto – studium, MHD a Google v jedné aplikaci
 
 PWA pro vysokoškoláky v Praze (primárně Univerzita Karlova – SIS, Moodle, PID). Všechno, co student potřebuje,
 na jednom klidném místě: **rozvrh ze SISu, úkoly z Moodlu, vlastní úkoly a události, Google Kalendář, Úkoly a Disk
@@ -59,17 +59,17 @@ komunitní služby jako [Transitous](https://transitous.org).
 ### Propojení
 | Služba | Jak | Co přinese |
 | --- | --- | --- |
-| **Google Kalendář** | přihlášení Google | rozvrh, zkoušky, harmonogram a vlastní události v kalendáři „Stihnu · studium“ (nebo v hlavním); události z hlavního kalendáře se zobrazí v aplikaci |
-| **Google Úkoly** | přihlášení Google | vlastní úkoly a studijní termíny v seznamu „Stihnu“; úkoly z „Moje úkoly“ se stáhnou – odškrtnutí platí oběma směry |
+| **Google Kalendář** | přihlášení Google | rozvrh, zkoušky, harmonogram a vlastní události v kalendáři „Stihnuto · studium“ (nebo v hlavním); události z hlavního kalendáře se zobrazí v aplikaci |
+| **Google Úkoly** | přihlášení Google | vlastní úkoly a studijní termíny v seznamu „Stihnuto“; úkoly z „Moje úkoly“ se stáhnou – odškrtnutí platí oběma směry |
 | **Google Disk** | přihlášení Google | data mezi zařízeními (skrytá složka aplikace), volitelně poznámky jako Google dokumenty a soubory podle předmětů |
 | **Moodle** | odkaz z *Kalendář → Exportovat kalendář* | úkoly, testy a odevzdávárny – **bez tokenu**, obnovuje se samo |
 | **Moodle (plné)** | token *Moodle mobile web service* | navíc materiály, PDF a prezentace z kurzů |
 | **SIS – rozvrh** | odkaz z *Rozvrh NG → Export → iCalendar* | předměty, časy, místnosti → budovy; obnovuje se samo |
-| **SIS – sylaby a zkoušky** | záložka „→ Stihnu“ nebo vložený text | sylabus, podmínky, literatura; termíny zkoušek do kalendáře |
+| **SIS – sylaby a zkoušky** | záložka „→ Stihnuto“ nebo vložený text | sylabus, podmínky, literatura; termíny zkoušek do kalendáře |
 | **PID Golemio** | API klíč | živé odjezdy, zpoždění, klimatizace |
 
 Pokročilé nastavení synchronizace: cílový kalendář/seznam, co zapisovat, směr (obousměrně / jen zapisovat / jen číst),
-rozsah, připomínky, barvy předmětů, další zrcadlené kalendáře a seznamy, interval, řešení konfliktů (novější / Stihnu / Google),
+rozsah, připomínky, barvy předmětů, další zrcadlené kalendáře a seznamy, interval, řešení konfliktů (novější / Stihnuto / Google),
 promítání smazání a historie běhů.
 
 ---
@@ -148,7 +148,7 @@ Oprávnění: `calendar`, `tasks`, `drive.file` (jen soubory vytvořené aplikac
 ### Jak synchronizace funguje
 - Každá propojená položka má vazbu s otiskem lokální i vzdálené podoby; změna se pozná porovnáním otisků. Když se změní obě strany,
   rozhodne nastavená politika (výchozí: novější změna).
-- Položky ze Stihnu nesou značku (`extendedProperties` u událostí, patička poznámky u úkolů), takže ani na novém zařízení nevznikají duplikáty.
+- Položky ze Stihnuta nesou značku (`extendedProperties` u událostí, patička poznámky u úkolů), takže ani na novém zařízení nevznikají duplikáty.
 - Smazání se promítá jen při výslovném smazání (tombstone). Když se změní rozvrh, zastaralé kopie se uklidí – a pokud by šlo o hromadné
   mazání, aplikace se nejdřív zeptá. Výuka smazaná v Googlu se v aplikaci nesmaže, jen se přestane zapisovat.
 - Disk: data se slučují po položkách podle `updatedAt` a tombstones, takže se nic neztratí ani při práci na dvou zařízeních.
@@ -157,13 +157,13 @@ Oprávnění: `calendar`, `tasks`, `drive.file` (jen soubory vytvořené aplikac
 ## Moodle bez tokenu
 Klíč *Moodle mobile web service* se v **Předvolby → Klíče zabezpečení** objeví až po prvním přihlášení v oficiální aplikaci Moodle;
 RSS klíč k tomu nefunguje. Proto je doporučená cesta **export kalendáře**:
-Moodle → **Kalendář → Exportovat kalendář** → *Všechny události*, *Nedávné a příští* → **Získat URL kalendáře** → vložit do Stihnu.
+Moodle → **Kalendář → Exportovat kalendář** → *Všechny události*, *Nedávné a příští* → **Získat URL kalendáře** → vložit do Stihnuta.
 Odkaz (`…/calendar/export_execute.php?userid=…&authtoken=…`) se stahuje přes serverovou iCal proxy a obnovuje se v nastaveném intervalu.
 
 ## SIS
 - **Rozvrh**: odkaz na export iCalendar z Rozvrhu NG se obnovuje sám (výchozí každých 6 h) a změny se propíšou i do Google Kalendáře.
-- **Sylaby a termíny zkoušek**: v *Propojení → SIS* přetáhni tlačítko **→ Stihnu** do lišty záložek. Na stránce předmětu nebo termínů
-  zkoušek v SISu na záložku klikni – otevře se Stihnu a stránku přečte (přihlášení zůstává v SISu, data se předávají jen mezi tvými okny,
+- **Sylaby a termíny zkoušek**: v *Propojení → SIS* přetáhni tlačítko **→ Stihnuto** do lišty záložek. Na stránce předmětu nebo termínů
+  zkoušek v SISu na záložku klikni – otevře se Stihnuto a stránku přečte (přihlášení zůstává v SISu, data se předávají jen mezi tvými okny,
   aplikace přijímá zprávy jen z domén `*.cuni.cz`). Alternativa: zkopírovat text stránky do *Import ze SISu*.
 - Aplikace sama SIS nestahuje a neobchází jeho přihlášení ani ochrany.
 
@@ -208,7 +208,7 @@ Podrobně v [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Zdroje dat a poděkování
 Trasy a odjezdy: [Transitous](https://transitous.org) ([zdroje dat](https://transitous.org/sources/)) – komunitní plánovač
-nad jízdními řády PID; Stihnu ho používá podle jeho pravidel (open source, nekomerčně, s cache a identifikací v User-Agent).
+nad jízdními řády PID; Stihnuto ho používá podle jeho pravidel (open source, nekomerčně, s cache a identifikací v User-Agent).
 Jídelníčky menz: [Koleje a menzy UK](https://kam.cuni.cz) (veřejné rozhraní systému Septim, jen čtení, s cache).
 Zastávky: [PID – data.pid.cz](https://data.pid.cz) · mapové podklady: [OpenFreeMap](https://openfreemap.org), © přispěvatelé
 [OpenStreetMap](https://www.openstreetmap.org/copyright) · počasí: [Open-Meteo](https://open-meteo.com) (CC BY 4.0) ·

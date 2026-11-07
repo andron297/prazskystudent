@@ -1,4 +1,4 @@
-# Stěhování Stihnu na novou adresu
+# Stěhování Stihnuta na novou adresu
 
 Cíl: kratší adresa (např. **stihnu.vercel.app**) bez ztráty dat a bez nového přihlašování.
 
@@ -28,7 +28,7 @@ Doporučení: hned teď zdarma `stihnu.vercel.app`; vlastní doménu lze přidat
 
 ## Co se pak stane
 
-- Na staré adrese uvidí přihlášený student okno **„Stihnu má novou adresu“**. Jedním klepnutím se vytvoří
+- Na staré adrese uvidí přihlášený student okno **„Stihnuto má novou adresu“**. Jedním klepnutím se vytvoří
   jednorázové propojení (stejné jako QR kód pro telefon, platí 3 minuty) rovnou pro novou adresu:
   student je tam hned přihlášený i odemčený a data se stáhnou ze zašifrované zálohy účtu.
 - Nepřihlášené návštěvníky a ukázku stará adresa rovnou přesměruje.

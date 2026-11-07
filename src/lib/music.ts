@@ -35,3 +35,33 @@ export function spotifyOpenUrl(url: string | undefined | null): string | null {
 export function isSpotifyUrl(url: string): boolean {
   return SPOTIFY_RE.test(url.trim());
 }
+
+export interface SpotifyInfo {
+  ok: boolean;
+  title?: string;
+  thumbnail?: string;
+}
+
+const infoCache = new Map<string, Promise<SpotifyInfo>>();
+
+/**
+ * Ověří odkaz přes veřejné oEmbed Spotify: soukromé playlisty, osobní mixy
+ * a smazané odkazy vrací 404 – ty vložený přehrávač neumí (ukázal by
+ * „Page not found“). Při výpadku sítě se odkaz bere jako platný.
+ */
+export function spotifyInfo(url: string | undefined | null): Promise<SpotifyInfo> {
+  const open = spotifyOpenUrl(url);
+  if (!open) return Promise.resolve({ ok: false });
+  const cached = infoCache.get(open);
+  if (cached) return cached;
+  const p = fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(open)}`, { signal: AbortSignal.timeout(8000) })
+    .then(async (r) => {
+      if (r.status === 404 || r.status === 400) return { ok: false };
+      if (!r.ok) return { ok: true };
+      const d = (await r.json()) as { title?: string; thumbnail_url?: string };
+      return { ok: true, title: d.title, thumbnail: d.thumbnail_url };
+    })
+    .catch(() => ({ ok: true }));
+  infoCache.set(open, p);
+  return p;
+}

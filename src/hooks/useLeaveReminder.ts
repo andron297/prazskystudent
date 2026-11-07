@@ -1,6 +1,6 @@
 /**
  * Upozornění „Za 5 minut vyraz“ a „Vyraz teď“ – lokální notifikace přes
- * service worker (funguje, i když je Stihnu na pozadí, dokud je otevřené).
+ * service worker (funguje, i když je Stihnuto na pozadí, dokud je otevřené).
  * Každé upozornění se pošle nejvýš jednou pro daný spoj.
  */
 import { useEffect } from 'react';

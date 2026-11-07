@@ -1,12 +1,12 @@
 # Architektura datového toku
 
-Stihnu je klientská PWA (React + TypeScript) s tenkou serverovou vrstvou na Vercelu. Všechna studijní data žijí
+Stihnuto je klientská PWA (React + TypeScript) s tenkou serverovou vrstvou na Vercelu. Všechna studijní data žijí
 v prohlížeči; server slouží jen jako bezpečná proxy k externím API, která nepodporují CORS nebo vyžadují tajný klíč.
 
 ```mermaid
 flowchart LR
   subgraph Zdroje
-    SIS["SIS – iCal rozvrhu, záložka → Stihnu"]
+    SIS["SIS – iCal rozvrhu, záložka → Stihnuto"]
     MOODLE["Moodle – export kalendáře / REST (wstoken)"]
     TEXT["Text harmonogramu / sylabu"]
     GPS["navigator.geolocation"]
@@ -174,7 +174,7 @@ i každá líně načítaná sekce. `/api/*` se nikdy necachuje.
 3. **Rozhodnutí**: změna jen na jedné straně se přenese; změna na obou = konflikt podle politiky. Výuka upravená v Googlu
    se nepřepisuje, dokud se nezmění v aplikaci. Smazání v Googlu: osobní položky se smažou i lokálně, výuka se jen vyřadí
    (`excluded`). Lokální smazání se promítne jen s tombstone. Zastaralé kopie importu se uklidí s pojistkou proti hromadnému mazání.
-4. **Párování bez duplikátů**: události nesou `extendedProperties.private.stihnuKey`, úkoly patičku `— Stihnu · req:…`.
+4. **Párování bez duplikátů**: události nesou `extendedProperties.private.stihnuKey`, úkoly patičku `— Stihnuto · req:…`.
 5. **Zrcadla**: vybrané kalendáře (výchozí hlavní) se zobrazí jen ke čtení, vybrané seznamy úkolů (výchozí „Moje úkoly“) obousměrně.
 
 `services/google/client.ts` je REST klient (Calendar v3, Tasks v1, Drive v3) s opakováním při limitech a obnovou tokenu;

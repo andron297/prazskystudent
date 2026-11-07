@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { BookMarked, CalendarDays, ChevronDown, Database, Download, ExternalLink, FlaskConical, GraduationCap, KeyRound, LoaderCircle, MapPin, Monitor, Moon, MousePointerClick, Palette, Plus, RefreshCw, RotateCcw, ScrollText, ServerCog, Sparkles, Sun, TramFront, Trash, Upload, Zap } from 'lucide-react';
+import { BookMarked, CalendarDays, ChevronDown, Database, Download, ExternalLink, FlaskConical, GraduationCap, KeyRound, LoaderCircle, MapPin, MousePointerClick, Plus, RefreshCw, RotateCcw, ScrollText, ServerCog, Sparkles, TramFront, Trash, Upload, Zap } from 'lucide-react';
 import type { IcsSource, WalkSpeed } from '../../types';
-import { formatReminder, downloadTextFile } from '../../lib/calendarExport';
+import { downloadTextFile } from '../../lib/calendarExport';
 import { formatRelative } from '../../lib/dates';
 import { LOCATION_PRESETS } from '../../lib/buildings';
 import { uid } from '../../lib/id';
 import { isMoodleCalendarUrl } from '../../lib/moodleIcs';
 import { sisBookmarklet } from '../../lib/sisImport';
 import { ConnectionsHub } from '../setup/ConnectionsHub';
-import { SchoolCard } from './SchoolCard';
+import { SettingsBack } from '../settings/SettingsBack';
 import { MOODLE_SHOTS, RealScreens } from '../setup/RealScreens';
 import { AI_NAMES, providerForKey } from '../../lib/aiProvider';
 import { navigateTo } from '../../hooks/useAppShell';
@@ -30,7 +30,7 @@ import { MoodleConnect } from './MoodleConnect';
 /* ------------------------------------------------------------------ */
 
 
-function Collapsible({ title, children, defaultOpen = false, icon: Icon }: { title: ReactNode; children: ReactNode; defaultOpen?: boolean; icon?: typeof CalendarDays }) {
+export function Collapsible({ title, children, defaultOpen = false, icon: Icon }: { title: ReactNode; children: ReactNode; defaultOpen?: boolean; icon?: typeof CalendarDays }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="rounded-[22px] bg-surface-2/70 ring-1 ring-inset ring-line">
@@ -143,7 +143,7 @@ function MoodleSection() {
           <p className="flex items-center gap-2 text-[14px] font-bold text-accent">
             <Zap className="size-4" aria-hidden /> Doporučeno: kalendář Moodlu – žádný token
           </p>
-          <p className="mt-1 text-[13px] text-muted">Klíč z Moodlu nepotřebujete. Moodle umí sdílet všechny termíny jako odkaz na kalendář – Stihnu z něj průběžně vytáhne úkoly, testy a odevzdávárny. Odevzdání a známky pak přenesete záložkou „→ Stihnu“, nebo je aplikace stáhne sama s klíčem z Moodlu (níže).</p>
+          <p className="mt-1 text-[13px] text-muted">Klíč z Moodlu nepotřebujete. Moodle umí sdílet všechny termíny jako odkaz na kalendář – Stihnuto z něj průběžně vytáhne úkoly, testy a odevzdávárny. Odevzdání a známky pak přenesete záložkou „→ Stihnuto“, nebo je aplikace stáhne sama s klíčem z Moodlu (níže).</p>
         </div>
         <Steps
           items={[
@@ -174,7 +174,7 @@ function MoodleSection() {
         <Collapsible title="Plné propojení přes klíč (odevzdání, známky, materiály)" icon={KeyRound} defaultOpen={Boolean(moodle)}>
           <div className="space-y-3 text-[13px] leading-relaxed text-muted">
             <p>
-              S klíčem Stihnu samo odškrtne odevzdané úkoly, zapíše známky a stáhne soubory z kurzů. Nový Moodle klíč v{' '}
+              S klíčem Stihnuto samo odškrtne odevzdané úkoly, zapíše známky a stáhne soubory z kurzů. Nový Moodle klíč v{' '}
               <a className="font-semibold text-accent hover:underline" href={`${base}/user/managetoken.php`} target="_blank" rel="noreferrer">
                 Bezpečnostních klíčích
               </a>{' '}
@@ -353,7 +353,7 @@ function SisSection() {
           <p className="flex items-center gap-2 text-[14px] font-bold">
             <BookMarked className="size-4 text-moss" aria-hidden /> Termíny zkoušek a stránky z Moodlu jedním klikem
           </p>
-          <p className="mt-1 text-[13px] text-muted">Přetáhněte tlačítko do lišty záložek. Pak klikněte na záložku v SISu (termíny zkoušek, stránka předmětu) nebo v Moodlu (úkol, kurz) – Stihnu si stránku přečte vaším přihlášením: odevzdané úkoly odškrtne, známky a termíny doplní. Nic se neposílá jinam.</p>
+          <p className="mt-1 text-[13px] text-muted">Přetáhněte tlačítko do lišty záložek. Pak klikněte na záložku v SISu (termíny zkoušek, stránka předmětu) nebo v Moodlu (úkol, kurz) – Stihnuto si stránku přečte vaším přihlášením: odevzdané úkoly odškrtne, známky a termíny doplní. Nic se neposílá jinam.</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <a
               ref={linkRef}
@@ -364,7 +364,7 @@ function SisSection() {
               className="inline-flex cursor-grab items-center gap-2 rounded-full bg-forest px-4 py-2 text-[13px] font-bold text-forest-fg shadow-md active:cursor-grabbing"
               draggable
             >
-              <MousePointerClick className="size-4" aria-hidden /> → Stihnu
+              <MousePointerClick className="size-4" aria-hidden /> → Stihnuto
             </a>
             <Button size="sm" variant="ghost" icon={ScrollText} onClick={() => navigateTo('import')}>
               Nebo vložit text stránky
@@ -402,7 +402,7 @@ function SecretField({ label, value, onChange, placeholder, hint, extra }: { lab
   );
 }
 
-function TransitSection() {
+export function TransitSection() {
   const settings = useAppStore((s) => s.settings);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const setOrigin = useAppStore((s) => s.setOrigin);
@@ -520,7 +520,7 @@ function TransitSection() {
 /* Počasí a aplikace                                                   */
 /* ------------------------------------------------------------------ */
 
-function WeatherSection() {
+export function WeatherSection() {
   const weather = useAppStore((s) => s.settings.weather);
   const updateSettings = useAppStore((s) => s.updateSettings);
   return (
@@ -532,9 +532,9 @@ function WeatherSection() {
             value={weather.feel}
             onChange={(feel) => updateSettings({ weather: { ...weather, feel } })}
             options={[
-              { value: 'cold', label: '🥶 Zimomřivě' },
+              { value: 'cold', label: 'Zimomřivě' },
               { value: 'normal', label: 'Normálně' },
-              { value: 'warm', label: '🔥 Otužile' },
+              { value: 'warm', label: 'Otužile' },
             ]}
           />
         </Field>
@@ -543,10 +543,9 @@ function WeatherSection() {
   );
 }
 
-function AppSection() {
+export function AppSection() {
   const settings = useAppStore((s) => s.settings);
   const updateSettings = useAppStore((s) => s.updateSettings);
-  const clearAllData = useAppStore((s) => s.clearAllData);
   const importBackup = useAppStore((s) => s.importBackup);
   const server = useUiStore((s) => s.server);
   const serverChecked = useUiStore((s) => s.serverChecked);
@@ -560,14 +559,14 @@ function AppSection() {
     void _m;
     void _a;
     const payload = { app: 'stihnu', version: 2, exportedAt: new Date().toISOString(), ...pickPersisted(state), settings: { ...safeSettings, moodle: moodle ? { ...moodle, token: '' } : null } };
-    downloadTextFile(`stihnu-zaloha-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), 'application/json');
+    downloadTextFile(`stihnuto-zaloha-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(payload, null, 2), 'application/json');
     toast.success('Záloha je stažená (bez klíčů a přístupových údajů).');
   };
 
   const onImport = async (file: File) => {
     try {
       const data = JSON.parse(await file.text());
-      if (data?.app !== 'stihnu') throw new Error('Soubor není záloha aplikace Stihnu.');
+      if (data?.app !== 'stihnu') throw new Error('Soubor není záloha aplikace Stihnuto.');
       importBackup(data);
       toast.success('Záloha obnovena.');
     } catch (e) {
@@ -575,134 +574,99 @@ function AppSection() {
     }
   };
 
+  const showDemo = async () => {
+    if (await confirmAction({ title: 'Zobrazit ukázku?', message: 'Přidám vymyšlené předměty na vyzkoušení. Vaše data zůstanou; ukázka zmizí, jakmile se vrátíte k vlastním datům.', confirmLabel: 'Zobrazit ukázku' })) {
+      useAppStore.getState().startDemo();
+      toast.success('Ukázka je zpátky.');
+    }
+  };
+  const deleteDemo = async () => {
+    if (await confirmAction({ title: 'Smazat ukázková data?', message: 'Vaše vlastní data zůstanou.', confirmLabel: 'Smazat ukázku', tone: 'danger' })) {
+      const removed = useAppStore.getState().purgeSampleData();
+      toast.info(removed ? 'Ukázková data smazána.' : 'Žádná ukázková data tu nejsou.');
+    }
+  };
+  const aiProvider = providerForKey(settings.anthropicApiKey);
+
   return (
-    <Card id="aplikace" className="scroll-mt-24" eyebrow="Vzhled, režim, data" title={<>Aplikace</>}>
-      <div className="space-y-5">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Data" hint="Ukázka = vymyšlené předměty na vyzkoušení. Moje data = jen to vaše.">
-            <Segmented
-              value={settings.mode}
-              onChange={(m) => {
-                if (m === 'demo') {
-                  useAppStore.getState().startDemo();
-                  toast.info('Ukázka: vymyšlené předměty a simulovaná doprava.');
-                } else {
-                  const removed = useAppStore.getState().startOwnData();
-                  toast.success(removed ? 'Moje data – ukázka je pryč.' : 'Moje data.');
-                }
-              }}
-              options={[
-                { value: 'live', label: 'Moje data', icon: Zap },
-                { value: 'demo', label: 'Ukázka', icon: FlaskConical },
-              ]}
-            />
-          </Field>
-          <Field label="Motiv">
-            <Segmented
-              value={settings.theme}
-              onChange={(theme) => updateSettings({ theme })}
-              options={[
-                { value: 'system', label: 'Auto', icon: Monitor },
-                { value: 'light', label: 'Světlý', icon: Sun },
-                { value: 'dark', label: 'Tmavý', icon: Moon },
-              ]}
-            />
-            <a href="#/vzhled" className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-bold text-accent hover:underline">
-              <Palette className="size-4" aria-hidden /> Barvy, fotky, pozadí a písmo
-            </a>
-          </Field>
-        </div>
-        <Field label="Jak vás oslovit" hint="Zobrazí se v pozdravu na hlavní stránce.">
-          <TextInput value={settings.displayName} onChange={(e) => updateSettings({ displayName: e.target.value })} placeholder="např. Ondro" maxLength={24} className="max-w-xs" />
-        </Field>
-        {settings.mode === 'demo' && (
-          <Toggle
-            checked={settings.demoClock}
-            onChange={(v) => {
-              updateSettings({ demoClock: v });
-              if (v) useClockStore.getState().startSimulation();
-              else useClockStore.getState().switchToRealTime();
+    <div className="space-y-4">
+      <Card id="aplikace" className="scroll-mt-24" eyebrow="Co aplikace ukazuje" title={<>Vaše data <em className="italic text-moss">a ukázka</em></>}>
+        <div className="space-y-4">
+          <Segmented
+            value={settings.mode}
+            onChange={(m) => {
+              if (m === 'demo') {
+                useAppStore.getState().startDemo();
+                toast.info('Ukázka: vymyšlené předměty a simulovaná doprava.');
+              } else {
+                const removed = useAppStore.getState().startOwnData();
+                toast.success(removed ? 'Moje data – ukázka je pryč.' : 'Moje data.');
+              }
             }}
-            label="Simulované hodiny (start ve 13:05)"
-            description={simulated ? 'Odpočet do semináře ve 14:00 je vidět kdykoli.' : 'Běží reálný čas.'}
+            options={[
+              { value: 'live', label: 'Moje data', icon: Zap },
+              { value: 'demo', label: 'Ukázka', icon: FlaskConical },
+            ]}
           />
-        )}
-        <div>
-          <span className="mb-1.5 block text-[13px] font-semibold">Připomínky u ručně exportovaných termínů (.ics)</span>
-          <div className="flex flex-wrap gap-1.5">
-            {[10080, 2880, 1440, 180, 120, 60, 30].map((m) => {
-              const active = settings.reminders.includes(m);
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => updateSettings({ reminders: active ? settings.reminders.filter((x) => x !== m) : [...settings.reminders, m].sort((a, b) => b - a) })}
-                  className={cn('rounded-full px-3 py-1 text-[12.5px] font-semibold ring-1 ring-inset transition', active ? 'bg-accent text-accent-fg ring-accent' : 'bg-surface text-muted ring-line-strong hover:text-fg')}
-                >
-                  {formatReminder(m)}
-                </button>
-              );
-            })}
+          <p className="text-[13.5px] leading-relaxed text-muted">Ukázka jsou vymyšlené předměty a simulovaná doprava na vyzkoušení. Moje data jsou jen vaše předměty, rozvrh a úkoly – ukázka se s nimi nikdy nemíchá.</p>
+          {settings.mode === 'demo' && (
+            <Toggle
+              checked={settings.demoClock}
+              onChange={(v) => {
+                updateSettings({ demoClock: v });
+                if (v) useClockStore.getState().startSimulation();
+                else useClockStore.getState().switchToRealTime();
+              }}
+              label="Simulované hodiny ukázky (start ve 13:05)"
+              description={simulated ? 'Odpočet do semináře ve 14:00 je vidět kdykoli.' : 'Běží reálný čas.'}
+            />
+          )}
+          <div className="flex flex-wrap gap-2">
+            {settings.mode === 'live' && (
+              <Button variant="ghost" icon={RotateCcw} onClick={() => void showDemo()}>
+                Zobrazit ukázku
+              </Button>
+            )}
+            <Button variant="ghost" icon={Trash} onClick={() => void deleteDemo()}>
+              Smazat ukázková data
+            </Button>
           </div>
         </div>
-        <SecretField label="Vlastní AI klíč (volitelné)" value={settings.anthropicApiKey} onChange={(anthropicApiKey) => updateSettings({ anthropicApiKey })} placeholder="Claude sk-ant-…, ChatGPT sk-… nebo Gemini AIza…" hint={providerForKey(settings.anthropicApiKey) ? `Používáte ${AI_NAMES[providerForKey(settings.anthropicApiKey)!]}.` : 'Claude, ChatGPT i Gemini – poznám podle klíče.'} />
-        <div className="flex flex-wrap gap-2">
-          <Button icon={Download} onClick={exportBackup}>
-            Záloha
-          </Button>
-          <Button icon={Upload} onClick={() => fileRef.current?.click()}>
-            Obnovit
-          </Button>
-          <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files?.[0] && void onImport(e.target.files[0])} />
-          <Button
-            variant="ghost"
-            icon={RotateCcw}
-            onClick={async () => {
-              if (await confirmAction({ title: 'Zobrazit ukázku?', message: 'Přidám vymyšlené předměty na vyzkoušení. Vaše data zůstanou; ukázka zmizí, jakmile se vrátíte k vlastním datům.', confirmLabel: 'Zobrazit ukázku' })) {
-                useAppStore.getState().startDemo();
-                toast.success('Ukázka je zpátky.');
-              }
-            }}
-          >
-            Zobrazit ukázku
-          </Button>
-          <Button
-            variant="ghost"
-            icon={Trash}
-            onClick={async () => {
-              if (await confirmAction({ title: 'Smazat ukázková data?', message: 'Vaše vlastní data zůstanou.', confirmLabel: 'Smazat ukázku', tone: 'danger' })) {
-                const removed = useAppStore.getState().purgeSampleData();
-                toast.info(removed ? 'Ukázková data smazána.' : 'Žádná ukázková data tu nejsou.');
-              }
-            }}
-          >
-            Smazat ukázku
-          </Button>
-          <Button
-            variant="ghost"
-            icon={Trash}
-            className="text-red-700 hover:text-red-700"
-            onClick={async () => {
-              if (await confirmAction({ title: 'Smazat všechna data?', message: 'Smaže předměty, rozvrh, úkoly, materiály i milníky v tomto zařízení.', confirmLabel: 'Smazat vše', tone: 'danger' })) {
-                clearAllData();
-                toast.info('Data smazána.');
-              }
-            }}
-          >
-            Smazat vše
-          </Button>
-        </div>
-        <p className="flex items-center gap-2 text-xs text-muted">
-          <ServerCog className="size-3.5" aria-hidden />
-          {!serverChecked
-            ? 'Zjišťuji serverové funkce…'
-            : server.reachable
-              ? `Server běží · ${[server.golemio && 'Golemio', server.google && 'Google Maps', server.googleClientId && 'Google přihlášení', server.anthropic && 'AI'].filter(Boolean).join(', ') || 'bez serverových klíčů'}`
-              : 'Server aplikace je nedostupný – vlastní data potřebují aplikaci nasazenou na Vercelu.'}
-        </p>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card eyebrow="Soubor do počítače" title={<>Záloha</>}>
+          <p className="text-[13.5px] leading-relaxed text-muted">Stáhne předměty, rozvrh, úkoly a nastavení do jednoho souboru – bez hesel a klíčů. S účtem se vše ukládá samo, záloha se hodí navíc.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button icon={Download} onClick={exportBackup}>
+              Stáhnout zálohu
+            </Button>
+            <Button variant="ghost" icon={Upload} onClick={() => fileRef.current?.click()}>
+              Obnovit ze zálohy
+            </Button>
+            <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files?.[0] && void onImport(e.target.files[0])} />
+          </div>
+        </Card>
+
+        <Card eyebrow="Čtení sylabů, stránek z Moodlu a PDF" title={<>Umělá <em className="italic text-moss">inteligence</em></>}>
+          <p className="text-[13.5px] leading-relaxed text-muted">
+            {server.aiProvider ? 'Funguje zdarma a bez nastavování (servery v EU). ' : ''}Pokud máte vlastní klíč, aplikace použije ten – poznám ho podle tvaru.
+          </p>
+          <div className="mt-3">
+            <SecretField label="Vlastní AI klíč (volitelné)" value={settings.anthropicApiKey} onChange={(anthropicApiKey) => updateSettings({ anthropicApiKey })} placeholder="Claude sk-ant-…, ChatGPT sk-… nebo Gemini AIza…" hint={aiProvider ? `Používáte ${AI_NAMES[aiProvider]}.` : 'Claude, ChatGPT i Gemini.'} />
+          </div>
+        </Card>
       </div>
-    </Card>
+
+      <p className="flex items-center gap-2 px-1 text-xs text-muted">
+        <ServerCog className="size-3.5 shrink-0" aria-hidden />
+        {!serverChecked
+          ? 'Zjišťuji serverové funkce…'
+          : server.reachable
+            ? `Server běží · ${[server.golemio && 'Golemio', server.google && 'Google Maps', server.googleClientId && 'Google přihlášení', server.aiProvider && 'AI'].filter(Boolean).join(', ') || 'bez serverových klíčů'}`
+            : 'Server aplikace je nedostupný – vlastní data potřebují aplikaci nasazenou na Vercelu.'}
+      </p>
+    </div>
   );
 }
 
@@ -722,6 +686,7 @@ export function ConnectionsView({ section }: { section?: string }) {
 
   return (
     <div className="space-y-5">
+      <SettingsBack />
       <header className="relative overflow-hidden rounded-[32px] bg-forest px-6 py-9 text-white sm:px-10 sm:py-12">
         <img src="/images/path-1200.webp" alt="" className="absolute inset-0 size-full object-cover opacity-60" />
         <div className="photo-scrim absolute inset-0" />
@@ -730,13 +695,11 @@ export function ConnectionsView({ section }: { section?: string }) {
           <SerifTitle as="h1" className="mt-2 text-[48px] text-white sm:text-[64px] [&_em]:text-[#e7d6b5]">
             Všechno <em>na jednom</em> místě
           </SerifTitle>
-          <p className="mt-3 max-w-lg text-[15px] text-white/85">Počasí a doprava fungují samy. Rozvrh, Moodle a Google propojíte v průvodci za pár minut – pak se o to stará Stihnu.</p>
+          <p className="mt-3 max-w-lg text-[15px] text-white/85">Počasí a doprava fungují samy. Rozvrh, Moodle a Google propojíte v průvodci za pár minut – pak se o to stará Stihnuto.</p>
         </div>
       </header>
 
       <ConnectionsHub />
-
-      <SchoolCard />
 
       <h2 className="px-1 pt-4 font-display text-[28px]">
         Podrobné <em className="text-moss">nastavení</em>
@@ -746,13 +709,8 @@ export function ConnectionsView({ section }: { section?: string }) {
         <MoodleSection />
         <SisSection />
       </div>
-      <TransitSection />
-      <div className="grid gap-5 lg:grid-cols-[1fr_2fr]">
-        <WeatherSection />
-        <AppSection />
-      </div>
-      <p className="flex items-center justify-center gap-2 pb-4 text-xs text-subtle">
-        <Database className="size-3.5" aria-hidden /> Data jsou v tomto zařízení{gs.connectedAt && settings.google.drive.enabled ? ' a ve vašem Google Disku' : ''}. Fotky: Wikimedia Commons a Unsplash (autoři ve Vzhledu), 3D obrázky: Microsoft Fluent Emoji (MIT).
+      <p className="flex items-center justify-center gap-2 pb-4 text-center text-xs text-subtle">
+        <Database className="size-3.5 shrink-0" aria-hidden /> Data jsou v tomto zařízení{gs.connectedAt && settings.google.drive.enabled ? ' a ve vašem Google Disku' : ''}. Škola a budovy, doprava, počasí a upozornění jsou v Nastavení.
       </p>
     </div>
   );

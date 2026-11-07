@@ -297,22 +297,23 @@ export interface OutfitItem {
   label: string;
 }
 
+/** Oblečení malými písmeny – píše se uprostřed věty i v seznamu. */
 const OUTFIT_LABEL: Record<OutfitId, string> = {
-  'winter-jacket': 'Zimní bunda',
-  jacket: 'Bunda',
-  'light-jacket': 'Lehká bunda',
-  sweater: 'Mikina',
-  tshirt: 'Tričko',
-  hat: 'Čepice',
-  gloves: 'Rukavice',
-  scarf: 'Šála',
-  umbrella: 'Deštník',
-  raincoat: 'Bunda s kapucí',
-  boots: 'Pevné boty',
-  sunglasses: 'Brýle',
-  sunscreen: 'Opalovací krém',
-  water: 'Voda',
-  layer: 'Vrstva navíc',
+  'winter-jacket': 'zimní bunda',
+  jacket: 'bunda',
+  'light-jacket': 'lehká bunda',
+  sweater: 'mikina',
+  tshirt: 'tričko',
+  hat: 'čepice',
+  gloves: 'rukavice',
+  scarf: 'šála',
+  umbrella: 'deštník',
+  raincoat: 'bunda s kapucí',
+  boots: 'pevné boty',
+  sunglasses: 'sluneční brýle',
+  sunscreen: 'opalovací krém',
+  water: 'voda',
+  layer: 'vrstva navíc',
 };
 
 export type ComfortLevel = 'freezing' | 'cold' | 'cool' | 'mild' | 'warm' | 'hot';

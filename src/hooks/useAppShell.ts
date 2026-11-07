@@ -41,20 +41,24 @@ export function useThemeEffect(pref: ThemePref): 'light' | 'dark' {
 /* Hash routing (#/dnes, #/predmety/<id>, #/harmonogram, #/integrace)  */
 /* ------------------------------------------------------------------ */
 
-export type View = 'dnes' | 'plan' | 'doprava' | 'predmety' | 'propojeni' | 'import' | 'ucet' | 'podminky' | 'soukromi' | 'pruvodce' | 'vzhled' | 'pripojit';
+export type View = 'dnes' | 'plan' | 'doprava' | 'predmety' | 'propojeni' | 'nastaveni' | 'import' | 'ucet' | 'podminky' | 'soukromi' | 'o-aplikaci' | 'pruvodce' | 'vzhled' | 'pripojit';
 
-const VIEWS: View[] = ['dnes', 'plan', 'doprava', 'predmety', 'propojeni', 'import', 'ucet', 'podminky', 'soukromi', 'pruvodce', 'vzhled', 'pripojit'];
+const VIEWS: View[] = ['dnes', 'plan', 'doprava', 'predmety', 'propojeni', 'nastaveni', 'import', 'ucet', 'podminky', 'soukromi', 'o-aplikaci', 'pruvodce', 'vzhled', 'pripojit'];
+
+/** Veřejné stránky se skutečnou adresou (/soukromi, /podminky, /o-aplikaci) – kvůli Googlu a vyhledávačům. */
+const PATH_VIEWS: Record<string, View> = { '/soukromi': 'soukromi', '/privacy': 'soukromi', '/podminky': 'podminky', '/terms': 'podminky', '/o-aplikaci': 'o-aplikaci', '/about': 'o-aplikaci' };
 /** Starší adresy (i z první verze) → nové. */
 const ALIASES: Record<string, [View, string?]> = {
   ukoly: ['plan', 'ukoly'],
   kalendar: ['plan', 'tyden'],
   harmonogram: ['plan', 'rok'],
   integrace: ['propojeni'],
-  nastaveni: ['propojeni'],
+  settings: ['nastaveni'],
   mapa: ['doprava'],
   account: ['ucet'],
   prihlaseni: ['ucet'],
   zasady: ['soukromi'],
+  about: ['o-aplikaci'],
   napoveda: ['pruvodce'],
   help: ['pruvodce'],
   tour: ['pruvodce'],
@@ -65,11 +69,19 @@ const ALIASES: Record<string, [View, string?]> = {
   music: ['propojeni'],
 };
 
+/** Části dřívější stránky Propojení, které jsou teď v Nastavení. */
+const MOVED_TO_SETTINGS: Record<string, string> = { doprava: 'cesta', pocasi: 'pocasi', aplikace: 'data', spravce: 'server', skola: 'skola', budovy: 'skola' };
+
 function parseHash(): { view: View; param?: string } {
   const raw = window.location.hash.replace(/^#\/?/, '');
+  if (!raw) {
+    const byPath = PATH_VIEWS[window.location.pathname.replace(/\/+$/, '')];
+    if (byPath) return { view: byPath };
+  }
   const slash = raw.indexOf('/');
   const first = slash === -1 ? raw : raw.slice(0, slash);
   const rest = slash === -1 ? '' : raw.slice(slash + 1);
+  if (first === 'propojeni' && MOVED_TO_SETTINGS[rest]) return { view: 'nastaveni', param: MOVED_TO_SETTINGS[rest] };
   const alias = ALIASES[first];
   if (alias) return { view: alias[0], param: rest ? decodeURIComponent(rest) : alias[1] };
   const view = first as View;

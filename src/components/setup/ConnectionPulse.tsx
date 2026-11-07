@@ -1,7 +1,7 @@
 /**
  * Jasné „je to propojené a data proudí“:
  *  - ConnectionStatusLine: u služby od kdy je propojená a kdy naposledy přišla data,
- *  - FlowBanner: nahoře v Propojení živý pás, kudy data tečou do Stihnu,
+ *  - FlowBanner: nahoře v Propojení živý pás, kudy data tečou do Stihnuta,
  *  - ConnectionWatcher + CelebrationHost: velké potvrzení hned po propojení.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
@@ -64,7 +64,7 @@ export function ConnectionStatusLine({ s }: { s: ServiceStatus }) {
   );
 }
 
-/** Pás nahoře v Propojení: ikony propojených služeb → animovaná cesta → Stihnu. */
+/** Pás nahoře v Propojení: ikony propojených služeb → animovaná cesta → Stihnuto. */
 export function FlowBanner({ visual }: { visual: (id: ServiceId) => ReactNode }) {
   const { services } = useConnections();
   const linked = services.filter((s) => s.state === 'connected' || s.state === 'auto');
@@ -75,7 +75,7 @@ export function FlowBanner({ visual }: { visual: (id: ServiceId) => ReactNode })
       <div className="flex items-center gap-3">
         <div className="flex -space-x-1.5">
           {linked.slice(0, 7).map((s) => (
-            <span key={s.id} title={s.title} className="grid size-9 place-items-center rounded-full bg-surface-2 ring-2 ring-[var(--surface)]">
+            <span key={s.id} title={s.title} className={cn('grid size-9 place-items-center rounded-full ring-2 ring-[var(--surface)]', s.id === 'google' ? 'bg-white' : 'bg-accent-soft text-accent')}>
               {visual(s.id)}
             </span>
           ))}

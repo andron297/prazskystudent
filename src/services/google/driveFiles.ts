@@ -2,7 +2,7 @@
  * Soubory předmětu na Google Disku – jen s oprávněním drive.file (aplikace
  * vidí pouze to, co sama vytvořila nebo co student vybral; ke zbytku Disku
  * přístup nemá a Google pro to nevyžaduje bezpečnostní audit):
- *  - složka „Stihnu/<předmět>“,
+ *  - složka „Stihnuto/<předmět>“,
  *  - nahrání souboru (i velkého – po částech),
  *  - nový Google dokument, tabulka nebo prezentace,
  *  - údaje o souboru (kdy a kdo naposledy upravil, ikona, náhled).
@@ -73,6 +73,12 @@ async function api<T>(method: string, url: string, body?: BodyInit | object, hea
 
 const quote = (s: string) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
+async function findFolder(name: string): Promise<string | null> {
+  const q = `mimeType='${FOLDER}' and name='${quote(name)}' and trashed=false and 'root' in parents`;
+  const { data } = await api<{ files?: { id: string }[] }>('GET', `${DRIVE}/files?q=${encodeURIComponent(q)}&fields=files(id)&pageSize=1`);
+  return data.files?.[0]?.id ?? null;
+}
+
 async function ensureFolder(name: string, parentId?: string): Promise<string> {
   const q = `mimeType='${FOLDER}' and name='${quote(name)}' and trashed=false${parentId ? ` and '${parentId}' in parents` : ''}`;
   const { data } = await api<{ files?: { id: string }[] }>('GET', `${DRIVE}/files?q=${encodeURIComponent(q)}&fields=files(id)&pageSize=5`);
@@ -95,7 +101,8 @@ export async function subjectFolder(subject: Subject): Promise<string> {
       /* složka smazaná nebo bez přístupu – založit znovu */
     }
   }
-  const root = await ensureFolder('Stihnu');
+  // Dřív se aplikace jmenovala Stihnu – existující složka se použije dál.
+  const root = (await findFolder('Stihnu')) ?? (await ensureFolder('Stihnuto'));
   const id = await ensureFolder(subjectFolderName(subject), root);
   const current = useAppStore.getState().subjects.find((s) => s.id === subject.id);
   if (current) useAppStore.getState().upsertSubject({ ...current, driveFolderId: id });

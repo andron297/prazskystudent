@@ -12,6 +12,7 @@ import { confirmAction, toast, useUiStore } from '../../store/uiStore';
 import { cn, SerifTitle } from '../ui/primitives';
 import { RecoveryCodeCard } from './AccountScreens';
 import { PairDeviceDialog, ScanPairButton } from './PairDevice';
+import { SettingsBack } from '../settings/SettingsBack';
 
 function Section({ icon: Icon, title, children, tone }: { icon: LucideIcon; title: string; children: ReactNode; tone?: 'danger' }) {
   return (
@@ -42,12 +43,13 @@ export function AccountView() {
   if (status === 'off') {
     return (
       <div className="mx-auto max-w-2xl space-y-4">
+        <SettingsBack />
         <SerifTitle as="h1" className="text-[44px]">
           Účet
         </SerifTitle>
         <Section icon={Cloud} title="Účty zatím nejsou zapnuté">
           <p className="text-muted">Data jsou teď jen v tomto zařízení. Jakmile správce aplikace zapne účty, přihlásíte se a data se budou bezpečně synchronizovat mezi zařízeními.</p>
-          <a href="#/propojeni/spravce" className="mt-3 inline-block font-semibold text-accent hover:underline">
+          <a href="#/nastaveni/server" className="mt-3 inline-block font-semibold text-accent hover:underline">
             Návod pro správce
           </a>
         </Section>
@@ -69,6 +71,7 @@ export function AccountView() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
+      <SettingsBack />
       <header className="flex items-center gap-4">
         {user.avatar ? <img src={user.avatar} alt="" className="size-16 rounded-full object-cover" referrerPolicy="no-referrer" /> : <span className="grid size-16 place-items-center rounded-full bg-accent-soft text-accent"><UserRound className="size-8" aria-hidden /></span>}
         <div className="min-w-0">
@@ -202,7 +205,7 @@ export function AccountView() {
               if (await confirmAction({ title: 'Opravdu smazat účet?', message: 'Účet i všechna data v něm zmizí natrvalo.', confirmLabel: 'Smazat natrvalo', tone: 'danger' }))
                 void run('delete', async () => {
                   await deleteAccount(confirmEmail);
-                  toast.success('Účet je smazaný. Díky za vyzkoušení Stihnu.');
+                  toast.success('Účet je smazaný. Díky za vyzkoušení Stihnuta.');
                 });
             }}
             className={cn(btn, 'bg-red-600 text-white disabled:opacity-40')}

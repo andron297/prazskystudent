@@ -65,7 +65,7 @@ export const DEFAULT_GOOGLE: GoogleSyncSettings = {
     pullLists: ['@default'],
     keepCompletedDays: 14,
   },
-  drive: { enabled: true, syncState: true, exportMaterials: false, folderName: 'Stihnu' },
+  drive: { enabled: true, syncState: true, exportMaterials: false, folderName: 'Stihnuto' },
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -277,6 +277,75 @@ function mapRequirement(list: Requirement[], id: string, fn: (r: Requirement) =>
   return list.map((r) => (r.id === id ? { ...fn(r), updatedAt: nowIso() } : r));
 }
 
+/** ID předmětu po sloučení (i přes více sloučení za sebou). */
+export function resolveSubjectId(aliases: Record<string, string> | undefined, id: string | undefined): string | undefined {
+  if (!id || !aliases) return id;
+  let current = id;
+  const seen = new Set<string>();
+  while (aliases[current] && !seen.has(current)) {
+    seen.add(current);
+    current = aliases[current];
+  }
+  return current;
+}
+
+/** Položky z importu přesměruje na sloučené předměty. */
+function remapSubjects<T extends { subjectId?: string }>(items: T[], aliases: Record<string, string> | undefined): T[] {
+  if (!aliases || Object.keys(aliases).length === 0) return items;
+  return items.map((x) => {
+    const to = resolveSubjectId(aliases, x.subjectId);
+    return to !== x.subjectId ? { ...x, subjectId: to } : x;
+  });
+}
+
+/**
+ * Předměty z importu (SIS, Moodle, Google, záloha): sloučené se znovu nevytvoří
+ * (jejich údaje se jen doplní do předmětu, do kterého patří) a u existujících
+ * zůstane, co si student nastavil (barva, složka na Disku, sylabus).
+ */
+function upsertSubjects(list: Subject[], incoming: Subject[], aliases: Record<string, string> | undefined): Subject[] {
+  const next = [...list];
+  const index = new Map(next.map((x, i) => [x.id, i]));
+  // Nejdřív běžné předměty, sloučené až po nich (ať mají kam patřit).
+  const ordered = [...incoming].sort((a, b) => Number(Boolean(aliases?.[a.id])) - Number(Boolean(aliases?.[b.id])));
+  for (const raw of ordered) {
+    const targetId = resolveSubjectId(aliases, raw.id) ?? raw.id;
+    const i = index.get(targetId);
+    if (i === undefined) {
+      if (index.has(raw.id)) continue;
+      index.set(raw.id, next.length);
+      next.push(raw);
+      continue;
+    }
+    const cur = next[i];
+    if (targetId !== raw.id) {
+      next[i] = {
+        ...cur,
+        code: cur.code ?? raw.code,
+        teacher: cur.teacher ?? raw.teacher,
+        credits: cur.credits ?? raw.credits,
+        completion: cur.completion ?? raw.completion,
+        moodleCourseId: cur.moodleCourseId ?? raw.moodleCourseId,
+        moodleCourseUrl: cur.moodleCourseUrl ?? raw.moodleCourseUrl,
+        syllabus: cur.syllabus ?? raw.syllabus,
+      };
+      continue;
+    }
+    const defined = Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== undefined)) as Partial<Subject>;
+    next[i] = {
+      ...cur,
+      ...defined,
+      color: cur.color ?? raw.color,
+      driveFolderId: cur.driveFolderId ?? raw.driveFolderId,
+      syllabus: raw.syllabus ?? cur.syllabus,
+      moodleCourseId: raw.moodleCourseId ?? cur.moodleCourseId,
+      moodleCourseUrl: raw.moodleCourseUrl ?? cur.moodleCourseUrl,
+      createdAt: cur.createdAt ?? raw.createdAt,
+    };
+  }
+  return next;
+}
+
 function upsertById<T extends { id: string }>(list: T[], items: T[]): T[] {
   const index = new Map(list.map((item, i) => [item.id, i]));
   const next = [...list];
@@ -404,7 +473,15 @@ export const useAppStore = create<AppState>()(
             syllabus: keep.syllabus ?? drop.syllabus,
             updatedAt: at,
           };
+          // Rozhodnutí o sloučení se pamatuje v nastavení (synchronizuje se s účtem),
+          // aby ho další import ze SISu nebo Moodlu znovu nerozdělil.
+          const aliases: Record<string, string> = {};
+          for (const [from, to] of Object.entries(s.settings.subjectAliases ?? {})) aliases[from] = to === dropId ? keepId : to;
+          aliases[dropId] = keepId;
+          delete aliases[keepId];
           return {
+            settings: { ...s.settings, subjectAliases: aliases },
+            meta: { ...s.meta, settingsUpdatedAt: at },
             tombstones: tomb(s.tombstones, [keyOf.subject(dropId)]),
             subjects: s.subjects.filter((x) => x.id !== dropId).map((x) => (x.id === keepId ? merged : x)),
             events: move(s.events),
@@ -431,9 +508,11 @@ export const useAppStore = create<AppState>()(
         })),
       importSisSubject: ({ code, name, syllabus }) => {
         const s = get();
+        const aliasedId = resolveSubjectId(s.settings.subjectAliases, `subj_sis_${hashString(code ?? name ?? '').toString(36)}`);
         const existing =
           (code ? s.subjects.find((x) => x.code?.toUpperCase() === code.toUpperCase()) : undefined) ??
-          (name ? s.subjects.find((x) => x.name.toLowerCase() === name.toLowerCase()) : undefined);
+          (name ? s.subjects.find((x) => x.name.toLowerCase() === name.toLowerCase()) : undefined) ??
+          s.subjects.find((x) => x.id === aliasedId);
         if (existing) {
           get().setSubjectSyllabus(existing.id, syllabus);
           return existing.id;
@@ -586,7 +665,8 @@ export const useAppStore = create<AppState>()(
         set((s) => {
           const stamp = nowIso();
           const mark = <T extends object>(items: T[]) => items.map((i) => ({ ...i, updatedAt: stamp, ...(demo ? { demo: true } : {}) }));
-          const tagged = source ? events.map((e) => ({ ...e, icsSourceId: source.id })) : events;
+          const aliases = s.settings.subjectAliases;
+          const tagged = remapSubjects(source ? events.map((e) => ({ ...e, icsSourceId: source.id })) : events, aliases);
           const kept = s.events.filter((e) => {
             if (replaceSourceId && e.icsSourceId === replaceSourceId) return false;
             if (replaceSources.includes(e.source) && e.kind !== 'personal') return false;
@@ -594,7 +674,7 @@ export const useAppStore = create<AppState>()(
           });
           const sources = source ? upsertById(s.settings.icsSources, [source]) : s.settings.icsSources;
           return {
-            subjects: upsertById(s.subjects, mark(subjects)),
+            subjects: upsertSubjects(s.subjects, mark(subjects), aliases),
             events: upsertById(kept, mark(tagged)).sort((a, b) => a.start.localeCompare(b.start)),
             settings: source ? { ...s.settings, icsSources: sources } : s.settings,
           };
@@ -607,10 +687,11 @@ export const useAppStore = create<AppState>()(
           const stamp = nowIso();
           const flag = <T extends { id: string; demo?: boolean }>(items: T[], known: Set<string>) =>
             items.map((item) => ({ ...item, updatedAt: stamp, ...(demo && !known.has(item.id) ? { demo: true } : {}) }));
+          const aliases = s.settings.subjectAliases;
           return {
-            subjects: upsertById(s.subjects, flag(result.subjects, existingSubj)),
-            requirements: upsertById(s.requirements, flag(result.requirements, existingReq)),
-            materials: upsertById(s.materials, flag(result.materials, existingMat)),
+            subjects: upsertSubjects(s.subjects, flag(result.subjects, existingSubj), aliases),
+            requirements: upsertById(s.requirements, remapSubjects(flag(result.requirements, existingReq), aliases)),
+            materials: upsertById(s.materials, remapSubjects(flag(result.materials, existingMat), aliases)),
             settings: {
               ...s.settings,
               moodle: {
@@ -627,9 +708,10 @@ export const useAppStore = create<AppState>()(
       applyMoodleIcs: ({ subjects, requirements, source, demo }) =>
         set((s) => {
           const mark = <T extends object>(items: T[]) => (demo ? items.map((i) => ({ ...i, demo: true })) : items);
+          const aliases = s.settings.subjectAliases;
           return {
-            subjects: upsertById(s.subjects, mark(subjects)),
-            requirements: upsertById(s.requirements, mark(requirements)),
+            subjects: upsertSubjects(s.subjects, mark(subjects), aliases),
+            requirements: upsertById(s.requirements, remapSubjects(mark(requirements), aliases)),
             settings: { ...s.settings, icsSources: upsertById(s.settings.icsSources, [source]) },
           };
         }),
@@ -663,15 +745,19 @@ export const useAppStore = create<AppState>()(
         set((s) => {
           const keepDemo = <T extends { demo?: boolean }>(list: T[]) => list.filter((x) => x.demo);
           const mirrors = s.events.filter((e) => e.google?.readOnly);
-          const settings = merged.settings && (merged.settingsUpdatedAt ?? '') > (s.meta.settingsUpdatedAt ?? '') ? { ...s.settings, ...merged.settings } : s.settings;
+          const newer = merged.settings && (merged.settingsUpdatedAt ?? '') > (s.meta.settingsUpdatedAt ?? '') ? { ...s.settings, ...merged.settings } : s.settings;
+          // Rozhodnutí o předmětech se nikdy neztratí: sloučení a „jsou různé“ ze všech zařízení se sčítají.
+          const aliases = { ...(merged.settings?.subjectAliases ?? {}), ...(s.settings.subjectAliases ?? {}) };
+          const distinct = [...new Set([...(merged.settings?.distinctSubjects ?? []), ...(s.settings.distinctSubjects ?? [])])];
+          const settings = { ...newer, subjectAliases: aliases, distinctSubjects: distinct };
           const live = s.googleSync.live;
           return {
-            subjects: [...keepDemo(s.subjects), ...merged.subjects],
-            events: [...keepDemo(s.events), ...mirrors, ...merged.events].sort((a, b) => a.start.localeCompare(b.start)),
-            requirements: [...keepDemo(s.requirements), ...merged.requirements],
-            tasks: [...keepDemo(s.tasks), ...merged.tasks],
-            materials: [...keepDemo(s.materials), ...merged.materials],
-            milestones: [...s.milestones.filter((m) => m.source === 'demo'), ...merged.milestones],
+            subjects: upsertSubjects(keepDemo(s.subjects), merged.subjects, aliases),
+            events: [...keepDemo(s.events), ...mirrors, ...remapSubjects(merged.events, aliases)].sort((a, b) => a.start.localeCompare(b.start)),
+            requirements: [...keepDemo(s.requirements), ...remapSubjects(merged.requirements, aliases)],
+            tasks: [...keepDemo(s.tasks), ...remapSubjects(merged.tasks, aliases)],
+            materials: [...keepDemo(s.materials), ...remapSubjects(merged.materials, aliases)],
+            milestones: [...s.milestones.filter((m) => m.source === 'demo'), ...remapSubjects(merged.milestones, aliases)],
             tombstones: pruneTombstones(merged.tombstones, new Date()),
             settings,
             meta: { ...s.meta, settingsUpdatedAt: merged.settingsUpdatedAt ?? s.meta.settingsUpdatedAt },

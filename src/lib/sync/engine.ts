@@ -53,8 +53,11 @@ import {
 } from './mapping';
 import { GoogleApiError, GoogleAuthError, type GoogleBackend, type RemoteCalendar, type RemoteEvent, type RemoteTask } from './remote';
 
-export const DEDICATED_CALENDAR_NAME = 'Stihnu · studium';
-export const DEDICATED_TASKLIST_NAME = 'Stihnu';
+export const DEDICATED_CALENDAR_NAME = 'Stihnuto · studium';
+export const DEDICATED_TASKLIST_NAME = 'Stihnuto';
+/** Názvy z doby, kdy se aplikace jmenovala Stihnu – existující kalendář a seznam se dál používají. */
+const LEGACY_CALENDAR_NAMES = ['Stihnu · studium'];
+const LEGACY_TASKLIST_NAMES = ['Stihnu'];
 
 const DAY = 86_400_000;
 const EPOCH = '1970-01-01T00:00:00.000Z';
@@ -172,11 +175,11 @@ export async function syncCalendar(ctx: SyncContext): Promise<ServiceResult> {
   let targetId = '';
   if (cal.target === 'dedicated') {
     const known = state.containers.calendarId ? calendars.find((c) => c.id === state.containers.calendarId) : undefined;
-    const byName = calendars.find((c) => c.summary === DEDICATED_CALENDAR_NAME && c.accessRole === 'owner');
+    const byName = calendars.find((c) => (c.summary === DEDICATED_CALENDAR_NAME || LEGACY_CALENDAR_NAMES.includes(c.summary ?? '')) && c.accessRole === 'owner');
     if (known) targetId = known.id;
     else if (byName) targetId = byName.id;
     else if (canPush) {
-      const created = await backend.createCalendar(DEDICATED_CALENDAR_NAME, 'Rozvrh, termíny a vlastní události z aplikace Stihnu.');
+      const created = await backend.createCalendar(DEDICATED_CALENDAR_NAME, 'Rozvrh, termíny a vlastní události z aplikace Stihnuto.');
       targetId = created.id;
       calendars.push(created);
       result.notes.push(`Vytvořen kalendář „${DEDICATED_CALENDAR_NAME}“.`);
@@ -489,7 +492,7 @@ export async function syncCalendar(ctx: SyncContext): Promise<ServiceResult> {
       if (ev.status === 'cancelled' || linkedRemote.has(ev.id)) continue;
       const markerKey = remoteEventKey(ev);
       if (markerKey) {
-        // Položka ze Stihnu bez vazby (jiné zařízení) – smažeme jen, když ji uživatel smazal.
+        // Položka ze Stihnuta bez vazby (jiné zařízení) – smažeme jen, když ji uživatel smazal.
         if (data.tombstones[markerKey] && canPush && settings.deletions === 'mirror') queueDelete(ev.id, 'Smazání události');
         continue;
       }
@@ -605,7 +608,7 @@ export async function syncTasks(ctx: SyncContext): Promise<ServiceResult> {
   let targetId = '';
   if (conf.target === 'dedicated') {
     const known = state.containers.taskListId ? lists.find((l) => l.id === state.containers.taskListId) : undefined;
-    const byName = lists.find((l) => l.title === DEDICATED_TASKLIST_NAME);
+    const byName = lists.find((l) => l.title === DEDICATED_TASKLIST_NAME || LEGACY_TASKLIST_NAMES.includes(l.title ?? ''));
     if (known) targetId = known.id;
     else if (byName) targetId = byName.id;
     else if (canPush) {

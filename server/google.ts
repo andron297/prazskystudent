@@ -97,7 +97,7 @@ export async function handleGoogle(request: Request): Promise<Response> {
       const data = await tokenRequest({ code: body.code, client_id: clientId, client_secret: secret, redirect_uri: 'postmessage', grant_type: 'authorization_code' });
       const headers: Record<string, string> = {};
       if (data.refresh_token) headers['set-cookie'] = cookieHeader(sealToken(data.refresh_token), 180 * 86_400, request);
-      // Přihlášený do účtu Stihnu: zapečetěný token svázaný s účtem, ať propojení funguje i na dalších
+      // Přihlášený do účtu Stihnuto: zapečetěný token svázaný s účtem, ať propojení funguje i na dalších
       // zařízeních (uloží se do šifrovaného trezoru). Bez přihlášení k tomu účtu je k ničemu.
       const user = data.refresh_token ? await verifyUser(request) : null;
       const sealedForAccount = user && data.refresh_token ? sealToken(JSON.stringify({ rt: data.refresh_token, uid: user.id })) : undefined;

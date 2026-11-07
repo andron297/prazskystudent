@@ -1,4 +1,4 @@
-/* Stihnu – service worker: offline app shell + cache hashovaných assetů. API se nikdy necachuje. */
+/* Stihnuto – service worker: offline app shell + cache hashovaných assetů. API se nikdy necachuje. */
 const VERSION = 'stihnu-v4';
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
 

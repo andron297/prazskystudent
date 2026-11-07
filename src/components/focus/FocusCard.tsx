@@ -8,7 +8,7 @@ import type { Task } from '../../types';
 import { plural } from '../../lib/dates';
 import { FOCUS_PRESETS, focusLeft, focusSummary, phaseMinutes, presetOf, useFocusStore } from '../../store/focusStore';
 import { PlaylistPlayer } from '../music/PlaylistPlayer';
-import { Emoji3D } from '../ui/Emoji3D';
+import { Glyph, GlyphTile } from '../ui/Glyph';
 import { cn } from '../ui/primitives';
 
 const PHASE_LABEL = { focus: 'Soustředění', short: 'Krátká pauza', long: 'Dlouhá pauza' } as const;
@@ -52,7 +52,7 @@ export function FocusCard({ tasks }: { tasks: Task[] }) {
       <div className={cn('pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b transition-colors duration-700', isBreak ? 'from-sand/30' : 'from-accent/12')} aria-hidden />
       <header className="relative flex flex-wrap items-center gap-x-3 gap-y-2.5">
         <div className="mr-auto flex items-center gap-2.5">
-          <Emoji3D name={isBreak ? 'hot-beverage' : 'tomato'} size={44} eager />
+          <GlyphTile name={isBreak ? 'hourglass' : 'timer'} size={42} />
           <div className="min-w-0">
             <p className="eyebrow text-subtle">{isBreak ? 'Pauza' : 'Pomodoro'}</p>
             <h2 className="font-display text-[23px] leading-none">{isBreak ? <>Chvíli <em className="italic text-moss">vydechněte</em></> : <>Soustředění</>}</h2>
@@ -181,10 +181,10 @@ export function FocusChip() {
     <a
       href="#/dnes"
       onClick={() => setTimeout(() => document.querySelector('[aria-label="Soustředění – pomodoro"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350)}
-      className={cn('inline-flex h-8 items-center gap-1 rounded-full pl-1 pr-2.5 text-[12.5px] font-bold tabular ring-1 ring-inset', phase === 'focus' ? 'bg-accent-soft text-accent ring-accent/25' : 'bg-sand/25 text-clay ring-sand/50')}
+      className={cn('inline-flex h-8 items-center gap-1.5 rounded-full pl-2 pr-2.5 text-[12.5px] font-bold tabular ring-1 ring-inset', phase === 'focus' ? 'bg-accent-soft text-accent ring-accent/25' : 'bg-sand/25 text-clay ring-sand/50')}
       title={phase === 'focus' ? 'Soustředění běží' : 'Pauza'}
     >
-      <Emoji3D name={phase === 'focus' ? 'tomato' : 'hot-beverage'} size={22} eager />
+      <Glyph name="timer" size={17} />
       {fmt(Math.max(0, endsAt - now))}
     </a>
   );

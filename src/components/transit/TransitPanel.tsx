@@ -325,7 +325,7 @@ export function TransitPanel({
                   {w}
                 </p>
               ))}
-              <Button size="sm" className="mt-3" icon={KeyRound} onClick={() => navigateTo('propojeni', 'doprava')}>
+              <Button size="sm" className="mt-3" icon={KeyRound} onClick={() => navigateTo('nastaveni', 'cesta')}>
                 Nastavit dopravu
               </Button>
             </div>

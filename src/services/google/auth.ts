@@ -50,7 +50,7 @@ interface GoogleIdentity {
       }) => { requestCode: () => void };
       revoke: (token: string, done?: () => void) => void;
     };
-    /** Přihlášení „Pokračovat přes Google“ (ID token pro účet Stihnu). */
+    /** Přihlášení „Pokračovat přes Google“ (ID token pro účet Stihnuto). */
     id?: {
       initialize: (config: {
         client_id: string;
@@ -175,7 +175,7 @@ export interface SignInOptions {
 
 /** Interaktivní přihlášení (musí být vyvolané kliknutím – otevírá okno Googlu). */
 export async function signIn(options: SignInOptions): Promise<TokenInfo> {
-  if (!options.clientId) throw new Error('Chybí OAuth Client ID – nastavte ho v Propojení → Google.');
+  if (!options.clientId) throw new Error('Chybí OAuth Client ID – správce ho nastaví na serveru (Nastavení → Server aplikace).');
   await loadIdentityScript();
   const oauth2 = window.google?.accounts?.oauth2;
   if (!oauth2) throw new Error('Google Identity Services nejsou dostupné.');

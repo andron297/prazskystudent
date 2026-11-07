@@ -59,7 +59,7 @@ function HourlyChart({ forecast, now, advice }: { forecast: WeatherForecast; now
   );
 }
 
-export function WeatherCard({ forecast, advice, now, dayLabel }: { forecast: WeatherForecast | null; advice: WeatherAdvice | null; now: Date; dayLabel: string }) {
+export function WeatherCard({ forecast, advice, now, dayLabel, place }: { forecast: WeatherForecast | null; advice: WeatherAdvice | null; now: Date; dayLabel: string; place: string }) {
   const reduce = useReducedMotion();
   if (!forecast || !advice) {
     return (
@@ -69,6 +69,8 @@ export function WeatherCard({ forecast, advice, now, dayLabel }: { forecast: Wea
     );
   }
   const c = forecast.current;
+  // Nejchladnější cesta (podle ní je oblečení) – jen když je opravdu chladnější než teď.
+  const coldest = [...advice.commutes].sort((a, b) => a.feels - b.feels)[0];
   return (
     <section className="card relative min-w-0 overflow-hidden rounded-[26px] p-4 sm:p-5" aria-label="Počasí a co si obléct">
       <div className="pointer-events-none absolute -right-10 -top-16 size-56 rounded-full bg-[radial-gradient(closest-side,rgb(125_175_230/0.20),transparent)] dark:bg-[radial-gradient(closest-side,rgb(125_175_230/0.12),transparent)]" aria-hidden />
@@ -89,7 +91,10 @@ export function WeatherCard({ forecast, advice, now, dayLabel }: { forecast: Wea
       </header>
 
       <p className="relative mt-3 text-[15.5px] font-semibold leading-snug">{advice.headline}</p>
-      <p className="relative mt-0.5 text-[12.5px] text-muted">Pocitově {Math.round(c.feels)}° · rada počítá s {advice.basisFeels}° na cestě</p>
+      <p className="relative mt-0.5 text-[12.5px] text-muted">
+        {place} · teď {Math.round(c.temp)} °C, pocitově {Math.round(c.feels)} °C
+        {coldest ? ` · ${coldest.window.kind === 'to' ? 'cestou tam' : 'cestou zpět'} pocitově ${coldest.feels} °C` : ''}
+      </p>
 
       <ul className="relative mt-3.5 grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-2" aria-label="Doporučené oblečení">
         {advice.outfit.map((o, i) => (

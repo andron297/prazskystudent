@@ -35,7 +35,7 @@ export interface CompactLeg {
   wheelchair?: boolean;
   stops?: number;
   geometry?: string;
-  steps?: { d: number; s?: string; dir?: string }[];
+  steps?: { d: number; s?: string; dir?: string; l?: number; w?: number }[];
   via?: { name: string; lat: number; lon: number; at?: string }[];
 }
 
@@ -87,7 +87,7 @@ export function fromTransitous(raw: CompactItinerary, originLabel: string, build
     if (l.mode === 'WALK' || l.mode === 'BIKE' || !MODE[l.mode]) {
       const prev = legs[legs.length - 1];
       const to = l.to.name === 'Cíl' ? buildingName : l.to.name;
-      const steps = l.steps?.map((st) => ({ distance: st.d, street: st.s, dir: st.dir }));
+      const steps = l.steps?.map((st) => ({ distance: st.d, street: st.s, dir: st.dir, ...(st.l !== undefined ? { level: st.l } : {}), ...(st.w ? { way: st.w } : {}) }));
       if (prev && prev.kind === 'walk') {
         prev.minutes += minutes;
         prev.to = to;

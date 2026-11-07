@@ -1,15 +1,15 @@
 /**
  * Přehled propojení: u každé služby jedna věta, jasný stav a jedno tlačítko.
- * Pod tím soukromí (kde jsou data, co kam jde) a krátký návod pro správce.
+ * Soukromí a návod pro správce jsou v Nastavení (Data a soukromí, Server).
  */
 import { useState } from 'react';
 import { Check, ChevronDown, Copy, ExternalLink } from 'lucide-react';
 import { useConnections, type ServiceId, type ServiceStatus } from '../../hooks/useConnections';
-import type { Emoji3DName } from '../../lib/emoji3d';
+import { navigateTo } from '../../hooks/useAppShell';
 import { connectGoogle } from '../../services/syncCenter';
 import { useAppStore } from '../../store/appStore';
 import { confirmAction, toast, useUiStore } from '../../store/uiStore';
-import { Emoji3D } from '../ui/Emoji3D';
+import { Glyph, GlyphTile, type GlyphName } from '../ui/Glyph';
 import { cn } from '../ui/primitives';
 import { PlaylistPlayer } from '../music/PlaylistPlayer';
 import { StateDot } from './SetupWizard';
@@ -27,22 +27,22 @@ export function GoogleG({ size = 24 }: { size?: number }) {
   );
 }
 
-const VISUAL: Record<Exclude<ServiceId, 'google'>, Emoji3DName> = {
-  weather: 'sun-behind-small-cloud',
+const VISUAL: Record<Exclude<ServiceId, 'google'>, GlyphName> = {
+  weather: 'weather',
   transit: 'tram',
-  location: 'round-pushpin',
-  school: 'classical-building',
-  sis: 'graduation-cap',
-  moodle: 'books',
-  music: 'headphone',
+  location: 'pin',
+  school: 'building',
+  sis: 'cap',
+  moodle: 'book',
+  music: 'note',
   notifications: 'bell',
-  ai: 'sparkles',
+  ai: 'spark',
 };
 
-/** Obrázek služby: 3D předmět, u Googlu jeho logo. */
+/** Ikona služby: vlastní kresba, u Googlu jeho logo. */
 export function ServiceVisual({ id, size = 34 }: { id: ServiceId; size?: number }) {
-  if (id === 'google') return <GoogleG size={Math.round(size * 0.78)} />;
-  return <Emoji3D name={VISUAL[id]} size={size} />;
+  if (id === 'google') return <GoogleG size={Math.round(size * 0.7)} />;
+  return <Glyph name={VISUAL[id]} size={Math.round(size * 0.66)} />;
 }
 
 const STATE_LABEL: Record<ServiceStatus['state'], string> = {
@@ -72,7 +72,7 @@ export function ConnectionsHub() {
           void connectGoogle({ reconnect: true }).finally(() => setBusyGoogle(false));
         },
       };
-    if (s.state === 'unavailable') return s.id === 'notifications' ? null : { label: 'Pro správce', run: () => document.getElementById('spravce')?.scrollIntoView({ behavior: 'smooth' }) };
+    if (s.state === 'unavailable') return s.id === 'notifications' ? null : { label: 'Pro správce', run: () => navigateTo('nastaveni', 'server') };
     if (s.id === 'ai') return { label: s.state === 'connected' ? 'Změnit' : 'Vložit klíč', run: () => openSetup('ai') };
     if (s.id === 'music') return { label: s.state === 'connected' ? 'Změnit' : 'Vybrat', run: () => openSetup('extras') };
     const step = WIZARD_STEP[s.id];
@@ -105,7 +105,7 @@ export function ConnectionsHub() {
         </button>
       </div>
 
-      <FlowBanner visual={(id) => <ServiceVisual id={id} size={26} />} />
+      <FlowBanner visual={(id) => <ServiceVisual id={id} size={28} />} />
 
       <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {services.map((s) => {
@@ -113,7 +113,7 @@ export function ConnectionsHub() {
           return (
             <li key={s.id} className={cn('card flex flex-col rounded-[24px] p-4', s.state === 'attention' && 'ring-2 ring-amber-400/70')}>
               <div className="flex items-start gap-3">
-                <span className={cn('grid size-12 shrink-0 place-items-center rounded-2xl ring-1 ring-inset', s.id === 'google' ? 'bg-white ring-line' : s.state === 'attention' ? 'bg-amber-500/12 ring-amber-500/25' : 'bg-surface-2/80 ring-line', s.state !== 'auto' && s.state !== 'connected' && s.state !== 'attention' && 'opacity-80 grayscale-[0.35]')}>
+                <span className={cn('grid size-11 shrink-0 place-items-center rounded-[14px] ring-1 ring-inset', s.id === 'google' ? 'bg-white ring-line' : s.state === 'attention' ? 'bg-amber-500/12 text-amber-700 ring-amber-500/25 dark:text-amber-300' : s.state === 'auto' || s.state === 'connected' ? 'bg-accent-soft text-accent ring-accent/15' : 'bg-surface-2 text-muted ring-line')}>
                   <ServiceVisual id={s.id} />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -147,11 +147,6 @@ export function ConnectionsHub() {
           );
         })}
       </ul>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <PrivacyCard />
-        <OwnerCard />
-      </div>
     </section>
   );
 }
@@ -171,12 +166,12 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
   );
 }
 
-function PrivacyCard() {
+export function PrivacyCard() {
   const clearAllData = useAppStore((s) => s.clearAllData);
   return (
     <div className="card rounded-[24px] p-5">
       <p className="flex items-center gap-2.5 text-[16px] font-bold">
-        <Emoji3D name="locked-with-key" size={30} /> Soukromí a bezpečnost
+        <GlyphTile name="shield" size={34} /> Soukromí a bezpečnost
       </p>
       <ul className="mt-3 list-disc space-y-2 pl-5 text-[14px] leading-snug text-muted marker:text-accent">
         <li>S účtem se rozvrh, úkoly i nastavení šifrují přímo ve vašem zařízení – na serveru je jen zašifrovaný balík, který nikdo jiný nepřečte. Bez účtu zůstává vše jen v tomto prohlížeči.</li>
@@ -221,7 +216,7 @@ function CopyName({ name }: { name: string }) {
 }
 
 /** Jednorázové nastavení serveru (Vercel) – pro toho, kdo aplikaci provozuje. */
-function OwnerCard() {
+export function OwnerCard() {
   const server = useUiStore((s) => s.server);
   const [open, setOpen] = useState(false);
   const supabaseCallback = server.account ? `${server.account.url}/auth/v1/callback` : null;
@@ -339,7 +334,7 @@ function OwnerCard() {
   return (
     <div id="spravce" className="card scroll-mt-24 rounded-[24px] p-5">
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center gap-2 text-left" aria-expanded={open}>
-        <Emoji3D name="key" size={28} />
+        <GlyphTile name="key" size={34} tone="muted" />
         <span className="flex-1">
           <span className="block text-[16px] font-bold">Pro správce aplikace</span>
           <span className="block text-[13px] text-muted">{missing ? `${missing} ${missing === 1 ? 'věc' : 'věci'} na serveru ještě není nastavená` : 'Server je nastavený'}</span>

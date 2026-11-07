@@ -153,7 +153,7 @@ describe('ICS export', () => {
         { id: 'a', title: 'Seminární práce; verze 1', start: new Date('2026-11-04T22:29:00Z'), end: new Date('2026-11-04T22:59:00Z'), allDay: false },
         { id: 'b', title: 'Zkouškové období', start: new Date(2027, 0, 11), end: new Date(2027, 1, 19), allDay: true },
       ],
-      { calendarName: 'Stihnu', reminders: [1440, 120] },
+      { calendarName: 'Stihnuto', reminders: [1440, 120] },
     );
     expect(text).toContain('TRIGGER:-PT1440M');
     expect(text).toContain('DTEND;VALUE=DATE:20270220');

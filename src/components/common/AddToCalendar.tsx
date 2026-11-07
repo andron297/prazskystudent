@@ -37,7 +37,7 @@ export function AddToCalendar({ items, filename, compact = false, label = 'Do ka
   if (items.length === 1) {
     menuItems.push({
       label: 'Google Kalendář (odkaz)',
-      hint: clientId ? 'Otevře předvyplněnou událost' : 'Otevře předvyplněnou událost – pro automatické připomínky použijte .ics nebo propojte Google v Propojení',
+      hint: clientId ? 'Otevře předvyplněnou událost' : 'Otevře předvyplněnou událost – pro automatické připomínky použijte .ics nebo propojte Google v Nastavení → Propojení',
       icon: ExternalLink,
       onSelect: () => window.open(googleCalendarUrl(items[0]), '_blank', 'noopener,noreferrer'),
     });
@@ -47,7 +47,7 @@ export function AddToCalendar({ items, filename, compact = false, label = 'Do ka
     hint: `Pro Google, Apple i Outlook · připomínky ${reminderText}`,
     icon: Download,
     onSelect: () => {
-      downloadIcs(filename, items, { calendarName: 'Stihnu', reminders });
+      downloadIcs(filename, items, { calendarName: 'Stihnuto', reminders });
       toast.success(items.length === 1 ? 'Soubor .ics je stažený – otevřete ho a událost se přidá do kalendáře.' : `Staženo ${items.length} událostí v jednom .ics souboru.`);
     },
   });

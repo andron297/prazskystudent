@@ -1,5 +1,5 @@
 /**
- * Doménový model aplikace Stihnu.
+ * Doménový model aplikace Stihnuto.
  * Časy s hodinami se ukládají jako ISO 8601 (UTC), celodenní data jako 'YYYY-MM-DD' (lokální kalendářní den).
  */
 
@@ -112,7 +112,7 @@ export interface Subject {
   moodleCourseId?: number;
   moodleCourseUrl?: string;
   syllabus?: SubjectSyllabus;
-  /** Složka předmětu na Google Disku (Stihnu/<předmět>). */
+  /** Složka předmětu na Google Disku (Stihnuto/<předmět>). */
   driveFolderId?: string;
   createdAt: ISODateTime;
   updatedAt?: ISODateTime;
@@ -310,7 +310,7 @@ export type ConflictPolicy = 'newest' | 'app' | 'google';
 
 export interface GoogleCalendarSyncSettings {
   enabled: boolean;
-  /** 'dedicated' = vlastní kalendář „Stihnu“, 'primary' = hlavní kalendář, jinak ID kalendáře. */
+  /** 'dedicated' = vlastní kalendář „Stihnuto“, 'primary' = hlavní kalendář, jinak ID kalendáře. */
   target: string;
   direction: SyncDirection;
   push: { classes: boolean; exams: boolean; deadlines: boolean; milestones: boolean; personal: boolean };
@@ -326,7 +326,7 @@ export interface GoogleCalendarSyncSettings {
 
 export interface GoogleTasksSyncSettings {
   enabled: boolean;
-  /** 'dedicated' = seznam „Stihnu“, '@default' = Moje úkoly, jinak ID seznamu. */
+  /** 'dedicated' = seznam „Stihnuto“, '@default' = Moje úkoly, jinak ID seznamu. */
   target: string;
   direction: SyncDirection;
   push: { personal: boolean; requirements: boolean; subtasks: boolean };
@@ -443,6 +443,8 @@ export interface Settings {
   displayName: string;
   /** Dvojice předmětů, o kterých student řekl, že jsou různé ('idA|idB'). */
   distinctSubjects?: string[];
+  /** Sloučené předměty: ID zrušeného → ID, do kterého se sloučil (importy ho už znovu nevytvoří). */
+  subjectAliases?: Record<string, string>;
   /** Oblíbené menzy (první je hlavní); prázdné = ještě nevybráno. */
   menza?: { canteenIds: number[]; asked?: boolean };
   /** Odpovědi o studiu – podle nich se z harmonogramu skryjí termíny, které se studenta netýkají. */
@@ -453,8 +455,10 @@ export interface Settings {
   /** Vlastní odpočty (na hlavní stránce). */
   countdowns?: Countdown[];
   appearance?: AppearanceSettings;
-  /** Fakulta / škola studenta (lib/campus) – „moje budovy“ na mapě a v plánovači. */
+  /** Fakulta / škola studenta (lib/campus). */
   faculty?: string | null;
+  /** Budovy, kam student chodí (ID z katalogu i vlastní) – mapa, plánovač cest, menza. */
+  myBuildings?: string[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -539,6 +543,10 @@ export interface WalkStep {
   distance: number;
   street?: string;
   dir?: string;
+  /** Patro po kroku (záporné = pod zemí, chybí = úroveň ulice). */
+  level?: number;
+  /** Cesta v OpenStreetMap (podle ní pozná navigace přechod, schody, eskalátor…). */
+  way?: number;
 }
 
 export interface WalkLeg {

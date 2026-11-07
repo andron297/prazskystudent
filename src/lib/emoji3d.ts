@@ -1,131 +1,36 @@
 /**
- * 3D obrázky (Microsoft Fluent Emoji 3D, licence MIT – public/emoji3d/LICENSE.txt).
- * Názvy odpovídají souborům public/emoji3d/<název>.webp.
+ * 3D obrázky počasí a oblečení (Microsoft Fluent Emoji 3D, licence MIT –
+ * public/emoji3d/LICENSE.txt). Používají se jen u počasí; jinde vlastní ikony (ui/Glyph).
  */
 import type { OutfitId } from './weather';
 import { weatherKind } from './weather';
 
 export type Emoji3DName =
-  | 'airplane'
-  | 'alarm-clock'
-  | 'artist-palette'
-  | 'balance-scale'
-  | 'beach-with-umbrella'
-  | 'bell'
-  | 'bell-with-slash'
   | 'billed-cap'
-  | 'birthday-cake'
-  | 'books'
-  | 'bottle-with-popping-cork'
-  | 'brain'
-  | 'briefcase'
-  | 'bus'
-  | 'calendar'
-  | 'check-mark-button'
-  | 'christmas-tree'
-  | 'cityscape'
-  | 'classical-building'
-  | 'closed-umbrella'
   | 'cloud'
   | 'cloud-with-lightning'
   | 'cloud-with-lightning-and-rain'
   | 'cloud-with-rain'
   | 'cloud-with-snow'
   | 'coat'
-  | 'cold-face'
-  | 'compass'
   | 'crescent-moon'
   | 'cup-with-straw'
-  | 'droplet'
-  | 'fire'
   | 'fog'
-  | 'fork-and-knife-with-plate'
-  | 'four-leaf-clover'
-  | 'gem-stone'
   | 'gloves'
-  | 'glowing-star'
-  | 'graduation-cap'
-  | 'green-salad'
-  | 'headphone'
-  | 'herb'
-  | 'high-voltage'
   | 'hiking-boot'
-  | 'hot-beverage'
-  | 'hot-face'
-  | 'hourglass-done'
-  | 'hourglass-not-done'
-  | 'house'
-  | 'hundred-points'
-  | 'jeans'
-  | 'key'
   | 'lab-coat'
-  | 'laptop'
-  | 'leaf-fluttering-in-wind'
-  | 'light-bulb'
-  | 'link'
-  | 'locked-with-key'
   | 'lotion-bottle'
-  | 'luggage'
-  | 'maple-leaf'
-  | 'memo'
-  | 'metro'
-  | 'milky-way'
-  | 'mobile-phone'
-  | 'musical-notes'
-  | 'night-with-stars'
-  | 'open-book'
-  | 'party-popper'
-  | 'pencil'
-  | 'person-walking'
-  | 'potable-water'
-  | 'puzzle-piece'
-  | 'rainbow'
-  | 'red-heart'
-  | 'robot'
-  | 'rocket'
-  | 'round-pushpin'
-  | 'running-shoe'
-  | 'school'
   | 'scarf'
-  | 'seedling'
-  | 'shield'
-  | 'shorts'
-  | 'sleeping-face'
-  | 'snow-capped-mountain'
   | 'snowflake'
-  | 'snowman'
-  | 'sparkles'
-  | 'spiral-calendar'
-  | 'spiral-notepad'
-  | 'star'
-  | 'station'
-  | 'steaming-bowl'
-  | 'stethoscope'
-  | 'stopwatch'
   | 'sun'
   | 'sun-behind-cloud'
   | 'sun-behind-large-cloud'
   | 'sun-behind-rain-cloud'
   | 'sun-behind-small-cloud'
   | 'sunglasses'
-  | 'sunrise'
-  | 'sunset'
   | 't-shirt'
-  | 'teacup-without-handle'
-  | 'tear-off-calendar'
-  | 'test-tube'
-  | 'thermometer'
-  | 'ticket'
-  | 'tomato'
-  | 'trophy'
-  | 'tram'
-  | 'tram-car'
-  | 'umbrella'
   | 'umbrella-with-rain-drops'
-  | 'watch'
   | 'wind-face'
-  | 'world-map'
-  | 'wrapped-gift'
   | 'yarn';
 
 export function emoji3dUrl(name: Emoji3DName): string {
@@ -175,29 +80,3 @@ export const OUTFIT_3D: Record<OutfitId, Emoji3DName> = {
   water: 'cup-with-straw',
   layer: 'scarf',
 };
-
-/** Symboly odpočtů: uložené emoji (zpětně kompatibilní) → 3D obrázek. */
-export const COUNTDOWN_SYMBOLS: { emoji: string; name: Emoji3DName; label: string }[] = [
-  { emoji: '⏳', name: 'hourglass-not-done', label: 'Přesýpací hodiny' },
-  { emoji: '🎓', name: 'graduation-cap', label: 'Promoce, státnice' },
-  { emoji: '📝', name: 'memo', label: 'Zkouška, test' },
-  { emoji: '📚', name: 'books', label: 'Učení' },
-  { emoji: '🎉', name: 'party-popper', label: 'Oslava' },
-  { emoji: '🎂', name: 'birthday-cake', label: 'Narozeniny' },
-  { emoji: '✈️', name: 'airplane', label: 'Cesta, Erasmus' },
-  { emoji: '🧳', name: 'luggage', label: 'Odjezd' },
-  { emoji: '🏖️', name: 'beach-with-umbrella', label: 'Prázdniny' },
-  { emoji: '🎄', name: 'christmas-tree', label: 'Vánoce' },
-  { emoji: '🏔️', name: 'snow-capped-mountain', label: 'Hory' },
-  { emoji: '❤️', name: 'red-heart', label: 'Někdo blízký' },
-  { emoji: '🏆', name: 'trophy', label: 'Cíl' },
-  { emoji: '🎁', name: 'wrapped-gift', label: 'Dárek' },
-  { emoji: '🏠', name: 'house', label: 'Domů' },
-  { emoji: '💼', name: 'briefcase', label: 'Práce, stáž' },
-  { emoji: '🚀', name: 'rocket', label: 'Start projektu' },
-  { emoji: '☀️', name: 'sun', label: 'Léto' },
-];
-
-export function countdown3d(emoji: string | undefined): Emoji3DName {
-  return COUNTDOWN_SYMBOLS.find((s) => s.emoji === emoji)?.name ?? 'hourglass-not-done';
-}

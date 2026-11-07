@@ -5,25 +5,39 @@
 import { useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { navigateTo, type View } from '../../hooks/useAppShell';
-import type { Emoji3DName } from '../../lib/emoji3d';
 import { useUiStore } from '../../store/uiStore';
 import { MOODLE_SHOTS, RealScreens } from '../setup/RealScreens';
-import { Emoji3D } from '../ui/Emoji3D';
+import { GOOGLE_SHOTS, GoogleTroubleshoot } from '../setup/GoogleGuide';
+import { SettingsBack } from '../settings/SettingsBack';
+import { Glyph, GlyphTile, type GlyphName } from '../ui/Glyph';
 import { cn, Segmented, SerifTitle } from '../ui/primitives';
 
 interface Section {
   id: string;
-  emoji: Emoji3DName;
+  emoji: GlyphName;
   title: string;
   lead: string;
   points: ReactNode[];
   view?: View;
+  param?: string;
 }
 
 const SECTIONS: Section[] = [
   {
+    id: 'nastaveni',
+    emoji: 'gear',
+    title: 'Kde co najdete',
+    lead: 'Dole (na počítači nahoře) jsou Dnes, Plán, Doprava a Předměty. Všechno ostatní je v Nastavení.',
+    points: [
+      'Nastavení otevřete ozubeným kolem vpravo nahoře: propojení, škola a budovy, doprava, počasí, upozornění, vzhled, data a účet.',
+      'Tento průvodce i krátkou prohlídku najdete v Nastavení → Pomoc.',
+      'Úkol, událost nebo termín přidáte tlačítkem plus (na počítači Přidat).',
+    ],
+    view: 'nastaveni',
+  },
+  {
     id: 'dnes',
-    emoji: 'house',
+    emoji: 'home',
     title: 'Dnes: kdy vyrazit a co vás čeká',
     lead: 'Úvodní obrazovka ukazuje jen to, co právě potřebujete.',
     points: [
@@ -35,7 +49,7 @@ const SECTIONS: Section[] = [
   },
   {
     id: 'plan',
-    emoji: 'spiral-calendar',
+    emoji: 'calendar',
     title: 'Plán: úkoly, kalendář a harmonogram',
     lead: 'Všechno časové v jedné záložce, bez zdvojování.',
     points: [
@@ -72,19 +86,20 @@ const SECTIONS: Section[] = [
   },
   {
     id: 'skola',
-    emoji: 'classical-building',
+    emoji: 'building',
     title: 'Vaše škola a budovy',
     lead: 'Funguje pro všechny fakulty UK i další pražské školy.',
     points: [
-      'Fakultu poznám podle rozvrhu sám; změnit ji můžete v Propojení → Škola a budovy.',
-      'Budovy fakulty jsou v plánovači cest, na mapě a podle nich hledám menzu poblíž.',
-      'Učíte se i jinde? Přidejte budovu podle adresy.',
+      'Fakultu poznám podle rozvrhu sám. Změníte ji v Nastavení (ozubené kolo vpravo nahoře) → Škola a budovy.',
+      'Budov můžete mít víc – hlavní budovu, laboratoře, knihovnu. Přidáte je ze seznamu škol nebo podle adresy a jednu označíte jako hlavní.',
+      'Vaše budovy jsou v plánovači cest, na mapě i v navigaci.',
     ],
-    view: 'propojeni',
+    view: 'nastaveni',
+    param: 'skola',
   },
   {
     id: 'predmety',
-    emoji: 'books',
+    emoji: 'book',
     title: 'Předměty, sylaby a Google Disk',
     lead: 'U každého předmětu je všechno pohromadě.',
     points: [
@@ -96,7 +111,7 @@ const SECTIONS: Section[] = [
   },
   {
     id: 'pocasi',
-    emoji: 'umbrella-with-rain-drops',
+    emoji: 'weather',
     title: 'Počasí a co si obléct',
     lead: 'Počasí ve chvíli, kdy půjdete ven, a oblečení na dnešek.',
     points: ['Bunda, čepice, šála, deštník nebo jen tričko – podle pocitové teploty a deště zvlášť na cestu tam a zpátky.'],
@@ -104,7 +119,7 @@ const SECTIONS: Section[] = [
   },
   {
     id: 'soustredeni',
-    emoji: 'tomato',
+    emoji: 'timer',
     title: 'Soustředění, hudba a odpočty',
     lead: 'Pomodoro, playlist na učení a odpočty do důležitých dnů.',
     points: [
@@ -120,32 +135,34 @@ const SECTIONS: Section[] = [
     title: 'Upozornění: co je potřeba udělat',
     lead: 'Zvonek nahoře ukazuje, co hoří teď, dnes a tento týden.',
     points: [
-      'Kdy vyrazit, termíny po splatnosti i blízké, úkoly a propojení, která chtějí jedno kliknutí.',
-      'U každé položky je tlačítko, které ji rovnou vyřídí (Hotovo, Trasa, Potvrdit), nebo ji odložíte na později.',
-      'Upozornění v telefonu: kdy vyrazit a termíny (večer předem a 3 hodiny před).',
+      'Termíny na dnešek a zítra jsou výrazně nahoře na hlavní stránce, po termínu červeně – s tlačítkem Hotovo.',
+      'Zvonek: kdy vyrazit, termíny, úkoly a propojení, která chtějí jedno kliknutí. Každou položku rovnou vyřídíte (Hotovo, Trasa, Potvrdit), nebo ji odložíte.',
+      'Upozornění v telefonu zapnete v Nastavení → Upozornění: kdy vyrazit a termíny (večer předem a 3 hodiny před).',
     ],
+    view: 'nastaveni',
+    param: 'upozorneni',
   },
   {
     id: 'menza',
-    emoji: 'fork-and-knife-with-plate',
+    emoji: 'plate',
     title: 'Jídelníček menzy',
     lead: 'Vaše oblíbené menzy, mezi kterými přepnete jedním klepnutím.',
     points: [
       'Výchozí je Menza Arnošta z Pardubic; vyberte si až čtyři oblíbené (hvězdička = hlavní).',
-      'Nabídnu i menzu nejblíž dnešní výuce a tlačítkem Trasa vás tam dovedu.',
+      'U menzy vidíte, jak daleko od ní právě jste, a tlačítkem Trasa vás tam dovedu.',
       'Studentské ceny, alergeny a víc dní dopředu.',
     ],
     view: 'dnes',
   },
   {
     id: 'vzhled',
-    emoji: 'artist-palette',
+    emoji: 'palette',
     title: 'Vzhled podle vás',
     lead: 'Barvy, fotky, pozadí i písmo nadpisů.',
     points: [
       'Sedm barevných motivů (i vlastní barva), světlý a tmavý režim.',
       'Fotka na hlavní stránce automaticky podle denní doby, z galerie Prahy, nebo vlastní. Totéž pro pozadí celé aplikace.',
-      'Vzhled otevřete ikonou palety na hlavní stránce nebo v Propojení.',
+      'Vzhled otevřete ikonou palety na hlavní stránce nebo v Nastavení → Vzhled a oslovení.',
     ],
     view: 'vzhled',
   },
@@ -155,14 +172,14 @@ const SECTIONS: Section[] = [
     title: 'Propojení a další zařízení',
     lead: 'U každé služby vidíte, že je propojená, od kdy a kdy naposledy přišla data.',
     points: [
-      'SIS, Moodle, Google, hudba a upozornění – průvodce vás provede za pár minut, u Moodlu se skutečnými snímky obrazovky.',
+      'Nastavení (ozubené kolo vpravo nahoře) → Propojení. SIS, Moodle, Google a hudba – průvodce vás provede za pár minut, se skutečnými snímky obrazovky.',
       'Telefon propojíte QR kódem: na počítači Účet → Propojit telefon, telefonem naskenovat. Přihlásí se a odemkne sám.',
     ],
     view: 'propojeni',
   },
   {
     id: 'ucet',
-    emoji: 'locked-with-key',
+    emoji: 'lock',
     title: 'Účet a bezpečnost',
     lead: 'Data se šifrují přímo v zařízení. Na serveru jsou jen zašifrovaná.',
     points: [
@@ -173,8 +190,8 @@ const SECTIONS: Section[] = [
   },
   {
     id: 'instalace',
-    emoji: 'mobile-phone',
-    title: 'Jak dát Stihnu na plochu telefonu',
+    emoji: 'phone',
+    title: 'Jak dát Stihnuto na plochu telefonu',
     lead: 'Pak se otevírá jako normální aplikace – na celou obrazovku, s odpočtem na ikoně.',
     points: [
       <>
@@ -197,11 +214,12 @@ export function GuideView() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
+      <SettingsBack />
       <header className="relative overflow-hidden rounded-[32px] bg-forest px-6 py-8 text-white sm:px-10 sm:py-11">
         <img src="/images/riverside-1200.webp" alt="" className="absolute inset-0 size-full object-cover opacity-70" />
         <div className="photo-scrim absolute inset-0" />
         <div className="relative">
-          <p className="eyebrow text-white/75">Jak na Stihnu</p>
+          <p className="eyebrow text-white/75">Jak na Stihnuto</p>
           <h1 className="mt-2 font-display text-[46px] leading-[0.95] sm:text-[62px]">
             Průvodce <em className="text-[#e7d6b5]">aplikací</em>
           </h1>
@@ -220,7 +238,7 @@ export function GuideView() {
             <button type="button" onClick={() => openSetup('start')} className="glass-photo inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14.5px] font-bold text-white">
               Propojit SIS, Moodle a Google
             </button>
-            <a href="/brand/stihnu-brand-kit.zip" download className="glass-photo inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14.5px] font-bold text-white">
+            <a href="/brand/stihnuto-brand-kit.zip" download className="glass-photo inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14.5px] font-bold text-white">
               Logo a prvky ke stažení
             </a>
           </div>
@@ -230,12 +248,12 @@ export function GuideView() {
       <nav className="scrollbar-none -mx-4 flex gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0" aria-label="Obsah průvodce">
         {SECTIONS.map((s) => (
           <a key={s.id} href={`#/pruvodce/${s.id}`} onClick={(e) => { e.preventDefault(); document.getElementById(`g-${s.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-surface px-3 text-[12.5px] font-bold text-muted ring-1 ring-inset ring-line hover:text-fg">
-            <Emoji3D name={s.emoji} size={18} />
+            <Glyph name={s.emoji} size={16} />
             {s.title.split(':')[0].split(' a ')[0]}
           </a>
         ))}
         <a href="#/pruvodce/propojeni" onClick={(e) => { e.preventDefault(); document.getElementById('g-propojeni')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-surface px-3 text-[12.5px] font-bold text-muted ring-1 ring-inset ring-line hover:text-fg">
-          <Emoji3D name="link" size={18} /> Návody k propojení
+          <Glyph name="link" size={16} /> Návody k propojení
         </a>
       </nav>
 
@@ -250,9 +268,7 @@ export function GuideView() {
             className="card scroll-mt-24 rounded-[26px] p-5 sm:p-6"
           >
             <div className="flex items-start gap-3">
-              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-surface-2/80 ring-1 ring-inset ring-line">
-                <Emoji3D name={s.emoji} size={34} />
-              </span>
+              <GlyphTile name={s.emoji} size={46} />
               <div className="min-w-0">
                 <h2 className="font-display text-[24px] leading-tight">{s.title}</h2>
                 <p className="mt-1 text-[14.5px] text-muted">{s.lead}</p>
@@ -267,7 +283,7 @@ export function GuideView() {
               ))}
             </ul>
             {s.view && (
-              <button type="button" onClick={() => navigateTo(s.view!)} className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-4 text-[13.5px] font-bold text-accent ring-1 ring-inset ring-line hover:bg-accent-soft">
+              <button type="button" onClick={() => navigateTo(s.view!, s.param)} className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-4 text-[13.5px] font-bold text-accent ring-1 ring-inset ring-line hover:bg-accent-soft">
                 Ukázat
               </button>
             )}
@@ -294,8 +310,9 @@ export function GuideView() {
             ]}
           />
         </div>
-        <div className={cn('mt-4 grid gap-4', guide === 'moodle' && 'md:grid-cols-[1.3fr_1fr] md:items-start')}>
+        <div className={cn('mt-4 grid gap-4', (guide === 'moodle' || guide === 'google') && 'md:grid-cols-[1.3fr_1fr] md:items-start')}>
           {guide === 'moodle' && <RealScreens shots={MOODLE_SHOTS} source="Skutečné obrazovky Moodlu 5 (veřejná ukázka moodledemo.net) – Moodle UK vypadá stejně." />}
+          {guide === 'google' && <RealScreens shots={GOOGLE_SHOTS} source="Ilustrace podle oken Googlu – skutečná okna se mohou drobně lišit." />}
           <div className="space-y-3 text-[14.5px] leading-relaxed">
             {guide === 'sis' && (
               <ol className="list-decimal space-y-1.5 pl-5">
@@ -309,11 +326,25 @@ export function GuideView() {
                 <li>
                   Nahoře klikněte na <strong>Export</strong> → <strong>iCalendar</strong>. Stáhne se soubor <em>rozvrh.ics</em>.
                 </li>
-                <li>Soubor nahrajte do Stihnu – předměty, místnosti i sylaby se doplní samy.</li>
+                <li>Soubor nahrajte do Stihnuta – předměty, místnosti i sylaby se doplní samy.</li>
               </ol>
             )}
             {guide === 'moodle' && <p>Termíny z Moodlu jsou jeden odkaz z Exportu kalendáře. Heslo do Moodlu aplikace nepotřebuje – odkaz umí jen číst termíny.</p>}
-            {guide === 'google' && <p>Google Kalendář a Úkoly propojíte jedním tlačítkem. Otevře se okno Googlu, kde potvrdíte přístup. Aplikace uvidí jen kalendáře a úkoly, které jí povolíte, a propojení můžete kdykoli zrušit.</p>}
+            {guide === 'google' && (
+              <>
+                <ol className="list-decimal space-y-1.5 pl-5">
+                  <li>Klikněte na Propojit s Googlem a vyberte svůj účet.</li>
+                  <li>
+                    Google upozorní, že aplikaci neověřil – klikněte na <strong>Rozšířené</strong> a <strong>Přejít na web … (nebezpečné)</strong>. U studentských projektů je to běžné.
+                  </li>
+                  <li>
+                    Zaškrtněte <strong>Vybrat vše</strong> a klikněte na <strong>Pokračovat</strong>.
+                  </li>
+                </ol>
+                <p className="text-muted">Rozvrh a termíny se objeví v kalendáři „Stihnuto · studium“, úkoly v Google Úkolech. Propojení můžete kdykoli zrušit.</p>
+                <GoogleTroubleshoot />
+              </>
+            )}
             <button type="button" onClick={() => openSetup(guide)} className="inline-flex h-11 items-center gap-2 rounded-full bg-accent px-5 text-[14.5px] font-bold text-accent-fg hover:brightness-110">
               Propojit {guide === 'sis' ? 'SIS' : guide === 'moodle' ? 'Moodle' : 'Google'}
             </button>

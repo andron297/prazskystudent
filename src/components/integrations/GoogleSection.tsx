@@ -31,6 +31,7 @@ import { appNow } from '../../store/clockStore';
 import { confirmAction, toast, useUiStore } from '../../store/uiStore';
 import { Menu } from '../ui/overlays';
 import { Button, Card, cn, Field, Segmented, Select, TextInput, Toggle } from '../ui/primitives';
+import { GoogleConnectGuide, GoogleTroubleshoot } from '../setup/GoogleGuide';
 
 const REMINDERS = [10080, 2880, 1440, 180, 120, 60, 30, 15, 10];
 
@@ -101,7 +102,7 @@ function SetupGuide() {
       </p>
       <p className="mt-1 text-[13px] text-muted">Google potřebuje vědět, že aplikace patří vám. Dělá se jen jednou.</p>
       <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-[13px] leading-relaxed">
-        <li>{link('https://console.cloud.google.com/projectcreate', 'Založte projekt')} v Google Cloud (třeba „Stihnu“).</li>
+        <li>{link('https://console.cloud.google.com/projectcreate', 'Založte projekt')} v Google Cloud (třeba „Stihnuto“).</li>
         <li>
           Zapněte API: {link('https://console.cloud.google.com/apis/library/calendar-json.googleapis.com', 'Kalendář')}, {link('https://console.cloud.google.com/apis/library/tasks.googleapis.com', 'Úkoly')} a{' '}
           {link('https://console.cloud.google.com/apis/library/drive.googleapis.com', 'Disk')} (u každého „Enable“).
@@ -120,34 +121,6 @@ function SetupGuide() {
       <Field label="OAuth Client ID" className="mt-3">
         <TextInput value={g.clientId} onChange={(e) => updateGoogleSettings({ clientId: e.target.value.trim() })} placeholder="1234567890-abc….apps.googleusercontent.com" className="font-mono text-[13px]" />
       </Field>
-    </div>
-  );
-}
-
-/** Nejčastější chyba: účet není mezi testery aplikace (Google ukáže „Přístup zablokován“, 403 access_denied). */
-function BlockedHelp() {
-  return (
-    <div className="rounded-[22px] bg-amber-500/10 p-4 ring-1 ring-inset ring-amber-500/30">
-      <p className="flex items-center gap-2 text-[14px] font-bold">
-        <CircleAlert className="size-4 text-amber-700 dark:text-amber-300" aria-hidden /> Google napsal „Přístup zablokován“ (Chyba 403: access_denied)?
-      </p>
-      <p className="mt-1 text-[13px] text-muted">Aplikace je v testovacím režimu a váš účet zatím není mezi testery. Oprava na minutu:</p>
-      <ol className="mt-2 list-decimal space-y-1 pl-5 text-[13px] leading-relaxed">
-        <li>
-          Otevřete{' '}
-          <a className="font-semibold text-accent hover:underline" href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noreferrer">
-            Google Auth Platform → Audience
-          </a>{' '}
-          (vpravo nahoře musí být vybraný váš projekt).
-        </li>
-        <li>
-          V části <strong>Test users</strong> klikněte na <strong>Add users</strong>, napište Gmail, kterým se přihlašujete, a uložte.
-        </li>
-        <li>Vraťte se sem a klikněte znovu na „Propojit s Googlem“.</li>
-      </ol>
-      <p className="mt-2 text-xs text-subtle">
-        Pokud vám po přihlášení Google ukáže „Aplikace nebyla ověřena“, klikněte na <em>Pokročilé → Přejít do aplikace</em> – aplikace je vaše vlastní.
-      </p>
     </div>
   );
 }
@@ -218,7 +191,7 @@ function DemoGooglePreview() {
             {data.files.length === 0 && <li className="text-subtle">zatím prázdný</li>}
             {data.files.slice(0, 5).map((f) => (
               <li key={f.id} className="truncate">
-                {f.appData ? '🔒 ' : f.mimeType.includes('folder') ? '📁 ' : '📄 '}
+                {f.appData ? 'data aplikace · ' : f.mimeType.includes('folder') ? 'složka · ' : ''}
                 {f.name}
               </li>
             ))}
@@ -306,13 +279,13 @@ export function GoogleSection() {
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <ChipToggle active={g.calendar.enabled} onClick={() => patchCal({ enabled: !g.calendar.enabled })}>
-                  📅 Kalendář
+                  Kalendář
                 </ChipToggle>
                 <ChipToggle active={g.tasks.enabled} onClick={() => patchTasks({ enabled: !g.tasks.enabled })}>
-                  ✅ Úkoly
+                  Úkoly
                 </ChipToggle>
                 <ChipToggle active={g.drive.enabled} onClick={() => patchDrive({ enabled: !g.drive.enabled })}>
-                  💾 Disk
+                  Disk
                 </ChipToggle>
               </div>
               <Button size="lg" variant="primary" icon={busy ? LoaderCircle : LogIn} className={cn('mt-5', busy && '[&>svg]:animate-spin')} onClick={() => void connect()} disabled={busy || needsSetup || (!g.calendar.enabled && !g.tasks.enabled && !g.drive.enabled)}>
@@ -326,7 +299,16 @@ export function GoogleSection() {
                 </p>
               )}
             </div>
-            {needsSetup ? <SetupGuide /> : mode === 'demo' ? <DemoGooglePreview /> : <BlockedHelp />}
+            {needsSetup ? (
+              <SetupGuide />
+            ) : mode === 'demo' ? (
+              <DemoGooglePreview />
+            ) : (
+              <div className="space-y-4">
+                <GoogleTroubleshoot />
+                <GoogleConnectGuide />
+              </div>
+            )}
           </div>
         )}
 
@@ -349,7 +331,7 @@ export function GoogleSection() {
                   <span title="Převzato z Googlu">
                     ↓ {last.pulled.created + last.pulled.updated + last.pulled.deleted}
                   </span>
-                  {last.conflicts > 0 && <span title="Vyřešené konflikty">⚡ {last.conflicts}</span>}
+                  {last.conflicts > 0 && <span title="Vyřešené konflikty">konflikty: {last.conflicts}</span>}
                 </span>
               )}
             </div>
@@ -560,7 +542,7 @@ export function GoogleSection() {
                       onChange={(conflict) => patch({ conflict })}
                       options={[
                         { value: 'newest', label: 'Novější' },
-                        { value: 'app', label: 'Stihnu' },
+                        { value: 'app', label: 'Stihnuto' },
                         { value: 'google', label: 'Google' },
                       ]}
                     />

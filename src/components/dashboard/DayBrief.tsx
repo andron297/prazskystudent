@@ -5,12 +5,13 @@
  */
 import { useMemo } from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, Building2, ListTodo, MapPin, MonitorPlay, Moon, Sun } from 'lucide-react';
+import { Building2, ListTodo, MapPin, MonitorPlay, Moon, Sun } from 'lucide-react';
 import type { Building, Itinerary, RideLeg, ScheduleEvent, Subject } from '../../types';
 import { SUBJECT_COLOR_CLASSES } from '../../lib/colors';
 import { addDays, formatDayMonth, formatTime, formatWeekdayShort, isSameDay, plural, startOfDay } from '../../lib/dates';
 import { buildTaskRows, dueMoment, type TaskRow } from '../../lib/taskList';
 import { rideLegs } from '../../lib/transitPlanner';
+import { planTripTo } from '../../store/journeyStore';
 import { navigateTo } from '../../hooks/useAppShell';
 import { useVisibleEvents } from '../../hooks/useVisibleEvents';
 import { useAppStore } from '../../store/appStore';
@@ -107,6 +108,26 @@ function dueText(t: TaskRow, now: Date): string {
   return t.dueAllDay ? day : `${day} ${formatTime(t.due)}`;
 }
 
+/** Kdy a kde se ukáže doprava na další výuku + možnost naplánovat cestu hned. */
+function TransitHint({ event }: { event: ScheduleEvent }) {
+  const settings = useAppStore((s) => s.settings);
+  const { building } = buildingForEvent(event, settings);
+  if (!building || event.online) return null;
+  const start = new Date(event.start);
+  const from = new Date(start.getTime() - 3 * 3_600_000);
+  const arrive = new Date(start.getTime() - settings.bufferMinutes * 60_000);
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[18px] bg-white/[0.07] px-4 py-3">
+      <p className="min-w-0 flex-1 text-[13.5px] leading-snug opacity-90">
+        Spoj a odpočet odchodu se ukáže nahoře na hlavní stránce {formatWeekdayShort(from)} od {formatTime(from)} (3 hodiny před výukou).
+      </p>
+      <button type="button" onClick={() => planTripTo(building.name, building.coords, building.address, arrive)} className="shrink-0 rounded-full bg-[#e7d6b5] px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a2a] hover:brightness-105">
+        Naplánovat cestu
+      </button>
+    </div>
+  );
+}
+
 export function DayBrief({ now, target, itinerary }: { now: Date; target: ScheduleEvent | null; itinerary: Itinerary | null }) {
   const events = useVisibleEvents();
   const subjects = useAppStore((s) => s.subjects);
@@ -137,9 +158,9 @@ export function DayBrief({ now, target, itinerary }: { now: Date; target: Schedu
     return rows.filter((r) => r.subjectId === e.subjectId && (r.due ? dueMoment(r) <= horizon : r.kind === 'task'));
   };
   const classSubjects = new Set(classes.map((c) => c.subjectId).filter(Boolean));
-  const todayOther = rows.filter((r) => r.due && isSameDay(r.due, now) && !(r.subjectId && classSubjects.has(r.subjectId)));
-  const overdue = rows.filter((r) => r.due && dueMoment(r) < now.getTime());
-  const ahead = mode === 'today' ? [] : rows.filter((r) => r.due && dueMoment(r) >= now.getTime() && startOfDay(r.due) <= addDays(startOfDay(now), 3));
+  void classSubjects;
+  // Dnešek a zítřek ukazuje výrazně karta Termíny nahoře – tady jen to, co přijde potom.
+  const ahead = mode === 'today' ? [] : rows.filter((r) => r.due && dueMoment(r) >= now.getTime() && startOfDay(r.due) > addDays(startOfDay(now), 1) && startOfDay(r.due) <= addDays(startOfDay(now), 4));
   const aheadByDay = new Map<string, TaskRow[]>();
   for (const r of ahead) {
     const key = startOfDay(r.due!).toISOString();
@@ -168,9 +189,9 @@ export function DayBrief({ now, target, itinerary }: { now: Date; target: Schedu
         </p>
       </div>
 
-      <div className={cn('mt-4 grid gap-4', evening && 'lg:grid-cols-2')}>
+      <div className={cn('mt-4 grid grid-cols-[minmax(0,1fr)] gap-4', evening && 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]')}>
         {classes.length > 0 && (
-          <ul className="space-y-2">
+          <ul className="min-w-0 space-y-2">
             {classes.map((e) => {
               const { building, room } = buildingForEvent(e, settings);
               return <ClassRow key={e.id} event={e} subject={e.subjectId ? byId.get(e.subjectId) : undefined} building={building} room={room} tasks={mode === 'today' ? forClass(e) : []} now={now} itinerary={target?.id === e.id ? itinerary : null} />;
@@ -179,12 +200,12 @@ export function DayBrief({ now, target, itinerary }: { now: Date; target: Schedu
         )}
 
         {evening && (
-          <div className="rounded-[20px] bg-white/[0.07] px-4 py-3">
+          <div className="min-w-0 rounded-[20px] bg-white/[0.07] px-4 py-3">
             <p className="flex items-center gap-2 text-[13px] font-black uppercase tracking-[0.12em] opacity-75">
-              <ListTodo className="size-4" aria-hidden /> Úkoly na další dny
+              <ListTodo className="size-4" aria-hidden /> Další termíny
             </p>
             {aheadByDay.size === 0 ? (
-              <p className="mt-2 text-[14px] opacity-85">Na nejbližší tři dny nic. Užijte si volno.</p>
+              <p className="mt-2 text-[14px] opacity-85">V dalších dnech žádný termín.</p>
             ) : (
               <div className="mt-2 space-y-2.5">
                 {[...aheadByDay.entries()].map(([key, list]) => {
@@ -216,18 +237,7 @@ export function DayBrief({ now, target, itinerary }: { now: Date; target: Schedu
         )}
       </div>
 
-      {(todayOther.length > 0 || overdue.length > 0) && (
-        <button type="button" onClick={() => navigateTo('plan', 'ukoly')} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-1.5 text-[13px] font-semibold hover:bg-white/15">
-          {overdue.length > 0 && <span className="text-[#ffb4a2]">{overdue.length} po termínu</span>}
-          {overdue.length > 0 && todayOther.length > 0 && <span className="opacity-50">·</span>}
-          {todayOther.length > 0 && (
-            <span>
-              {mode === 'today' ? 'Dnes ještě' : 'Na dnešek'} {todayOther.length} {plural(todayOther.length, ['další úkol', 'další úkoly', 'dalších úkolů'])}
-            </span>
-          )}
-          <ArrowRight className="size-3.5" aria-hidden />
-        </button>
-      )}
+      {mode === 'ahead' && classes[0] && <TransitHint event={classes[0]} />}
       {classes.length === 0 && mode === 'free' && (
         <p className="mt-3 flex items-center gap-2 px-1 text-[13.5px] opacity-80">
           <Building2 className="size-4" aria-hidden /> V nejbližších dnech nemáte v rozvrhu žádnou výuku.

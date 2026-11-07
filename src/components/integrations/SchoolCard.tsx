@@ -5,13 +5,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Building } from '../../types';
 import { detectFaculty } from '../../lib/buildings';
-import { FACULTIES, facultyBuildings, facultyById, type Faculty } from '../../lib/campus';
+import { FACULTIES, facultyBuildings, facultyById, myBuildingIds, type Faculty } from '../../lib/campus';
 import { uid } from '../../lib/id';
 import { geocode, type Place } from '../../services/journey';
 import { useVisibleEvents } from '../../hooks/useVisibleEvents';
 import { useAppStore } from '../../store/appStore';
 import { toast } from '../../store/uiStore';
-import { Emoji3D } from '../ui/Emoji3D';
+import { GlyphTile } from '../ui/Glyph';
 import { cn } from '../ui/primitives';
 
 /** Výběr fakulty: fakulty UK, pak další pražské školy. */
@@ -117,38 +117,81 @@ function AddPlace({ onAdded }: { onAdded: (b: Building) => void }) {
   );
 }
 
+/** Výběr budov z katalogu (všechny pražské fakulty a školy) s hledáním. */
+function CatalogPicker({ selected, onAdd }: { selected: Set<string>; onAdd: (b: Building) => void }) {
+  const buildings = useAppStore((s) => s.settings.buildings);
+  const [q, setQ] = useState('');
+  const fold = (x: string) => x.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  const list = buildings.filter((b) => !b.custom && !selected.has(b.id) && (!q.trim() || fold(`${b.name} ${b.faculty ?? ''} ${b.address}`).includes(fold(q.trim()))));
+  return (
+    <div>
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Hledat budovu, fakultu nebo ulici"
+        className="h-11 w-full rounded-[14px] bg-surface px-3.5 text-[14px] ring-1 ring-inset ring-line-strong outline-none focus:ring-2 focus:ring-accent"
+        aria-label="Hledat budovu v katalogu"
+      />
+      <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto pr-1">
+        {list.map((b) => (
+          <li key={b.id}>
+            <button type="button" onClick={() => onAdd(b)} className="flex w-full items-center gap-3 rounded-[12px] px-3 py-2 text-left hover:bg-surface-2">
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13.5px] font-semibold">{b.name}</span>
+                <span className="block truncate text-[12px] text-muted">
+                  {b.faculty ? `${b.faculty} · ` : ''}
+                  {b.address}
+                </span>
+              </span>
+              <span className="shrink-0 text-[12.5px] font-bold text-accent">Přidat</span>
+            </button>
+          </li>
+        ))}
+        {list.length === 0 && <li className="px-3 py-2 text-[13px] text-muted">Nic nenalezeno – zkuste přidání podle adresy.</li>}
+      </ul>
+    </div>
+  );
+}
+
 export function SchoolCard({ id = 'skola' }: { id?: string }) {
   const facultyId = useAppStore((s) => s.settings.faculty ?? null);
   const buildings = useAppStore((s) => s.settings.buildings);
+  const myIds = useAppStore((s) => s.settings.myBuildings);
   const aliases = useAppStore((s) => s.settings.locationAliases);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const removeBuilding = useAppStore((s) => s.removeBuilding);
   const events = useVisibleEvents();
   const [picking, setPicking] = useState(false);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState<'catalog' | 'address' | null>(null);
   const faculty = facultyById(facultyId);
   const detected = useMemo(() => detectFaculty(events, buildings, aliases), [events, buildings, aliases]);
-  const mine = facultyBuildings(faculty, buildings);
-  const custom = buildings.filter((b) => b.custom);
+  const ids = myBuildingIds({ myBuildings: myIds, faculty: facultyId, buildings });
+  const mine = ids.map((x) => buildings.find((b) => b.id === x)).filter((b): b is Building => Boolean(b));
 
+  const setMine = (next: string[]) => updateSettings({ myBuildings: [...new Set(next)] });
   const pick = (f: Faculty) => {
-    updateSettings({ faculty: f.id });
+    updateSettings({ faculty: f.id, myBuildings: [...new Set([...f.buildings, ...ids.filter((x) => !(faculty?.buildings ?? []).includes(x))])] });
     setPicking(false);
-    toast.success(`Vaše škola: ${f.short}. Budovy se ukážou na mapě a v plánovači cest.`);
+    toast.success(`Vaše škola: ${f.short}. Budovy můžete níže doplnit nebo odebrat.`);
   };
+  const remove = (b: Building) => {
+    setMine(ids.filter((x) => x !== b.id));
+    if (b.custom) removeBuilding(b.id);
+  };
+  const makeMain = (b: Building) => setMine([b.id, ...ids.filter((x) => x !== b.id)]);
 
   return (
-    <section id={id} className="card scroll-mt-24 rounded-[26px] p-4 sm:p-5" aria-label="Vaše škola a budovy">
+    <section id={id} className="card scroll-mt-24 rounded-[26px] p-4 sm:p-5" aria-label="Škola a budovy">
       <header className="flex items-start gap-3">
-        <Emoji3D name="classical-building" size={46} />
+        <GlyphTile name="building" size={46} />
         <div className="min-w-0 flex-1">
           <p className="eyebrow text-subtle">Škola a budovy</p>
           <h2 className="font-display text-[26px] leading-none">{faculty ? faculty.short : <>Kde <em className="italic text-moss">studujete?</em></>}</h2>
-          <p className="mt-1 text-[13px] text-muted">{faculty ? faculty.name : 'Podle fakulty ukážu vaše budovy na mapě, nabídnu je v plánovači cest a najdu menzu poblíž.'}</p>
+          <p className="mt-1 text-[13px] text-muted">{faculty ? faculty.name : 'Vyberte fakultu a budovy – ukážu je na mapě, nabídnu v plánovači cest a najdu menzu poblíž.'}</p>
         </div>
         {faculty && !picking && (
           <button type="button" onClick={() => setPicking(true)} className="shrink-0 rounded-full px-3 py-1.5 text-[12.5px] font-bold text-accent hover:bg-accent-soft">
-            Změnit
+            Změnit fakultu
           </button>
         )}
       </header>
@@ -175,46 +218,64 @@ export function SchoolCard({ id = 'skola' }: { id?: string }) {
         </div>
       )}
 
-      {faculty && !picking && (
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-          {mine.map((b, i) => (
-            <li key={b.id} className="rounded-[16px] bg-surface-2/70 px-3.5 py-2.5 ring-1 ring-inset ring-line">
-              <p className="text-[13.5px] font-bold">
-                {b.name}
-                {i === 0 && <span className="ml-1.5 text-[11px] font-bold uppercase tracking-wide text-accent">hlavní</span>}
-              </p>
-              <p className="text-[12px] text-muted">{b.address}</p>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {custom.length > 0 && (
-        <div className="mt-3">
-          <p className="mb-1.5 text-[12px] font-bold uppercase tracking-[0.1em] text-subtle">Vaše místa</p>
+      <div className="mt-4">
+        <p className="mb-1.5 flex items-baseline justify-between text-[12px] font-bold uppercase tracking-[0.1em] text-subtle">
+          Moje budovy <span className="normal-case tracking-normal">{mine.length}</span>
+        </p>
+        {mine.length === 0 ? (
+          <p className="rounded-[16px] bg-surface-2/70 px-3.5 py-3 text-[13px] text-muted">Zatím žádná budova. Vyberte fakultu nebo budovu přidejte níže.</p>
+        ) : (
           <ul className="grid gap-2 sm:grid-cols-2">
-            {custom.map((b) => (
+            {mine.map((b, i) => (
               <li key={b.id} className="flex items-start gap-2 rounded-[16px] bg-surface-2/70 px-3.5 py-2.5 ring-1 ring-inset ring-line">
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13.5px] font-bold">{b.name}</span>
+                  <span className="block text-[13.5px] font-bold">
+                    {b.name}
+                    {i === 0 && <span className="ml-1.5 text-[11px] font-bold uppercase tracking-wide text-accent">hlavní</span>}
+                  </span>
                   <span className="block truncate text-[12px] text-muted">{b.address}</span>
                 </span>
-                <button type="button" onClick={() => removeBuilding(b.id)} className="shrink-0 text-[12px] font-bold text-red-700 hover:underline dark:text-red-300">
-                  Odebrat
-                </button>
+                <span className="flex shrink-0 flex-col items-end gap-1">
+                  {i > 0 && (
+                    <button type="button" onClick={() => makeMain(b)} className="text-[12px] font-bold text-accent hover:underline">
+                      Hlavní
+                    </button>
+                  )}
+                  <button type="button" onClick={() => remove(b)} className="text-[12px] font-bold text-red-700 hover:underline dark:text-red-300">
+                    Odebrat
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
-        </div>
-      )}
+        )}
+      </div>
 
-      <div className="mt-3">
-        {adding ? (
-          <AddPlace onAdded={() => setAdding(false)} />
-        ) : (
-          <button type="button" onClick={() => setAdding(true)} className="text-[13px] font-bold text-accent hover:underline">
-            Učíte se i jinde? Přidat budovu podle adresy
+      <div className="mt-3 rounded-[18px] bg-surface-2/50 p-3 ring-1 ring-inset ring-line">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-auto text-[13.5px] font-bold">Přidat budovu</span>
+          <button type="button" onClick={() => setAdding(adding === 'catalog' ? null : 'catalog')} aria-pressed={adding === 'catalog'} className={cn('rounded-full px-3 py-1.5 text-[12.5px] font-bold ring-1 ring-inset', adding === 'catalog' ? 'bg-accent text-accent-fg ring-accent' : 'bg-surface ring-line hover:bg-surface-2')}>
+            Ze seznamu škol
           </button>
+          <button type="button" onClick={() => setAdding(adding === 'address' ? null : 'address')} aria-pressed={adding === 'address'} className={cn('rounded-full px-3 py-1.5 text-[12.5px] font-bold ring-1 ring-inset', adding === 'address' ? 'bg-accent text-accent-fg ring-accent' : 'bg-surface ring-line hover:bg-surface-2')}>
+            Podle adresy
+          </button>
+        </div>
+        {adding === 'catalog' && (
+          <div className="mt-3">
+            <CatalogPicker
+              selected={new Set(ids)}
+              onAdd={(b) => {
+                setMine([...ids, b.id]);
+                toast.success(`Přidáno: ${b.name}`);
+              }}
+            />
+          </div>
+        )}
+        {adding === 'address' && (
+          <div className="mt-3">
+            <AddPlace onAdded={(b) => setMine([...ids, b.id])} />
+          </div>
         )}
       </div>
     </section>

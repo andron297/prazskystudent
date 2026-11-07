@@ -34,7 +34,7 @@ function Frame({ children, wide = false }: { children: ReactNode; wide?: boolean
         <div className="mb-6 flex items-center gap-2.5">
           <BrandMark className="size-10" />
           <span className="font-display wordmark text-[28px] leading-none">
-            Stih<em className="text-moss">nu</em>
+            Stihnu<em className="text-moss">to</em>
           </span>
         </div>
         {children}
@@ -229,7 +229,7 @@ export function SignInScreen() {
       {tab === 'login' && (
         <div className="mt-6 rounded-[20px] bg-surface-2/80 p-4 text-[14px]">
           <p className="flex items-center gap-2 font-bold">
-            <Smartphone className="size-4.5 text-accent" aria-hidden /> Už máte Stihnu na počítači?
+            <Smartphone className="size-4.5 text-accent" aria-hidden /> Už máte Stihnuto na počítači?
           </p>
           <p className="mt-1 text-muted">Tam otevřete Účet → Propojit telefon a kód naskenujte. Přihlásí se a odemkne samo.</p>
           <ScanPairButton className="mt-3 w-full bg-surface" />
@@ -258,7 +258,7 @@ export function SignInScreen() {
 export function RecoveryCodeCard({ code, onDone, doneLabel = 'Kód mám uložený – pokračovat' }: { code: string; onDone: () => void; doneLabel?: string }) {
   const [saved, setSaved] = useState(false);
   const email = useAccount((s) => s.user?.email ?? '');
-  const text = `Stihnu – záchranný kód k účtu ${email}\n\n${code}\n\nKód odemkne vaše data na novém zařízení. Nikomu ho nedávejte.`;
+  const text = `Stihnuto – záchranný kód k účtu ${email}\n\n${code}\n\nKód odemkne vaše data na novém zařízení. Nikomu ho nedávejte.`;
   const download = () => {
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
     const a = document.createElement('a');
@@ -270,7 +270,7 @@ export function RecoveryCodeCard({ code, onDone, doneLabel = 'Kód mám uložen�
   const print = () => {
     const w = window.open('', '_blank', 'noopener,width=520,height=420');
     if (!w) return;
-    w.document.title = 'Stihnu – záchranný kód';
+    w.document.title = 'Stihnuto – záchranný kód';
     const pre = w.document.createElement('pre');
     pre.style.cssText = 'font:18px/1.6 monospace;padding:24px;white-space:pre-wrap';
     pre.textContent = text;
@@ -366,7 +366,7 @@ export function UnlockScreen() {
       </p>
       <div className="mt-5 rounded-[20px] bg-surface-2/80 p-4 text-[14px]">
         <p className="flex items-center gap-2 font-bold">
-          <Smartphone className="size-4.5 text-accent" aria-hidden /> Máte Stihnu otevřené na jiném zařízení?
+          <Smartphone className="size-4.5 text-accent" aria-hidden /> Máte Stihnuto otevřené na jiném zařízení?
         </p>
         <p className="mt-1 text-muted">Tam otevřete Účet → Propojit telefon a kód naskenujte. Odemkne se samo.</p>
         <ScanPairButton className="mt-3 w-full bg-surface" />
@@ -389,7 +389,7 @@ export function UnlockScreen() {
       <details className="mt-5 text-[14px]">
         <summary className="cursor-pointer font-semibold text-muted hover:text-fg">Kód nemám</summary>
         <p className="mt-2 text-muted">
-          Bez kódu data v účtu otevřít nejde – ani my to neumíme, proto jsou v bezpečí. Pokud máte Stihnu přihlášené na jiném zařízení, tam si vytvořte nový kód (Účet → Záchranný kód). Rozvrh, Moodle i Google si případně jen znovu propojíte.
+          Bez kódu data v účtu otevřít nejde – ani my to neumíme, proto jsou v bezpečí. Pokud máte Stihnuto přihlášené na jiném zařízení, tam si vytvořte nový kód (Účet → Záchranný kód). Rozvrh, Moodle i Google si případně jen znovu propojíte.
         </p>
       </details>
       <button type="button" onClick={() => void signOutAccount()} className="mt-5 text-[14px] font-semibold text-muted hover:text-fg">

@@ -7,14 +7,13 @@ import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Countdown } from '../../types';
 import { addDays, calendarDayDiff, formatDayMonth, formatTime, isDateKey, plural, startOfDay, toDate, toDateKey } from '../../lib/dates';
-import { COUNTDOWN_SYMBOLS, countdown3d } from '../../lib/emoji3d';
 import { uid } from '../../lib/id';
 import { usePlanData } from '../../hooks/usePlanData';
 import { useNow } from '../../hooks/useNow';
 import { useAppStore } from '../../store/appStore';
 import { toast, useUiStore } from '../../store/uiStore';
 import { Modal } from '../ui/overlays';
-import { Emoji3D } from '../ui/Emoji3D';
+import { Glyph } from '../ui/Glyph';
 import { Button, cn, Field, TextInput, Toggle } from '../ui/primitives';
 
 const NONE: Countdown[] = [];
@@ -71,13 +70,13 @@ export function CountdownEditor() {
   return open ? <CountdownForm onClose={close} /> : null;
 }
 
-const PRESETS: { title: string; emoji: string; days: number }[] = [
-  { title: 'Zkouškové období', emoji: '📝', days: 30 },
-  { title: 'Státnice', emoji: '🎓', days: 120 },
-  { title: 'Odjezd na Erasmus', emoji: '✈️', days: 90 },
-  { title: 'Prázdniny', emoji: '🏖️', days: 60 },
-  { title: 'Narozeniny', emoji: '🎂', days: 45 },
-  { title: 'Odevzdání práce', emoji: '🚀', days: 14 },
+const PRESETS: { title: string; days: number }[] = [
+  { title: 'Zkouškové období', days: 30 },
+  { title: 'Státnice', days: 120 },
+  { title: 'Odjezd na Erasmus', days: 90 },
+  { title: 'Prázdniny', days: 60 },
+  { title: 'Narozeniny', days: 45 },
+  { title: 'Odevzdání práce', days: 14 },
 ];
 
 function CountdownForm({ onClose }: { onClose: () => void }) {
@@ -88,16 +87,15 @@ function CountdownForm({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(toDateKey(addDays(new Date(), 14)));
   const [time, setTime] = useState('');
-  const [emoji, setEmoji] = useState('⏳');
   const [toCalendar, setToCalendar] = useState(false);
 
   const save = () => {
     if (!title.trim() || !date) return;
     const at = time ? new Date(`${date}T${time}:00`).toISOString() : date;
-    updateSettings({ countdowns: [...countdowns, { id: uid('cd'), title: title.trim(), at, emoji, createdAt: new Date().toISOString() }] });
+    updateSettings({ countdowns: [...countdowns, { id: uid('cd'), title: title.trim(), at, createdAt: new Date().toISOString() }] });
     if (toCalendar) {
       const start = time ? new Date(`${date}T${time}:00`) : startOfDay(new Date(`${date}T12:00:00`));
-      addEvent({ title: `${emoji} ${title.trim()}`, start: start.toISOString(), end: (time ? new Date(start.getTime() + 3_600_000) : addDays(start, 1)).toISOString(), allDay: !time, kind: 'personal' });
+      addEvent({ title: title.trim(), start: start.toISOString(), end: (time ? new Date(start.getTime() + 3_600_000) : addDays(start, 1)).toISOString(), allDay: !time, kind: 'personal' });
     }
     toast.success(toCalendar ? 'Odpočet přidán a zapsán i do kalendáře.' : 'Odpočet přidán na hlavní stránku.');
     onClose();
@@ -130,12 +128,11 @@ function CountdownForm({ onClose }: { onClose: () => void }) {
                 type="button"
                 onClick={() => {
                   setTitle(p.title);
-                  setEmoji(p.emoji);
                   if (!time) setDate(toDateKey(addDays(new Date(), p.days)));
                 }}
-                className={cn('inline-flex items-center gap-1.5 rounded-full py-1 pl-1.5 pr-3 text-[12.5px] font-semibold ring-1 ring-inset transition', title === p.title ? 'bg-accent-soft ring-accent' : 'bg-surface ring-line hover:bg-surface-2')}
+                className={cn('inline-flex items-center rounded-full px-3 py-1.5 text-[12.5px] font-semibold ring-1 ring-inset transition', title === p.title ? 'bg-accent-soft text-accent ring-accent' : 'bg-surface ring-line hover:bg-surface-2')}
               >
-                <Emoji3D name={countdown3d(p.emoji)} size={22} /> {p.title}
+                {p.title}
               </button>
             ))}
           </div>
@@ -151,24 +148,6 @@ function CountdownForm({ onClose }: { onClose: () => void }) {
             <TextInput type="time" value={time} onChange={(e) => setTime(e.target.value)} />
           </Field>
         </div>
-        <div>
-          <p className="mb-1.5 text-[13px] font-medium">Symbol</p>
-          <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-9">
-            {COUNTDOWN_SYMBOLS.map((s) => (
-              <button
-                key={s.emoji}
-                type="button"
-                onClick={() => setEmoji(s.emoji)}
-                aria-pressed={emoji === s.emoji}
-                title={s.label}
-                aria-label={s.label}
-                className={cn('grid aspect-square place-items-center rounded-[14px] ring-1 ring-inset transition', emoji === s.emoji ? 'bg-accent-soft ring-2 ring-accent' : 'ring-line hover:bg-surface-2')}
-              >
-                <Emoji3D name={s.name} size={30} />
-              </button>
-            ))}
-          </div>
-        </div>
         <Toggle checked={toCalendar} onChange={setToCalendar} label="Zapsat i do kalendáře" description={googleOn ? 'Objeví se v Plánu i v Google Kalendáři.' : 'Objeví se v Plánu.'} />
       </div>
     </Modal>
@@ -179,7 +158,6 @@ function Featured({ c, left, progress, editing, onRemove }: { c: Countdown; left
   return (
     <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-br from-accent/14 via-surface-2/80 to-sand/20 p-4 ring-1 ring-inset ring-line">
       <div className="flex items-center gap-3.5">
-        <Emoji3D name={countdown3d(c.emoji)} size={64} className="animate-float" />
         <div className="min-w-0 flex-1">
           <p className="eyebrow text-subtle">Nejbližší</p>
           <p className="line-clamp-2 text-[15.5px] font-bold leading-tight">{c.title}</p>
@@ -223,37 +201,36 @@ export function CountdownsCard() {
 
   // Návrhy: začátek zkouškového, konec výuky, prázdniny, Vánoce a zkoušky z předmětů.
   const suggestions = useMemo(() => {
-    const out: { key: string; title: string; at: string; emoji: string }[] = [];
+    const out: { key: string; title: string; at: string }[] = [];
     const today = startOfDay(now);
     for (const m of plan.milestones) {
       const start = toDate(m.start);
       if (start <= today) {
-        if (m.category === 'teaching' && m.end && toDate(m.end) > today) out.push({ key: `ms-end:${m.id}`, title: `Konec: ${m.title}`, at: m.end.slice(0, 10), emoji: '📚' });
+        if (m.category === 'teaching' && m.end && toDate(m.end) > today) out.push({ key: `ms-end:${m.id}`, title: `Konec: ${m.title}`, at: m.end.slice(0, 10) });
         continue;
       }
-      if (m.category === 'exam-period') out.push({ key: `ms:${m.id}`, title: m.title, at: m.start.slice(0, 10), emoji: '📝' });
-      if (m.category === 'holiday' && m.end) out.push({ key: `ms:${m.id}`, title: m.title, at: m.start.slice(0, 10), emoji: '🏖️' });
+      if (m.category === 'exam-period') out.push({ key: `ms:${m.id}`, title: m.title, at: m.start.slice(0, 10) });
+      if (m.category === 'holiday' && m.end) out.push({ key: `ms:${m.id}`, title: m.title, at: m.start.slice(0, 10) });
     }
     for (const r of plan.requirements) {
-      if (r.type === 'exam' && r.deadline && new Date(r.deadline) > now) out.push({ key: `req:${r.id}`, title: r.title, at: r.deadline, emoji: '🎓' });
+      if (r.type === 'exam' && r.deadline && new Date(r.deadline) > now) out.push({ key: `req:${r.id}`, title: r.title, at: r.deadline });
     }
     const xmas = new Date(now.getFullYear(), 11, 24);
-    if (xmas > now) out.push({ key: `xmas:${now.getFullYear()}`, title: 'Štědrý den', at: toDateKey(xmas), emoji: '🎄' });
+    if (xmas > now) out.push({ key: `xmas:${now.getFullYear()}`, title: 'Štědrý den', at: toDateKey(xmas) });
     const used = new Set(countdowns.map((c) => c.sourceKey));
     return out.filter((s) => !used.has(s.key)).sort((a, b) => toDate(a.at).getTime() - toDate(b.at).getTime()).slice(0, 4);
   }, [plan.milestones, plan.requirements, countdowns, now]);
 
-  const add = (s: { key: string; title: string; at: string; emoji: string }) => updateSettings({ countdowns: [...countdowns, { id: uid('cd'), title: s.title, at: s.at, emoji: s.emoji, sourceKey: s.key, createdAt: new Date().toISOString() }] });
+  const add = (s: { key: string; title: string; at: string }) => updateSettings({ countdowns: [...countdowns, { id: uid('cd'), title: s.title, at: s.at, sourceKey: s.key, createdAt: new Date().toISOString() }] });
   const remove = (id: string) => updateSettings({ countdowns: countdowns.filter((c) => c.id !== id) });
   const [first, ...rest] = list;
 
   return (
     <section className="card min-w-0 rounded-[26px] p-4 sm:p-5" aria-label="Odpočty">
       <header className="mb-3.5 flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <Emoji3D name="hourglass-not-done" size={34} />
-          <h2 className="font-display text-[23px] leading-none">Odpočty</h2>
-        </div>
+        <h2 className="flex min-w-0 items-center gap-2 font-display text-[23px] leading-none">
+          <Glyph name="hourglass" size={20} className="text-moss" /> Odpočty
+        </h2>
         <span className="flex items-center gap-1">
           {list.length > 0 && (
             <button type="button" onClick={() => setEditing((v) => !v)} className="rounded-full px-3 py-1.5 text-[12.5px] font-bold text-muted hover:bg-surface-2 hover:text-fg">
@@ -273,7 +250,6 @@ export function CountdownsCard() {
           <AnimatePresence initial={false}>
             {rest.map(({ c, r }) => (
               <motion.li key={c.id} layout initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} className="flex items-center gap-3 rounded-[18px] bg-surface-2/70 px-3 py-2.5 ring-1 ring-inset ring-line">
-                <Emoji3D name={countdown3d(c.emoji)} size={36} />
                 <span className="min-w-0 flex-1">
                   <span className="line-clamp-2 block text-[13.5px] font-semibold leading-snug">{c.title}</span>
                   <span className="block text-[11.5px] text-subtle">{whenLabel(c)}</span>
@@ -298,8 +274,7 @@ export function CountdownsCard() {
           <p className="mb-2 text-[12px] font-bold uppercase tracking-[0.1em] text-subtle">{list.length ? 'Přidat také' : 'Navrhované odpočty'}</p>
           <div className="flex flex-wrap gap-1.5">
             {suggestions.map((s) => (
-              <button key={s.key} type="button" onClick={() => add(s)} className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface py-1 pl-1.5 pr-3 text-[12.5px] font-semibold ring-1 ring-inset ring-line hover:bg-surface-2">
-                <Emoji3D name={countdown3d(s.emoji)} size={22} />
+              <button key={s.key} type="button" onClick={() => add(s)} className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-[12.5px] font-semibold ring-1 ring-inset ring-line hover:bg-surface-2">
                 <span className="truncate">{s.title}</span>
                 <span className="shrink-0 text-subtle">{formatDayMonth(toDate(s.at))}</span>
               </button>
@@ -309,7 +284,7 @@ export function CountdownsCard() {
       )}
       {list.length === 0 && suggestions.length === 0 && (
         <button type="button" onClick={() => useUiStore.setState({ countdownEditor: true })} className="flex w-full items-center gap-3 rounded-[18px] border border-dashed border-line-strong px-4 py-4 text-left text-[13.5px] text-muted hover:bg-surface-2">
-          <Emoji3D name="spiral-calendar" size={32} /> Přidejte si odpočet – třeba do státnic nebo do odjezdu domů.
+          Přidejte si odpočet – třeba do státnic nebo do odjezdu domů.
         </button>
       )}
     </section>

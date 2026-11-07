@@ -12,7 +12,8 @@ import { removeImage, storeImage, useLocalImage, type ImageSlot } from '../../ho
 import { useNow } from '../../hooks/useNow';
 import { useAppStore } from '../../store/appStore';
 import { toast, useUiStore } from '../../store/uiStore';
-import { Button, Card, Segmented, Toggle, cn } from '../ui/primitives';
+import { Button, Card, Segmented, TextInput, Toggle, cn } from '../ui/primitives';
+import { SettingsBack } from '../settings/SettingsBack';
 
 function useAppearance(): [AppearanceSettings, (patch: Partial<AppearanceSettings>) => void] {
   const stored = useAppStore((s) => s.settings.appearance);
@@ -155,6 +156,7 @@ const PRESETS = ['#2b5a40', '#1f5873', '#9a4527', '#7d3a58', '#56468a', '#b0851f
 export function AppearanceView() {
   const [a, update] = useAppearance();
   const theme = useAppStore((s) => s.settings.theme);
+  const displayName = useAppStore((s) => s.settings.displayName);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const [hex, setHex] = useState(a.customAccent ?? '#2b5a40');
   const praha = GALLERY.filter((p) => p.group === 'praha');
@@ -171,8 +173,8 @@ export function AppearanceView() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
-      <header className="pt-1">
-        <p className="eyebrow text-subtle">Nastavení</p>
+      <header>
+        <SettingsBack />
         <h1 className="mt-1 font-display text-[46px] leading-[0.95] sm:text-[60px]">
           Vzhled <em className="italic text-moss">podle vás</em>
         </h1>
@@ -181,6 +183,10 @@ export function AppearanceView() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
         <div className="min-w-0 space-y-5">
+          <Section title={<>Jak vás <em className="italic text-moss">oslovit</em></>} hint="Zobrazí se v pozdravu na hlavní stránce a v úvodní animaci. Když pole necháte prázdné, vezmu jméno z Moodlu nebo z Googlu.">
+            <TextInput value={displayName} onChange={(e) => updateSettings({ displayName: e.target.value })} placeholder="např. Ondro" maxLength={24} className="max-w-xs" aria-label="Jak vás oslovit" />
+          </Section>
+
           <Section title={<>Barevný <em className="italic text-moss">motiv</em></>} hint="Barva tlačítek, zvýraznění a pásů. Každý motiv má světlou i tmavou podobu.">
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {ACCENTS.map((t) => {

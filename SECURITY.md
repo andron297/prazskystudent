@@ -19,7 +19,7 @@
   `Cross-Origin-Opener-Policy`, `Permissions-Policy`.
 - Sdílená AI správce je jen pro přihlášené a s hodinovým limitem.
 
-## Jak s daty zachází Stihnu
+## Jak s daty zachází Stihnuto
 
 - **Bez účtu** data zůstávají jen v prohlížeči. **S účtem** jsou na serveru jen zašifrovaná (viz výše).
 - **Server jen přeposílá** dotazy, které prohlížeč sám udělat nemůže (CORS, klíče): PID/Transitous, Golemio, Moodle, iCal, SIS, Google OAuth, AI. Nic z toho neukládá.

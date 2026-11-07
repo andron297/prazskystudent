@@ -29,11 +29,11 @@ export function requirementToCalendarItem(req: Requirement, subject?: Subject): 
       ? `Checklist:\n${req.subtasks.map((s) => `${s.done ? '☑' : '☐'} ${s.title}`).join('\n')}`
       : null,
     req.url ? `Odkaz: ${req.url}` : null,
-    'Vytvořeno v aplikaci Stihnu',
+    'Vytvořeno v aplikaci Stihnuto',
   ].filter(Boolean);
   return {
     id: `req-${req.id}`,
-    title: `⏰ ${req.title}${subject?.code ? ` (${subject.code})` : ''}`,
+    title: `${req.title}${subject?.code ? ` (${subject.code})` : ''}`,
     description: lines.join('\n'),
     start: addMinutes(deadline, -30),
     end: deadline,
@@ -48,7 +48,7 @@ export function milestoneToCalendarItem(m: Milestone, subject?: Subject): Calend
     return {
       id: `ms-${m.id}`,
       title: m.title,
-      description: [subject ? `Předmět: ${subject.name}` : null, m.note, 'Harmonogram – Stihnu'].filter(Boolean).join('\n'),
+      description: [subject ? `Předmět: ${subject.name}` : null, m.note, 'Harmonogram – Stihnuto'].filter(Boolean).join('\n'),
       start,
       end,
       allDay: true,
@@ -58,7 +58,7 @@ export function milestoneToCalendarItem(m: Milestone, subject?: Subject): Calend
   return {
     id: `ms-${m.id}`,
     title: m.title,
-    description: [subject ? `Předmět: ${subject.name}` : null, m.note, 'Harmonogram – Stihnu'].filter(Boolean).join('\n'),
+    description: [subject ? `Předmět: ${subject.name}` : null, m.note, 'Harmonogram – Stihnuto'].filter(Boolean).join('\n'),
     start,
     end: m.end ? toDate(m.end) : addMinutes(start, 60),
     allDay: false,
@@ -132,7 +132,7 @@ export function buildIcs(items: CalendarItem[], options: IcsBuildOptions = {}): 
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Stihnu//Studijni kalendar//CS',
+    'PRODID:-//Stihnuto//Studijni kalendar//CS',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'X-WR-TIMEZONE:Europe/Prague',

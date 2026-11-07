@@ -1,4 +1,4 @@
-# Fotografie v aplikaci Stihnu
+# Fotografie v aplikaci Stihnuto
 
 Fotografie jsou pro aplikaci zmenšené (1920, 1200 a 360 px) a převedené do formátu WebP.
 Licence CC BY-SA vyžaduje uvést autora a licenci – v aplikaci se zobrazují u fotky na hlavní

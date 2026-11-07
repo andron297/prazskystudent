@@ -1,4 +1,4 @@
-# Stihnu – logo a prvky pro prezentace
+# Stihnuto – logo a prvky pro prezentace
 
 ## Co je v balíčku
 
@@ -9,7 +9,7 @@
 | `logo-vodorovne.svg` / `.png` | značka + název vedle sebe, na světlé pozadí |
 | `logo-vodorovne-svetle.svg` / `.png` | totéž na tmavé pozadí |
 | `logo-nad-sebou.svg` / `.png`, `logo-nad-sebou-svetle.*` | značka nad názvem (titulní snímky) |
-| `nazev.svg` / `.png`, `nazev-svetly.*` | jen název „Stihnu“ |
+| `nazev.svg` / `.png`, `nazev-svetly.*` | jen název „Stihnuto“ |
 | `paleta.svg` / `.png` | barvy aplikace (světlý a tmavý režim) |
 | `barvy.css`, `barvy.json` | barvy jako proměnné pro web a nástroje |
 | `obrazovky/` | snímky aplikace (počítač i mobil) ve vysokém rozlišení |

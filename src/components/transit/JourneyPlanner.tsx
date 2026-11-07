@@ -23,7 +23,7 @@ import { useJourneyStore } from '../../store/journeyStore';
 import { buildingForEvent, isTransitTarget } from '../../store/selectors';
 import { useUiStore } from '../../store/uiStore';
 import { cn } from '../ui/primitives';
-import { facultyBuildings, facultyById } from '../../lib/campus';
+import { myBuildings } from '../../lib/campus';
 import { DelayChip, LineBadge } from './TransitBits';
 
 const KIND_ICON = { gps: LocateFixed, origin: MapPin, stop: TrainFront, address: MapPin, place: MapPin, building: Building2, recent: History } as const;
@@ -352,11 +352,10 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
 
   const base = useMemo<Place[]>(() => {
     const fromLectures = lectures.map((l) => l.b!);
-    const faculty = facultyBuildings(facultyById(settings.faculty), settings.buildings);
-    const custom = settings.buildings.filter((b) => b.custom);
-    const school = [...new Map([...fromLectures, ...faculty, ...custom].map((b) => [b.id, b])).values()].slice(0, 6).map<Place>((b) => ({ kind: 'building', label: b.name, detail: b.address, coords: b.coords }));
+    const mine = myBuildings(settings);
+    const school = [...new Map([...fromLectures, ...mine].map((b) => [b.id, b])).values()].slice(0, 6).map<Place>((b) => ({ kind: 'building', label: b.name, detail: b.address, coords: b.coords }));
     return [myPlace, ...school];
-  }, [myPlace, lectures, settings.faculty, settings.buildings]);
+  }, [myPlace, lectures, settings]);
 
   const queryTime = useCallback(() => (timeMode === 'now' ? appNow() : (fromLocalInputValue(timeValue) ?? appNow())), [timeMode, timeValue]);
 
@@ -391,8 +390,14 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
     touched.current = true;
     setFrom(myPlace);
     setTo({ kind: 'place', label: request.label, detail: request.detail, coords: request.coords });
-    setArriveBy(false);
-    setTimeMode('now');
+    if (request.arriveBy) {
+      setArriveBy(true);
+      setTimeMode('set');
+      setTimeValue(toLocalInputValue(new Date(request.arriveBy)));
+    } else {
+      setArriveBy(false);
+      setTimeMode('now');
+    }
     setLecture(null);
     useJourneyStore.setState({ request: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps

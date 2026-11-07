@@ -4,7 +4,7 @@
  * Fakulta studenta určuje „moje budovy“ (mapa, menza poblíž, výchozí cíl)
  * a pozná se sama podle toho, kde se podle rozvrhu učí.
  */
-import type { Building } from '../types';
+import type { Building, Settings } from '../types';
 
 export interface Faculty {
   id: string;
@@ -118,3 +118,16 @@ export function withCampus(saved: Building[] | undefined): Building[] {
 
 /** Střed Prahy (Můstek) – výchozí pohled, když nevíme nic lepšího. */
 export const PRAGUE_CENTER = { lat: 50.08385, lng: 14.42345 };
+
+/** ID budov, kam student chodí: vlastní výběr, jinak budovy fakulty a vlastní místa. */
+export function myBuildingIds(settings: Pick<Settings, 'myBuildings' | 'faculty' | 'buildings'>): string[] {
+  if (settings.myBuildings) return settings.myBuildings;
+  return [...(facultyById(settings.faculty)?.buildings ?? []), ...settings.buildings.filter((b) => b.custom).map((b) => b.id)];
+}
+
+/** Moje budovy v pořadí (první = hlavní). */
+export function myBuildings(settings: Pick<Settings, 'myBuildings' | 'faculty' | 'buildings'>): Building[] {
+  return myBuildingIds(settings)
+    .map((id) => settings.buildings.find((b) => b.id === id))
+    .filter((b): b is Building => Boolean(b));
+}

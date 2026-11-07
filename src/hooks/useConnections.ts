@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { AI_NAMES, providerForKey, serverAiLabel } from '../lib/aiProvider';
 import { findPreset } from '../lib/buildings';
-import { facultyBuildings, facultyById } from '../lib/campus';
+import { facultyById, myBuildingIds } from '../lib/campus';
 import { formatRelative } from '../lib/dates';
 import { useAppStore } from '../store/appStore';
 import { appNow } from '../store/clockStore';
@@ -61,6 +61,7 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
   const events = useAppStore((s) => s.events);
   const facultyId = useAppStore((s) => s.settings.faculty ?? null);
   const buildings = useAppStore((s) => s.settings.buildings);
+  const mineIds = useAppStore((s) => s.settings.myBuildings);
   const subjects = useAppStore((s) => s.subjects);
   const server = useUiStore((s) => s.server);
   const connectedSince = useAppStore((s) => s.meta.connectedSince);
@@ -130,12 +131,12 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
       },
       (() => {
         const faculty = facultyById(facultyId);
-        const count = facultyBuildings(faculty, buildings).length + buildings.filter((b) => b.custom).length;
+        const count = myBuildingIds({ myBuildings: mineIds, faculty: facultyId, buildings }).length;
         return {
           id: 'school' as const,
           title: 'Škola a budovy',
-          state: faculty ? ('connected' as const) : pending('school'),
-          detail: faculty ? `${faculty.short} · ${count} ${count === 1 ? 'budova' : count < 5 ? 'budovy' : 'budov'} na mapě a v plánovači` : 'Vyberte fakultu – ukážu vaše budovy a menzu poblíž.',
+          state: faculty || count > 0 ? ('connected' as const) : pending('school'),
+          detail: count > 0 ? `${faculty ? `${faculty.short} · ` : ''}${count} ${count === 1 ? 'budova' : count < 5 ? 'budovy' : 'budov'} na mapě a v plánovači` : 'Vyberte fakultu a budovy – ukážu je na mapě a najdu menzu poblíž.',
           optional: false,
           since: connectedSince?.school,
         };
@@ -192,7 +193,7 @@ export function useConnections(): { services: ServiceStatus[]; done: number; tot
     const done = counted.filter((s) => s.state === 'auto' || s.state === 'connected').length;
     const attention = services.filter((s) => s.state === 'attention').length;
     return { services, done, total: counted.length, attention };
-  }, [mode, origin, icsSources, moodle, google, googleEnabled, music, notify, ownAiKey, skipped, events, subjects, server, needsAuth, googleError, connectedSince, requirements, facultyId, buildings]);
+  }, [mode, origin, icsSources, moodle, google, googleEnabled, music, notify, ownAiKey, skipped, events, subjects, server, needsAuth, googleError, connectedSince, requirements, facultyId, buildings, mineIds]);
 }
 
 /** Je propojení čerstvé? (pro jemné „před chvílí“) */

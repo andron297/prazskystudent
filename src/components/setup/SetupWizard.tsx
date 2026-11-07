@@ -1,6 +1,6 @@
 /**
  * Průvodce propojením – krok za krokem, velkým písmem, obyčejnou češtinou.
- * Každou službu jde přeskočit a kdykoli doplnit v Propojení.
+ * Každou službu jde přeskočit a kdykoli doplnit v Nastavení → Propojení.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -35,7 +35,7 @@ import type { IcsSource } from '../../types';
 import { LOCATION_PRESETS } from '../../lib/buildings';
 import { uid } from '../../lib/id';
 import { isMoodleCalendarUrl } from '../../lib/moodleIcs';
-import { MUSIC_PICKS, isSpotifyUrl } from '../../lib/music';
+import { MUSIC_PICKS, isSpotifyUrl, spotifyInfo } from '../../lib/music';
 import { AI_KEY_PAGES, AI_NAMES, providerForKey } from '../../lib/aiProvider';
 import { MOODLE_SHOTS, RealScreens } from './RealScreens';
 import { useConnections, type ServiceId, type ServiceStatus } from '../../hooks/useConnections';
@@ -49,6 +49,7 @@ import { FacultyPicker } from '../integrations/SchoolCard';
 import { detectFaculty } from '../../lib/buildings';
 import { facultyById } from '../../lib/campus';
 import { useVisibleEvents } from '../../hooks/useVisibleEvents';
+import { GoogleConnectGuide, GoogleTroubleshoot } from './GoogleGuide';
 
 type StepId = 'start' | 'auto' | 'location' | 'sis' | 'school' | 'moodle' | 'google' | 'extras' | 'ai' | 'done';
 const STEPS: StepId[] = ['start', 'auto', 'location', 'sis', 'school', 'moodle', 'google', 'extras', 'ai', 'done'];
@@ -263,7 +264,7 @@ function StartStep({ onOwn, onDemo }: { onOwn: () => void; onDemo: () => void })
   return (
     <div>
       <StepHead icon={Sparkles} kicker="Vítejte" title={<>Nastavíme to <em className="text-moss">spolu</em></>}>
-        Pár jednoduchých kroků a Stihnu bude znát váš rozvrh, úkoly i cestu do školy. Každý krok jde přeskočit a doplnit později.
+        Pár jednoduchých kroků a Stihnuto bude znát váš rozvrh, úkoly i cestu do školy. Každý krok jde přeskočit a doplnit později.
       </StepHead>
       <div className="grid gap-3">
         <button type="button" onClick={own} data-autofocus className="group flex items-start gap-4 rounded-[24px] bg-accent p-5 text-left text-accent-fg shadow-[0_16px_36px_-18px_var(--accent)] transition hover:brightness-110">
@@ -411,12 +412,13 @@ function SchoolStep({ onDone }: { onDone: () => void }) {
           value={facultyId}
           suggested={detected?.faculty.id}
           onPick={(f) => {
-            updateSettings({ faculty: f.id });
+            const prev = useAppStore.getState().settings.myBuildings ?? [];
+            updateSettings({ faculty: f.id, myBuildings: [...new Set([...f.buildings, ...prev])] });
             onDone();
           }}
         />
       </div>
-      <p className="mt-4 text-[13.5px] text-muted">Učíte se i jinde? Další budovy přidáte podle adresy v Propojení → Škola a budovy.</p>
+      <p className="mt-4 text-[13.5px] text-muted">Učíte se i jinde? Další budovy přidáte v Nastavení → Škola a budovy (ze seznamu škol i podle adresy).</p>
     </div>
   );
 }
@@ -560,7 +562,7 @@ function MoodleStep({ onDone }: { onDone: () => void }) {
         <div className="mt-3 space-y-2 text-muted">
           <p>
             V Moodlu otevřete <ExternalStep href={`${base}/user/managetoken.php`}>Bezpečnostní klíče</ExternalStep>, u „Moodle mobile web service“ klikněte na <strong>Reset</strong> a potvrďte. Moodle klíč
-            ukáže <strong>jen jednou</strong> – zkopírujte ho a vložte v Propojení → Moodle. Aplikace Moodle v mobilu vás pak jen znovu přihlásí.
+            ukáže <strong>jen jednou</strong> – zkopírujte ho a vložte v Nastavení → Propojení → Moodle. Aplikace Moodle v mobilu vás pak jen znovu přihlásí.
           </p>
         </div>
       </details>
@@ -572,11 +574,13 @@ function GoogleStep({ onDone }: { onDone: () => void }) {
   const { services } = useConnections();
   const status = services.find((s) => s.id === 'google') as ServiceStatus;
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
   const connect = async () => {
     setBusy(true);
     const ok = await connectGoogle({ reconnect: status.state === 'attention' });
     setBusy(false);
     if (ok) onDone();
+    else setFailed(true);
   };
   return (
     <div>
@@ -586,7 +590,7 @@ function GoogleStep({ onDone }: { onDone: () => void }) {
       {status.state === 'unavailable' ? (
         <div className="rounded-[20px] bg-surface-2 p-4 text-[15px]">
           <p className="font-bold">Tohle musí jednou zapnout správce aplikace.</p>
-          <p className="mt-1 text-muted">Návod pro správce je v Propojení → Pro správce aplikace. Klidně tento krok přeskočte – vše ostatní funguje i bez Googlu.</p>
+          <p className="mt-1 text-muted">Návod pro správce je v Nastavení → Server aplikace. Klidně tento krok přeskočte – vše ostatní funguje i bez Googlu.</p>
         </div>
       ) : status.state === 'connected' ? (
         <Success>Propojeno – {status.detail}</Success>
@@ -595,14 +599,13 @@ function GoogleStep({ onDone }: { onDone: () => void }) {
           <BigButton icon={CalendarDays} onClick={() => void connect()} busy={busy} autoFocus>
             {status.state === 'attention' ? 'Znovu potvrdit Google' : 'Propojit s Googlem'}
           </BigButton>
-          <p className="mt-3 text-[13.5px] text-muted">
-            Otevře se okno Googlu. Pokud uvidíte „Google tuto aplikaci neověřil“, klikněte na <strong>Pokročilé → Přejít do aplikace</strong> – je to normální u školních projektů.
-          </p>
+          {failed && <GoogleTroubleshoot className="mt-4" />}
+          <GoogleConnectGuide className="mt-5" />
         </>
       )}
       <p className="mt-5 flex items-start gap-2 text-[13.5px] text-muted">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
-        Stihnu vidí jen kalendáře a úkoly, které mu povolíte. Propojení můžete kdykoli zrušit.
+        Stihnuto vidí jen kalendáře a úkoly, které mu povolíte. Propojení můžete kdykoli zrušit.
       </p>
     </div>
   );
@@ -661,12 +664,17 @@ function ExtrasStep({ onDone }: { onDone: (ids: ServiceId[]) => void }) {
         />
         <button
           type="button"
-          onClick={() => {
+          onClick={async () => {
             if (!isSpotifyUrl(link)) {
               toast.error('Vložte odkaz ze Spotify (Sdílet → Kopírovat odkaz).');
               return;
             }
-            updateSettings({ music: { url: link.trim(), title: 'Můj playlist' } });
+            const info = await spotifyInfo(link.trim());
+            if (!info.ok) {
+              toast.error('Tenhle playlist Spotify do přehrávače nepustí – je soukromý nebo je to osobní mix. Zvolte veřejný playlist.');
+              return;
+            }
+            updateSettings({ music: { url: link.trim(), title: info.title ?? 'Můj playlist' } });
             setLink('');
             onDone(['music']);
           }}
@@ -679,7 +687,7 @@ function ExtrasStep({ onDone }: { onDone: (ids: ServiceId[]) => void }) {
         <p className="flex items-center gap-2 text-[16px] font-bold">
           <BellRing className="size-5 text-accent" aria-hidden /> Upozornit mě, kdy vyrazit
         </p>
-        <p className="mt-1 text-[14px] text-muted">5 minut před odchodem a ve chvíli, kdy je čas vyrazit – s číslem linky a zastávkou. Funguje, když máte Stihnu otevřené (i na pozadí).</p>
+        <p className="mt-1 text-[14px] text-muted">5 minut před odchodem a ve chvíli, kdy je čas vyrazit – s číslem linky a zastávkou. Funguje, když máte Stihnuto otevřené (i na pozadí).</p>
         {notify && notifySupported && Notification.permission === 'granted' ? (
           <Success>Zapnuto.</Success>
         ) : (
@@ -770,7 +778,7 @@ function DoneStep({ onClose, onGo }: { onClose: () => void; onGo: (s: StepId) =>
   return (
     <div>
       <StepHead icon={PartyPopper} kicker="Hotovo" title={<>Máte <em className="text-moss">nastaveno</em></>}>
-        Tady je přehled. Cokoli doplníte kdykoli v Propojení.
+        Tady je přehled. Cokoli doplníte kdykoli v Nastavení → Propojení.
       </StepHead>
       <ul className="space-y-2">
         {services.map((s) => (

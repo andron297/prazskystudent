@@ -33,7 +33,7 @@ const SETTINGS: GoogleSyncSettings = {
     pullLists: [],
     keepCompletedDays: 14,
   },
-  drive: { enabled: false, syncState: false, exportMaterials: false, folderName: 'Stihnu' },
+  drive: { enabled: false, syncState: false, exportMaterials: false, folderName: 'Stihnuto' },
 };
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 10, d, h, m).toISOString();
@@ -105,7 +105,7 @@ describe('obousměrná synchronizace s Googlem', () => {
     const { cal, tasks } = await runAll();
     expect(cal.pushed.created).toBe(4); // výuka, osobní událost, termín, svátek
     expect(tasks.pushed.created).toBe(4); // úkol, povinnost + 2 podúkoly
-    expect(cal.notes.join(' ')).toContain('Stihnu · studium');
+    expect(cal.notes.join(' ')).toContain('Stihnuto · studium');
     const peek = backend.peek();
     expect(peek.events.find((e) => e.summary === 'Úvod do mediálních studií · seminář')?.colorId).toBe('9');
     expect(peek.tasks.find((t) => t.title === 'Esej · JSB012')?.due).toBe('2026-11-05T00:00:00.000Z');
@@ -288,12 +288,12 @@ describe('obousměrná synchronizace s Googlem', () => {
 });
 
 describe('odpočty v Google Kalendáři', () => {
-  it('odpočet je celodenní událost s ikonou a stálým klíčem', async () => {
+  it('odpočet je celodenní událost se stálým klíčem (bez emoji, i když je starší odpočet má)', async () => {
     const { countdownMilestone, milestonePayload } = await import('../lib/sync/mapping');
     const m = countdownMilestone({ id: 'c1', title: 'Státnice', at: '2027-06-15', emoji: '🎓', createdAt: '2026-11-06T10:00:00.000Z' });
-    expect(m).toMatchObject({ id: 'cd-c1', title: '🎓 Státnice', allDay: true, start: '2027-06-15' });
+    expect(m).toMatchObject({ id: 'cd-c1', title: 'Státnice', allDay: true, start: '2027-06-15' });
     const p = milestonePayload(m);
-    expect(p).toMatchObject({ summary: '🎓 Státnice', start: '2027-06-15', end: '2027-06-16', allDay: true });
+    expect(p).toMatchObject({ summary: 'Státnice', start: '2027-06-15', end: '2027-06-16', allDay: true });
     expect(countdownMilestone({ id: 'c2', title: 'Vlak domů', at: '2026-12-19T14:30:00.000Z', createdAt: '' }).allDay).toBe(false);
   });
 });

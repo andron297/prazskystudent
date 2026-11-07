@@ -133,7 +133,7 @@ function DriveBar({ subject }: { subject: Subject }) {
       <span className="flex min-w-0 flex-1 items-center gap-2 text-[12.5px] text-muted">
         <HardDrive className="size-4 shrink-0 text-accent" aria-hidden />
         <span className="truncate">
-          Google Disk · <span className="font-semibold text-fg">Stihnu/{subject.code ?? subject.name}</span>
+          Google Disk · <span className="font-semibold text-fg">Stihnuto/{subject.code ?? subject.name}</span>
         </span>
       </span>
       <button type="button" disabled={Boolean(busy)} onClick={() => inputRef.current?.click()} className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-[12.5px] font-bold ring-1 ring-inset ring-line hover:bg-surface-2 disabled:opacity-60">
@@ -494,7 +494,7 @@ export function AddMaterialModal({ open, onClose, subject, requirements, default
             <label className="mt-3 flex items-start gap-3 rounded-2xl bg-surface-2 px-3.5 py-3 text-[13px]">
               <input type="checkbox" checked={toDrive} onChange={(e) => setToDrive(e.target.checked)} className="mt-0.5 size-4 accent-[var(--accent)]" />
               <span>
-                <strong>Uložit na Google Disk</strong> do složky „Stihnu/{subject.code ?? subject.name}“ – soubor pak otevřete na každém zařízení.
+                <strong>Uložit na Google Disk</strong> do složky „Stihnuto/{subject.code ?? subject.name}“ – soubor pak otevřete na každém zařízení.
               </span>
             </label>
           )}
@@ -671,7 +671,7 @@ export function MaterialViewer({ material, onClose }: { material: Material | nul
           <p>
             {settings.mode === 'demo'
               ? 'Tohle je ukázkový soubor. S vlastními daty se po kliknutí otevře přímo z Moodlu – aplikace k adrese souboru sama připojí váš klíč webové služby:'
-              : 'Ke stažení souboru z Moodlu je potřeba klíč webové služby. Propojte Moodle v sekci Propojení – odkaz pak bude vypadat takto:'}
+              : 'Ke stažení souboru z Moodlu je potřeba klíč webové služby. Propojte Moodle v Nastavení → Propojení – odkaz pak bude vypadat takto:'}
           </p>
           <code className="block overflow-x-auto whitespace-nowrap rounded-xl border border-line bg-surface-2 p-3 font-mono text-[12px]">
             {moodleFileUrlWithToken(material.url ?? '', tokenPreview)}

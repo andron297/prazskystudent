@@ -3,7 +3,7 @@ import { Check, FlaskConical, Play, Zap } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import { Button } from '../ui/primitives';
-import { Emoji3D } from '../ui/Emoji3D';
+import { GlyphTile } from '../ui/Glyph';
 
 /* ------------------------------------------------------------------ */
 /* Uvítání ukázky a nabídka prohlídky                                  */
@@ -55,7 +55,7 @@ export function TourOffer() {
   if (!show) return null;
   return (
     <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="card flex flex-wrap items-center gap-x-3.5 gap-y-2.5 rounded-[24px] px-4 py-3 sm:px-5">
-      <Emoji3D name="compass" size={38} />
+      <GlyphTile name="compass" size={40} />
       <div className="min-w-0 flex-1">
         <p className="text-[14.5px] font-bold leading-tight">Ukázat, co kde najdete?</p>
         <p className="mt-0.5 text-[12.5px] text-muted">Prohlídka na minutu. Později ji najdete v Průvodci.</p>

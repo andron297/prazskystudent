@@ -41,7 +41,7 @@ const STEPS: TourStep[] = [
   {
     targets: ['nav', 'nav-mobile'],
     title: 'Hlavní menu',
-    text: 'Plán (úkoly, kalendář a harmonogram), Doprava jako vyhledávač spojení, předměty s materiály a propojení.',
+    text: 'Plán (úkoly, kalendář a harmonogram), Doprava jako vyhledávač spojení a předměty s materiály.',
   },
   {
     targets: ['alerts'],
@@ -54,9 +54,9 @@ const STEPS: TourStep[] = [
     text: 'Napište třeba „esej do pátku“ nebo „zítra 18:00 trénink“. Datum, čas i předmět aplikace pozná z textu.',
   },
   {
-    targets: ['connections', 'account'],
-    title: 'Propojení a účet',
-    text: 'Tady propojíte SIS, Moodle a Google a spravujete účet. Data se šifrují a synchronizují mezi vašimi zařízeními.',
+    targets: ['settings'],
+    title: 'Nastavení',
+    text: 'Propojení se SIS, Moodlem a Googlem, škola a budovy, upozornění, vzhled, účet i tento průvodce. Data se šifrují a synchronizují mezi vašimi zařízeními.',
   },
 ];
 

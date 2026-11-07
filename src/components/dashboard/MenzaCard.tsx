@@ -14,7 +14,6 @@ import { planTripTo } from '../../store/journeyStore';
 import { useMenza, type MenzaDish } from '../../services/menza';
 import { useAppStore } from '../../store/appStore';
 import { Card, cn, Skeleton } from '../ui/primitives';
-import { Emoji3D } from '../ui/Emoji3D';
 
 const price = (n?: number) => (n === undefined ? '' : `${Math.round(n)} Kč`);
 
@@ -24,7 +23,6 @@ function Dish({ dish }: { dish: MenzaDish }) {
   const special = label !== dish.label ? label : null;
   return (
     <li className={cn('flex items-start gap-3 rounded-[16px] px-2.5 py-2', soup ? 'bg-surface-2/70' : '')}>
-      <Emoji3D name={soup ? 'steaming-bowl' : dish.vegetarian ? 'green-salad' : 'fork-and-knife-with-plate'} size={30} className="mt-0.5" />
       <span className="min-w-0 flex-1">
         <span className="block text-[14px] font-semibold leading-snug">{dish.name}</span>
         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11.5px] text-muted">
@@ -91,7 +89,7 @@ function CanteenChooser({ initial, suggested, onSave, onCancel, first }: { initi
   );
 }
 
-export function MenzaCard({ now, building, fallback }: { now: Date; building?: Building | null; fallback?: LatLng | null }) {
+export function MenzaCard({ now, building, fallback, me }: { now: Date; building?: Building | null; fallback?: LatLng | null; me?: { coords: LatLng; label: string; gps: boolean } | null }) {
   const menza = useAppStore((s) => s.settings.menza);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const near = useMemo(() => (building ? nearestCanteens(building.coords, 3) : fallback ? nearestCanteens(fallback, 3) : []), [building, fallback]);
@@ -226,14 +224,19 @@ export function MenzaCard({ now, building, fallback }: { now: Date; building?: B
       )}
 
       {canteen && (
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[16px] bg-surface-2/70 px-3 py-2 text-[12.5px] text-muted">
-          <span className="inline-flex items-center gap-1.5">
-            <MapPin className="size-3.5" aria-hidden />
-            {canteen.short}
-            {building ? ` · ${formatDistance(haversineMeters(building.coords, canteen.coords))} od budovy ${building.name} (asi ${walkingMinutes(building.coords, canteen.coords)} min pěšky)` : ''}
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[16px] bg-surface-2/70 px-3.5 py-2.5">
+          <span className="min-w-0 flex-1 text-[13px] leading-snug">
+            <strong className="block font-bold">{canteen.name}</strong>
+            {me ? (
+              <span className="text-muted">
+                {me.gps ? 'Od vás' : `Od výchozího místa (${me.label})`} {formatDistance(haversineMeters(me.coords, canteen.coords))} · asi {walkingMinutes(me.coords, canteen.coords)} min pěšky
+              </span>
+            ) : (
+              <span className="text-muted">{canteen.short}</span>
+            )}
           </span>
-          <button type="button" onClick={() => planTripTo(canteen.name, canteen.coords, 'menza')} className="ml-auto inline-flex h-7 items-center rounded-full bg-surface px-3 text-[12px] font-bold text-fg ring-1 ring-inset ring-line hover:bg-surface-2">
-            Trasa sem
+          <button type="button" onClick={() => planTripTo(canteen.name, canteen.coords, 'menza')} className="inline-flex h-9 shrink-0 items-center rounded-full bg-accent px-4 text-[13px] font-bold text-accent-fg hover:brightness-110">
+            Trasa
           </button>
         </div>
       )}

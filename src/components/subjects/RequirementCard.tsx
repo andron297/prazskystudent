@@ -89,7 +89,7 @@ export function RequirementCard({
           checked={complete}
           onChange={() => {
             toggleDone(r.id);
-            if (!complete) toast.success(`Hotovo: ${r.title} 🎉`);
+            if (!complete) toast.success(`Hotovo: ${r.title}`);
           }}
           label={complete ? 'Označit jako nehotové' : 'Označit jako hotové'}
           colorClass={color.bar}

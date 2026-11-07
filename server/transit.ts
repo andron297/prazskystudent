@@ -13,7 +13,7 @@ import { HttpError, errorResponse, json, methodNotAllowed } from './http.js';
 import { readTextLimited } from './security.js';
 
 const API = 'https://api.transitous.org/api/v1/';
-const USER_AGENT = 'Stihnu/2.4 (studijni aplikace, open source; +https://github.com/andron297/prazskystudent)';
+const USER_AGENT = 'Stihnuto/2.4 (studijni aplikace, open source; +https://github.com/andron297/prazskystudent)';
 
 // Pražská integrovaná doprava sahá i do Středočeského kraje.
 const BOUNDS = { minLat: 49.4, maxLat: 50.7, minLon: 13.4, maxLon: 15.6 };
@@ -80,7 +80,7 @@ interface RawLeg {
   cancelled?: boolean;
   intermediateStops?: RawPlace[];
   legGeometry?: { points?: string; precision?: number };
-  steps?: { relativeDirection?: string; distance?: number; streetName?: string; area?: boolean }[];
+  steps?: { relativeDirection?: string; distance?: number; streetName?: string; area?: boolean; fromLevel?: number; toLevel?: number; osmWay?: number }[];
 }
 
 export interface CompactPlace {
@@ -109,27 +109,101 @@ export interface CompactLeg {
   stops?: number;
   /** Tvar trasy – zakódovaná lomená čára (Google polyline, přesnost 7). */
   geometry?: string;
-  /** Pokyny pro chůzi: vzdálenost (m), ulice, směr. */
-  steps?: { d: number; s?: string; dir?: string }[];
+  /** Pokyny pro chůzi: vzdálenost (m), ulice, směr, patro po kroku (0 = ulice), cesta v OSM. */
+  steps?: CompactStep[];
   /** Zastávky po cestě (jen jízdy). */
   via?: { name: string; lat: number; lon: number; at?: string }[];
 }
 
-/** Sloučí drobné úseky „pokračuj rovně“ na stejné ulici do jednoho pokynu. */
-function compactSteps(steps: NonNullable<RawLeg['steps']>): CompactLeg['steps'] {
-  const out: NonNullable<CompactLeg['steps']> = [];
+export interface CompactStep {
+  d: number;
+  s?: string;
+  dir?: string;
+  /** Patro po kroku (záporné = pod zemí); chybí = úroveň ulice. */
+  l?: number;
+  /** Cesta v OpenStreetMap (chodník, přechod, schody…) – pro přesné pokyny. */
+  w?: number;
+}
+
+/**
+ * Kroky chůze: drobné úseky na stejné cestě OSM se sloučí, ale hranice cest
+ * zůstanou – podle nich navigace pozná přechod, schody, eskalátor nebo výtah.
+ */
+export function compactSteps(steps: NonNullable<RawLeg['steps']>): CompactStep[] {
+  const out: CompactStep[] = [];
   for (const st of steps.slice(0, 400)) {
     const d = Math.max(0, Math.round(st.distance ?? 0));
     const street = st.streetName?.trim() || undefined;
     const dir = st.relativeDirection && st.relativeDirection !== 'CONTINUE' ? st.relativeDirection : undefined;
+    const level = typeof st.toLevel === 'number' && Number.isFinite(st.toLevel) && st.toLevel !== 0 ? Math.round(st.toLevel * 2) / 2 : undefined;
+    const way = typeof st.osmWay === 'number' && st.osmWay > 0 ? st.osmWay : undefined;
     const last = out[out.length - 1];
-    if (last && !dir && last.s === street) {
+    if (last && !dir && !last.dir && last.s === street && last.l === level && last.w === way) {
       last.d += d;
       continue;
     }
-    out.push({ d, ...(street ? { s: street.slice(0, 80) } : {}), ...(dir ? { dir } : {}) });
+    out.push({ d, ...(street ? { s: street.slice(0, 80) } : {}), ...(dir ? { dir } : {}), ...(level !== undefined ? { l: level } : {}), ...(way ? { w: way } : {}) });
   }
-  return out.slice(0, 120);
+  return out.slice(0, 160);
+}
+
+/* ------------------------------------------------------------------ */
+/* Co je která cesta (přechod, chodník, schody…) – z OpenStreetMap     */
+/* ------------------------------------------------------------------ */
+
+export interface WayInfo {
+  k: 'crossing' | 'steps' | 'escalator' | 'elevator' | 'sidewalk' | 'footway' | 'platform' | 'passage' | 'underground' | 'road';
+  /** Přechod se semaforem. */
+  sig?: 1;
+  /** Přechod se zebrou. */
+  zebra?: 1;
+  /** Pod zemí (tunel, záporné patro). */
+  u?: 1;
+  name?: string;
+}
+
+export function wayInfoFromTags(t: Record<string, string>): WayInfo | null {
+  const hw = t.highway;
+  const level = Number((t.level ?? '').split(';')[0]);
+  const underground = t.tunnel === 'yes' || Number(t.layer) < 0 || (Number.isFinite(level) && level < 0) ? { u: 1 as const } : {};
+  const name = t.name ? { name: t.name.slice(0, 80) } : {};
+  if (hw === 'elevator') return { k: 'elevator', ...underground };
+  if (hw === 'steps') return { k: t.conveying && t.conveying !== 'no' ? 'escalator' : 'steps', ...underground };
+  if (t.footway === 'crossing' || hw === 'crossing' || (t.crossing && t.crossing !== 'no')) {
+    const sig = t.crossing === 'traffic_signals' || t['crossing:signals'] === 'yes';
+    const markings = t['crossing:markings'];
+    const zebra = (markings && markings !== 'no') || t.crossing === 'zebra' || t.crossing === 'marked' || (t.crossing === 'uncontrolled' && markings !== 'no');
+    return { k: 'crossing', ...(sig ? { sig: 1 as const } : {}), ...(zebra ? { zebra: 1 as const } : {}) };
+  }
+  if (t.public_transport === 'platform' || t.railway === 'platform' || hw === 'platform') return { k: 'platform', ...underground, ...name };
+  if (t.footway === 'sidewalk') return { k: 'sidewalk', ...underground };
+  if (t.tunnel === 'building_passage') return { k: 'passage' };
+  if (underground.u && (hw === 'footway' || hw === 'corridor' || hw === 'pedestrian' || hw === 'path')) return { k: 'underground', u: 1 };
+  if (hw === 'footway' || hw === 'pedestrian' || hw === 'path' || hw === 'corridor' || hw === 'living_street' || hw === 'track' || hw === 'cycleway') return { k: 'footway', ...underground, ...name };
+  if (hw) return { k: 'road', ...name };
+  return null;
+}
+
+const OSM_UA = 'Stihnuto/2.4 (studijni aplikace, open source; +https://github.com/andron297/prazskystudent)';
+
+/** Značky cest: nejdřív Overpass (určený pro čtení dat), při výpadku hlavní API OSM. */
+async function fetchWayTags(ids: string[]): Promise<Record<string, Record<string, string>>> {
+  const out: Record<string, Record<string, string>> = {};
+  try {
+    const body = new URLSearchParams({ data: `[out:json][timeout:10];way(id:${ids.join(',')});out tags;` });
+    const response = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body, headers: { 'user-agent': OSM_UA, accept: 'application/json' }, signal: AbortSignal.timeout(9_000) });
+    if (!response.ok) throw new Error(`overpass ${response.status}`);
+    const data = JSON.parse(await readTextLimited(response, 3_000_000)) as { elements?: { type?: string; id?: number; tags?: Record<string, string> }[] };
+    for (const e of data.elements ?? []) if (e.type === 'way' && e.id) out[String(e.id)] = e.tags ?? {};
+    return out;
+  } catch {
+    // Záložně hlavní API OSM – jeden dotaz na všechny cesty najednou.
+  }
+  const response = await fetch(`https://api.openstreetmap.org/api/0.6/ways.json?ways=${ids.join(',')}`, { headers: { 'user-agent': OSM_UA, accept: 'application/json' }, signal: AbortSignal.timeout(9_000) });
+  if (!response.ok) throw new HttpError(502, 'osm_error', `OpenStreetMap odpověděla chybou HTTP ${response.status}.`);
+  const data = JSON.parse(await readTextLimited(response, 3_000_000)) as { elements?: { type?: string; id?: number; tags?: Record<string, string> }[] };
+  for (const e of data.elements ?? []) if (e.type === 'way' && e.id) out[String(e.id)] = e.tags ?? {};
+  return out;
 }
 
 const place = (p: RawPlace | undefined): CompactPlace => ({
@@ -240,6 +314,18 @@ export async function handleTransit(request: Request): Promise<Response> {
           tripId: s.tripId,
         }));
       return json({ departures, source: 'transitous' }, 200, { 'cache-control': 'public, max-age=15, s-maxage=20' });
+    }
+    if (op === 'ways') {
+      // Co je která cesta na pěší trase (přechod, schody, eskalátor…) – pro přesné pokyny navigace.
+      const ids = [...new Set((params.get('ids') ?? '').split(',').filter((x) => /^\d{1,12}$/.test(x)))].slice(0, 300);
+      if (ids.length === 0) throw new HttpError(400, 'bad_ids', 'Chybí cesty.');
+      const tags = await fetchWayTags(ids);
+      const ways: Record<string, WayInfo> = {};
+      for (const [id, t] of Object.entries(tags)) {
+        const info = wayInfoFromTags(t);
+        if (info) ways[id] = info;
+      }
+      return json({ ways }, 200, { 'cache-control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=604800' });
     }
     throw new HttpError(400, 'unknown_op', 'Neznámá operace.');
   } catch (error) {

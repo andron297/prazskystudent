@@ -2,7 +2,7 @@ import type { Building, LocationPreset, ScheduleEvent } from '../types';
 import { CAMPUS_BUILDINGS, FACULTIES, facultyById, type Faculty } from './campus';
 import { foldDiacritics, normalizeKey } from './text';
 
-/** Výchozí budovy = katalog pražských fakult a škol (lib/campus); upravitelné v Propojení. */
+/** Výchozí budovy = katalog pražských fakult a škol (lib/campus); upravitelné v Nastavení → Škola a budovy. */
 export const DEFAULT_BUILDINGS: Building[] = CAMPUS_BUILDINGS;
 
 /** Výchozí body pro simulaci polohy a záložní polohu bez GPS. */

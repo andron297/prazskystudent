@@ -1,5 +1,5 @@
 /**
- * Účet Stihnu: přihlášení (Google nebo e-mail a heslo), klíče a šifrovaná
+ * Účet Stihnuto: přihlášení (Google nebo e-mail a heslo), klíče a šifrovaná
  * synchronizace mezi zařízeními.
  *
  * Bezpečnost:
@@ -145,7 +145,7 @@ async function sha256Hex(text: string): Promise<string> {
   return [...digest].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Vykreslí oficiální tlačítko „Pokračovat přes Google“; po kliknutí přihlásí k účtu Stihnu. */
+/** Vykreslí oficiální tlačítko „Pokračovat přes Google“; po kliknutí přihlásí k účtu Stihnuto. */
 export async function renderGoogleButton(parent: HTMLElement, onError: (message: string) => void): Promise<boolean> {
   const clientId = useUiStore.getState().server.googleClientId;
   if (!client || !clientId) return false;
@@ -469,6 +469,12 @@ async function pullAndMerge(): Promise<boolean> {
   const remote = await openJson<VaultPayload>(dek, row.ciphertext, row.iv, user.id);
   version = row.version;
   const outcome = mergeSnapshots(localData(), remote.data);
+  // Účet už je nastavený (z jiného zařízení) → průvodce nastavením ani prohlídku znovu nenabízet.
+  const st = useAppStore.getState();
+  if ((remote.data.subjects.length > 0 || (remote.data.settings?.icsSources?.length ?? 0) > 0) && (!st.meta.setupDone || !st.meta.tourSeen)) {
+    st.setSetup({ done: true });
+    st.markTourSeen();
+  }
   if (outcome.changedLocal) {
     applyingRemote = true;
     try {

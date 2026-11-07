@@ -9,7 +9,6 @@ import { Check } from 'lucide-react';
 import type { Itinerary, ScheduleEvent } from '../../types';
 import { formatTime } from '../../lib/dates';
 import { PlaylistPlayer } from '../music/PlaylistPlayer';
-import { Emoji3D } from '../ui/Emoji3D';
 import { cn } from '../ui/primitives';
 
 /* ------------------------------------------------------------------ */
@@ -60,11 +59,11 @@ export function BreathingCircle({ size = 132, light = false }: { size?: number; 
 /* Chvilka klidu před odchodem                                         */
 /* ------------------------------------------------------------------ */
 
-const PACKING = ['Lítačka / jízdenka', 'Klíče', 'Sluchátka', 'Nabíječka', 'Láhev s vodou'];
+const PACKING = ['lítačka nebo jízdenka', 'klíče', 'sluchátka', 'nabíječka', 'láhev s vodou'];
 
 export function DepartureRest({ event, itinerary, now, rain }: { event: ScheduleEvent; itinerary: Itinerary; now: Date; rain: boolean }) {
   const minutes = Math.floor((new Date(itinerary.leaveAt).getTime() - now.getTime()) / 60_000);
-  const items = useMemo(() => (rain ? ['Deštník', ...PACKING] : PACKING), [rain]);
+  const items = useMemo(() => (rain ? ['deštník', ...PACKING] : PACKING), [rain]);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   useEffect(() => setChecked({}), [event.id]);
   if (minutes < 8 || minutes > 180) return null;
@@ -97,8 +96,8 @@ export function DepartureRest({ event, itinerary, now, rain }: { event: Schedule
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-start">
             <PlaylistPlayer light compact />
-            <a href="https://pid.cz/aplikace-pid-litacka/" target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-white/15 pl-2 pr-4 text-[13px] font-bold text-white ring-1 ring-inset ring-white/25 hover:bg-white/25">
-              <Emoji3D name="ticket" size={24} /> Jízdenka v PID Lítačce
+            <a href="https://pid.cz/aplikace-pid-litacka/" target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center rounded-full bg-white/15 px-4 text-[13px] font-bold text-white ring-1 ring-inset ring-white/25 hover:bg-white/25">
+              Jízdenka v PID Lítačce
             </a>
           </div>
         </div>

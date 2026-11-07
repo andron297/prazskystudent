@@ -740,3 +740,11 @@ body {
     animation: none;
   }
 }
+
+/* Položky mřížky se nesmí roztáhnout podle dlouhého textu na jednom řádku (jinak ujedou do strany).
+   Ve vrstvě base – třídy jako min-w-[…] mají přednost. */
+@layer base {
+  :where(.grid) > * {
+    min-width: 0;
+  }
+}

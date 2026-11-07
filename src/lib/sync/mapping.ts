@@ -103,7 +103,7 @@ export function eventPayload(event: ScheduleEvent, subject: Subject | undefined,
     [word ? word.charAt(0).toUpperCase() + word.slice(1) : null, subject?.code].filter(Boolean).join(' · '),
     event.teacher ? `Vyučující: ${event.teacher}` : null,
     event.room || building ? `Místnost: ${[event.room, building?.name].filter(Boolean).join(' – ')}` : null,
-    subject ? `\nOtevřít ve Stihnu: ${appUrl}/#/predmety/${encodeURIComponent(subject.id)}` : null,
+    subject ? `\nOtevřít ve Stihnutu: ${appUrl}/#/predmety/${encodeURIComponent(subject.id)}` : null,
   ].filter(Boolean);
   return {
     summary,
@@ -125,10 +125,10 @@ export function requirementEventPayload(req: Requirement, subject: Subject | und
     `${REQUIREMENT_TYPE_LABELS[req.type]}${req.weight ? ` · ${req.weight} % hodnocení` : ''}`,
     req.subtasks.length ? req.subtasks.map((s) => `${s.done ? '☑' : '☐'} ${s.title}`).join('\n') : null,
     req.url ? `Odkaz: ${req.url}` : null,
-    subject ? `Otevřít ve Stihnu: ${appUrl}/#/predmety/${encodeURIComponent(subject.id)}` : null,
+    subject ? `Otevřít ve Stihnutu: ${appUrl}/#/predmety/${encodeURIComponent(subject.id)}` : null,
   ].filter(Boolean);
   return {
-    summary: `${done ? '✓ ' : '⏰ '}${req.title}${subject?.code ? ` · ${subject.code}` : ''}`,
+    summary: `${done ? '✓ ' : ''}${req.title}${subject?.code ? ` · ${subject.code}` : ''}`,
     description: lines.join('\n'),
     location: '',
     start: new Date(deadline.getTime() - 30 * 60_000).toISOString(),
@@ -138,7 +138,7 @@ export function requirementEventPayload(req: Requirement, subject: Subject | und
 }
 
 export function milestonePayload(m: Milestone, subject?: Subject): CalendarPayload {
-  const description = [subject ? `Předmět: ${subject.name}` : null, m.note, 'Harmonogram · Stihnu'].filter(Boolean).join('\n');
+  const description = [subject ? `Předmět: ${subject.name}` : null, m.note, 'Harmonogram · Stihnuto'].filter(Boolean).join('\n');
   if (m.allDay) {
     const startKey = isDateKey(m.start) ? m.start : toDateKey(new Date(m.start));
     const lastKey = m.end ? (isDateKey(m.end) ? m.end : toDateKey(new Date(m.end))) : startKey;
@@ -152,7 +152,7 @@ export function milestonePayload(m: Milestone, subject?: Subject): CalendarPaylo
 /** Odpočet jako důležitý den (do Google Kalendáře jde stejně jako termíny harmonogramu). */
 export function countdownMilestone(c: Countdown): Milestone {
   const allDay = isDateKey(c.at);
-  return { id: `cd-${c.id}`, title: `${c.emoji ?? '⏳'} ${c.title}`, category: 'event', start: c.at, allDay, source: 'manual', note: 'Odpočet', updatedAt: c.createdAt };
+  return { id: `cd-${c.id}`, title: c.title, category: 'event', start: c.at, allDay, source: 'manual', note: 'Odpočet', updatedAt: c.createdAt };
 }
 
 export function toEventBody(candidate: CalendarCandidate, appUrl: string): EventBody {
@@ -167,7 +167,7 @@ export function toEventBody(candidate: CalendarCandidate, appUrl: string): Event
     transparency: candidate.transparent ? 'transparent' : 'opaque',
     reminders: { useDefault: false, overrides: candidate.reminders.slice(0, 5).map((minutes) => ({ method: 'popup', minutes: Math.min(40_320, Math.max(0, Math.round(minutes))) })) },
     extendedProperties: { private: { stihnuKey: candidate.key } },
-    source: { title: 'Stihnu', url: appUrl },
+    source: { title: 'Stihnuto', url: appUrl },
   };
 }
 

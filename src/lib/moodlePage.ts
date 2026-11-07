@@ -1,5 +1,5 @@
 /**
- * Stránky Moodlu poslané záložkou „→ Stihnu“ (text stránky, jak ho vidí
+ * Stránky Moodlu poslané záložkou „→ Stihnuto“ (text stránky, jak ho vidí
  * přihlášený student): úkol (stav odevzdání, známka, termín), test
  * (dokončené pokusy, známka) a stránka kurzu (texty s termíny).
  */

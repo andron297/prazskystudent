@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Palette } from 'lucide-react';
 import type { ScheduleEvent } from '../../types';
-import { capitalize, formatDateLong, formatTime } from '../../lib/dates';
+import { capitalize, formatDateLong, formatTime, startOfDay } from '../../lib/dates';
 import { nameDayText, publicHoliday } from '../../lib/czechDays';
 import { autoHeroPhoto, galleryPhoto, photoCredit, photoUrl, resolveAppearance } from '../../lib/appearance';
 import { useLocalImage } from '../../hooks/useLocalImage';
@@ -30,6 +30,8 @@ import { weather3d } from '../../lib/emoji3d';
 import { TourOffer, WelcomeCard } from './DashboardCards';
 import { CountdownsCard } from './Countdowns';
 import { DayBrief } from './DayBrief';
+import { DeadlinesCard } from './DeadlinesCard';
+import { myBuildings } from '../../lib/campus';
 import { MenzaCard } from './MenzaCard';
 
 function greeting(hour: number): [string, string] {
@@ -99,6 +101,19 @@ export function DashboardView() {
   const rainCommute = advice?.commutes.find((c) => c.wet);
 
   const goToTransit = () => navigateTo('doprava');
+  // Bez výuky dnes: kdy je další (místo prázdné věty).
+  const nextClassText = useMemo(() => {
+    const t = minuteKey * 60_000;
+    const next = events.filter((e) => isTransitTarget(e) && new Date(e.start).getTime() > t).sort((a, b) => a.start.localeCompare(b.start))[0];
+    if (!next) return 'Dnes už žádná výuka.';
+    const d = new Date(next.start);
+    const days = Math.round((startOfDay(d).getTime() - startOfDay(new Date(t)).getTime()) / 86_400_000);
+    if (days > 7) return 'Dnes už žádná výuka.';
+    const b = buildingForEvent(next, settings).building;
+    const when = days === 0 ? 'dnes' : days === 1 ? 'zítra' : ['v neděli', 'v pondělí', 'v úterý', 've středu', 've čtvrtek', 'v pátek', 'v sobotu'][d.getDay()];
+    return `Dnes už žádná výuka. Další ${when} v ${formatTime(d)}${b ? ` · ${b.name}` : ''}.`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, Math.floor(minuteKey / 10), settings.buildings]);
   const nameDay = nameDayText(now);
   const holiday = publicHoliday(now);
 
@@ -150,7 +165,7 @@ export function DashboardView() {
             <p className="mt-3 max-w-md text-[15px] leading-relaxed text-white/85 sm:mt-4">
               {within
                 ? `${KIND_LABEL[within.kind]}${building?.locative ? ` ${building.locative}` : ''} v ${formatTime(new Date(within.start))}${subject ? ` · ${subject.name}` : ''}`
-                : 'Dnes už žádná výuka – čas na vás.'}
+                : nextClassText}
             </p>
             {forecast && (
               <div className="mt-4 flex flex-wrap items-center gap-2 sm:mt-5">
@@ -164,7 +179,7 @@ export function DashboardView() {
                     {rainCommute.precipProb} % déšť {rainCommute.window.kind === 'to' ? 'cestou tam' : 'cestou zpět'}
                   </span>
                 ) : (
-                  advice && <span className="glass-photo rounded-full px-3.5 py-1.5 text-[13px] font-semibold">{advice.outfit.slice(0, 2).map((o) => o.label).join(' + ')}</span>
+                  advice && <span className="glass-photo rounded-full px-3.5 py-1.5 text-[13px] font-semibold">{advice.outfit.slice(0, 2).map((o) => o.label).join(' a ')}</span>
                 )}
               </div>
             )}
@@ -172,6 +187,8 @@ export function DashboardView() {
           {within && <TransitGlance event={within} building={building ?? null} transit={transit} onOrigin={() => setOriginOpen(true)} onDetail={goToTransit} />}
         </div>
       </section>
+
+      <DeadlinesCard now={now} />
 
       <WelcomeCard />
       <TourOffer />
@@ -188,14 +205,14 @@ export function DashboardView() {
           </div>
           <div className="order-3 min-w-0 lg:order-none">
             <ViewBoundary compact label="Menza">
-              <MenzaCard now={now} building={building ?? mainBuilding} fallback={origin.coords} />
+              <MenzaCard now={now} building={building ?? mainBuilding ?? myBuildings(settings)[0] ?? null} fallback={origin.coords} me={{ coords: origin.coords, label: origin.label, gps: origin.source === 'gps' && !origin.usingFallback }} />
             </ViewBoundary>
           </div>
         </div>
         <div className="contents lg:col-span-5 lg:flex lg:min-w-0 lg:flex-col lg:gap-5">
           <div className="order-2 min-w-0 lg:order-none">
             <ViewBoundary compact label="Počasí">
-              <WeatherCard forecast={forecast} advice={advice} now={now} dayLabel={plan.day === 'tomorrow' ? 'Zítra do školy' : plan.day === 'today' ? 'Dnes do školy' : 'Dnes'} />
+              <WeatherCard forecast={forecast} advice={advice} now={now} dayLabel={plan.day === 'tomorrow' ? 'Zítra do školy' : plan.day === 'today' ? 'Dnes do školy' : 'Dnes'} place={origin.source === 'gps' && !origin.usingFallback ? 'U vás' : origin.label} />
             </ViewBoundary>
           </div>
           <div className="order-4 min-w-0 lg:order-none">

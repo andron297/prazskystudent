@@ -179,12 +179,12 @@ export function PairDeviceDialog({ open, onClose }: { open: boolean; onClose: ()
                   </li>
                   <li className="flex gap-3">
                     <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent-soft text-[12px] font-black text-accent">2</span>
-                    <span>Klepněte na odkaz – Stihnu se otevře a samo se přihlásí.</span>
+                    <span>Klepněte na odkaz – Stihnuto se otevře a samo se přihlásí.</span>
                   </li>
                   <li className="flex gap-3">
                     <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent-soft text-[12px] font-black text-accent">3</span>
                     <span>
-                      Máte Stihnu v telefonu jako aplikaci? Otevřete ji a zvolte <strong>Naskenovat kód z počítače</strong>.
+                      Máte Stihnuto v telefonu jako aplikaci? Otevřete ji a zvolte <strong>Naskenovat kód z počítače</strong>.
                     </span>
                   </li>
                 </ol>

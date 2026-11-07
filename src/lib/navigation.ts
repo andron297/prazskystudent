@@ -7,13 +7,64 @@ import type { Itinerary, LatLng, RideLeg, WalkLeg, WalkStep } from '../types';
 import { haversineMeters } from './geo';
 import { bearing, cumulative, pathLength, pointAlong, turnAngle } from './polyline';
 
-export type ManeuverType = 'depart' | 'straight' | 'slight-left' | 'left' | 'sharp-left' | 'slight-right' | 'right' | 'sharp-right' | 'uturn' | 'stairs' | 'arrive';
+export type ManeuverType =
+  | 'depart'
+  | 'straight'
+  | 'slight-left'
+  | 'left'
+  | 'sharp-left'
+  | 'slight-right'
+  | 'right'
+  | 'sharp-right'
+  | 'uturn'
+  | 'crossing'
+  | 'stairs'
+  | 'stairs-up'
+  | 'stairs-down'
+  | 'escalator'
+  | 'escalator-up'
+  | 'escalator-down'
+  | 'elevator'
+  | 'elevator-up'
+  | 'elevator-down'
+  | 'arrive';
+
+export type CrossingKind = 'zebra' | 'signals' | 'unmarked';
 
 export interface Maneuver {
   /** Vzdálenost od začátku úseku (m). */
   at: number;
   type: ManeuverType;
   street?: string;
+  /** Přechod u pokynu (samostatný, nebo spojený s odbočením). */
+  crossing?: CrossingKind;
+  /** Přechod je dřív než odbočení („přejděte a odbočte“). */
+  crossingFirst?: boolean;
+  /** Vstup do metra / výstup z metra. */
+  note?: 'entrance' | 'exit';
+}
+
+/** Co je která cesta na trase (z OpenStreetMap, viz services/wayInfo). */
+export interface NavWayInfo {
+  k: 'crossing' | 'steps' | 'escalator' | 'elevator' | 'sidewalk' | 'footway' | 'platform' | 'passage' | 'underground' | 'road';
+  sig?: 1;
+  zebra?: 1;
+  u?: 1;
+  name?: string;
+}
+
+export type NavWayMap = Record<number, NavWayInfo>;
+
+const VERTICAL = new Set<ManeuverType>(['stairs', 'stairs-up', 'stairs-down', 'escalator', 'escalator-up', 'escalator-down', 'elevator', 'elevator-up', 'elevator-down']);
+const TURNS = new Set<ManeuverType>(['slight-left', 'left', 'sharp-left', 'slight-right', 'right', 'sharp-right', 'uturn', 'straight']);
+export const isVertical = (t: ManeuverType) => VERTICAL.has(t);
+
+/** Schody / eskalátor / výtah a směr podle pater (když je plánovač zná). */
+function verticalType(step: WalkStep, info: NavWayInfo | undefined, prevLevel: number, level: number): ManeuverType | null {
+  const kind = step.dir === 'ELEVATOR' || info?.k === 'elevator' ? 'elevator' : info?.k === 'escalator' ? 'escalator' : step.dir === 'STAIRS' || info?.k === 'steps' ? 'stairs' : null;
+  if (!kind) return null;
+  const dir = level < prevLevel ? '-down' : level > prevLevel ? '-up' : '';
+  return `${kind}${dir}` as ManeuverType;
 }
 
 export interface WalkPhase {
@@ -73,11 +124,18 @@ function streetAt(steps: WalkStep[] | undefined, along: number): string | undefi
 }
 
 /**
- * Pokyny z geometrie. Chodníky se kroutí, proto se díváme na směr 20 m před
- * a 20 m za bodem a pokyn dáme jen na skutečné odbočce: při změně ulice od
- * 30°, uprostřed cesty až od 60°. Pokyny blíž než 25 m od sebe se sloučí.
+ * Pokyny z geometrie a z mapových dat. Chodníky se kroutí, proto se díváme na
+ * směr 20 m před a 20 m za bodem a pokyn dáme jen na skutečné odbočce: při
+ * změně ulice od 30°, uprostřed cesty až od 60°. Pokyny blíž než 25 m od sebe
+ * se sloučí. Přechody, schody, eskalátory a výtahy (podle OpenStreetMap a pater
+ * z plánovače) se nikdy nezahodí; vstup do metra a výstup z něj se pojmenuje.
  */
-export function maneuversFor(path: LatLng[], steps?: WalkStep[]): Maneuver[] {
+export function maneuversFor(path: LatLng[], rawSteps?: WalkStep[], ways?: NavWayMap, context: { toMetro?: boolean; fromMetro?: boolean } = {}): Maneuver[] {
+  // Pod zemí a na nástupišti nejsou ulice (název nástupiště není „ulice Můstek“).
+  const steps = rawSteps?.map((st) => {
+    const info = st.way ? ways?.[st.way] : undefined;
+    return st.street && ((st.level ?? 0) < 0 || info?.u || info?.k === 'platform') ? { ...st, street: undefined } : st;
+  });
   const cum = cumulative(path);
   const length = cum[cum.length - 1] ?? 0;
   const out: Maneuver[] = [{ at: 0, type: 'depart', street: streetAt(steps, 1) }];
@@ -87,38 +145,84 @@ export function maneuversFor(path: LatLng[], steps?: WalkStep[]): Maneuver[] {
   }
   const at = (x: number) => pointAlong(path, Math.max(0, Math.min(length, x)), cum);
   const angleAt = (x: number) => turnAngle(bearing(at(x - 20), at(x)), bearing(at(x), at(x + 20)));
+  // Délky kroků plánovače nemusí přesně sedět na délku čáry – přepočet na geometrii.
+  const stepTotal = steps?.reduce((sum, st) => sum + st.distance, 0) ?? 0;
+  const scale = stepTotal > 0 ? length / stepTotal : 1;
 
-  // Kandidáti: hranice ulic podle plánovače a ostré zlomy v geometrii.
-  const candidates: { x: number; boundary: boolean; street?: string; dir?: string; stairs?: boolean }[] = [];
+  // Kandidáti: hranice ulic podle plánovače, přechody a schody z mapy a ostré zlomy v geometrii.
+  const candidates: { x: number; boundary: boolean; street?: string; dir?: string; vertical?: ManeuverType; crossing?: CrossingKind; note?: Maneuver['note'] }[] = [];
   if (steps?.length) {
     let acc = 0;
+    let prevLevel = 0;
+    let wasUnderground = Boolean(context.fromMetro);
+    let entered = false;
+    let exited = false;
     for (let i = 0; i < steps.length; i++) {
       const st = steps[i];
-      if (i > 0 && acc > 8 && length - acc > 8) {
-        const changed = (steps[i - 1].street ?? '') !== (st.street ?? '');
-        if (changed || st.dir) candidates.push({ x: acc, boundary: true, street: st.street, dir: st.dir, stairs: st.dir === 'STAIRS' });
+      const info = st.way ? ways?.[st.way] : undefined;
+      const level = st.level ?? 0;
+      const x = Math.min(length, acc * scale);
+      const vertical = verticalType(st, info, prevLevel, level);
+      const crossing: CrossingKind | undefined = info?.k === 'crossing' && st.distance >= 2 ? (info.sig ? 'signals' : info.zebra ? 'zebra' : 'unmarked') : undefined;
+      const underground = level < 0 || Boolean(info?.u);
+      let note: Maneuver['note'];
+      if (vertical && context.toMetro && !entered && !wasUnderground && (level < 0 || info?.u)) {
+        note = 'entrance';
+        entered = true;
+      } else if (vertical && context.fromMetro && !exited && wasUnderground && level >= 0 && !info?.u) {
+        note = 'exit';
+        exited = true;
       }
+      if (i > 0 && x > 8 && length - x > 8) {
+        const changed = (steps[i - 1].street ?? '') !== (st.street ?? '');
+        if (vertical || crossing) candidates.push({ x, boundary: true, street: st.street, vertical: vertical ?? undefined, crossing, note });
+        else if (changed || st.dir) candidates.push({ x, boundary: true, street: st.street, dir: st.dir });
+      } else if (i === 0 && vertical && note) {
+        candidates.push({ x: Math.max(1, x), boundary: true, vertical, note });
+      }
+      if (vertical || st.distance > 3) wasUnderground = underground;
+      prevLevel = level;
       acc += st.distance;
     }
   }
   for (let i = 1; i < path.length - 1; i++) {
     const x = cum[i];
     if (x < 15 || length - x < 15) continue;
-    if (Math.abs(angleAt(x)) >= 60) candidates.push({ x, boundary: false, street: streetAt(steps, x + 5) });
+    if (Math.abs(angleAt(x)) >= 60) candidates.push({ x, boundary: false, street: streetAt(steps, (x / scale) + 5) });
   }
   candidates.sort((a, b) => a.x - b.x);
 
+  const weight = (t: ManeuverType) => (t === 'straight' ? 0 : t.startsWith('slight') ? 1 : TURNS.has(t) ? 3 : t === 'crossing' ? 4 : VERTICAL.has(t) ? 5 : 0);
+  const semantic = (t: ManeuverType) => t === 'crossing' || VERTICAL.has(t);
+
   for (const c of candidates) {
     const angle = angleAt(c.x);
-    let type: ManeuverType | null = c.stairs ? 'stairs' : (c.dir && DIR_MAP[c.dir]) || null;
+    let type: ManeuverType | null = c.vertical ?? (c.crossing ? 'crossing' : null) ?? ((c.dir && DIR_MAP[c.dir]) || null);
     if (!type) type = Math.abs(angle) >= (c.boundary ? 30 : 60) ? classify(angle) : null;
     // Změna na pojmenovanou ulici bez odbočení → „pokračuj rovně do ulice …“
-    if (!type && c.boundary && c.street && c.street !== streetAt(steps, c.x - 5)) type = 'straight';
+    if (!type && c.boundary && c.street && c.street !== streetAt(steps, c.x / scale - 5)) type = 'straight';
     if (!type) continue;
-    const m: Maneuver = { at: c.x, type, street: c.street };
+    const m: Maneuver = { at: c.x, type, street: VERTICAL.has(type) || type === 'crossing' ? undefined : c.street, ...(c.crossing ? { crossing: c.crossing } : {}), ...(c.note ? { note: c.note } : {}) };
     const last = out[out.length - 1];
-    if (last.type !== 'depart' && c.x - last.at < 25) {
-      const weight = (t: ManeuverType) => (t === 'straight' ? 0 : t.startsWith('slight') ? 1 : t === 'stairs' ? 2 : 3);
+    const gap = c.x - last.at;
+    if (last.type !== 'depart' && (semantic(type) || semantic(last.type))) {
+      if (gap < 8) {
+        // Přechod hned u odbočení → jeden pokyn („odbočte vlevo a přejděte po přechodu“).
+        if (type === 'crossing' && TURNS.has(last.type) && last.type !== 'straight') {
+          out[out.length - 1] = { ...last, crossing: c.crossing };
+          continue;
+        }
+        if (last.type === 'crossing' && TURNS.has(type) && type !== 'straight') {
+          out[out.length - 1] = { ...m, at: last.at, crossing: last.crossing, crossingFirst: true };
+          continue;
+        }
+        if (weight(type) > weight(last.type)) out[out.length - 1] = { ...m, note: m.note ?? last.note };
+        continue;
+      }
+      out.push(m);
+      continue;
+    }
+    if (last.type !== 'depart' && gap < 25) {
       if (weight(type) > weight(last.type) || (!last.street && m.street)) out[out.length - 1] = { ...m, street: m.street ?? last.street };
       continue;
     }
@@ -129,7 +233,7 @@ export function maneuversFor(path: LatLng[], steps?: WalkStep[]): Maneuver[] {
 }
 
 /** Fáze cesty z itineráře. Bez tvaru trasy se použije přímá čára (navigace „vzdušnou čarou“). */
-export function buildPhases(it: Itinerary, origin: LatLng, building: { name: string; coords: LatLng }, eventStart?: string): NavPhase[] {
+export function buildPhases(it: Itinerary, origin: LatLng, building: { name: string; coords: LatLng }, eventStart?: string, ways?: NavWayMap): NavPhase[] {
   const phases: NavPhase[] = [];
   let cursor: LatLng = origin;
   const legs = it.legs;
@@ -151,7 +255,10 @@ export function buildPhases(it: Itinerary, origin: LatLng, building: { name: str
         path,
         cum,
         length: pathLength(path),
-        maneuvers: maneuversFor(path, walk.steps),
+        maneuvers: maneuversFor(path, walk.steps, ways, {
+          toMetro: nextRide?.mode === 'metro',
+          fromMetro: (legs.slice(0, i).reverse().find((l): l is RideLeg => l.kind === 'ride') ?? null)?.mode === 'metro',
+        }),
         target: nextRide ? { name: nextRide.fromStop, coords: targetCoords, platform: nextRide.platform, isStop: true, mode: nextRide.mode } : { name: building.name, coords: targetCoords, isStop: false },
         deadline: nextRide ? nextRide.predictedDeparture : eventStart,
         minutes: walk.minutes,
@@ -183,19 +290,42 @@ export function nextManeuver(maneuvers: Maneuver[], along: number): { maneuver: 
   return { maneuver: next, distance: Math.max(0, next.at - along) };
 }
 
-const ACTION: Record<ManeuverType, string> = {
-  depart: 'Vyrazte',
-  straight: 'Pokračujte rovně',
-  'slight-left': 'Mírně vlevo',
-  left: 'Odbočte vlevo',
-  'sharp-left': 'Ostře vlevo',
-  'slight-right': 'Mírně vpravo',
-  right: 'Odbočte vpravo',
-  'sharp-right': 'Ostře vpravo',
-  uturn: 'Otočte se',
-  stairs: 'Schody',
-  arrive: 'Jste u cíle',
+/** Pokyn jako sloveso (malým písmenem): „odbočte vlevo“, „sejděte po schodech“. */
+const PHRASE: Record<ManeuverType, string> = {
+  depart: 'vyrazte',
+  straight: 'pokračujte rovně',
+  'slight-left': 'mírně vlevo',
+  left: 'odbočte vlevo',
+  'sharp-left': 'ostře vlevo',
+  'slight-right': 'mírně vpravo',
+  right: 'odbočte vpravo',
+  'sharp-right': 'ostře vpravo',
+  uturn: 'otočte se',
+  crossing: 'přejděte po přechodu',
+  stairs: 'pokračujte po schodech',
+  'stairs-up': 'vyjděte po schodech nahoru',
+  'stairs-down': 'sejděte po schodech dolů',
+  escalator: 'pokračujte eskalátorem',
+  'escalator-up': 'vyjeďte eskalátorem nahoru',
+  'escalator-down': 'sjeďte eskalátorem dolů',
+  elevator: 'pokračujte výtahem',
+  'elevator-up': 'vyjeďte výtahem nahoru',
+  'elevator-down': 'sjeďte výtahem dolů',
+  arrive: 'jste u cíle',
 };
+
+const CROSSING_PHRASE: Record<CrossingKind, string> = {
+  zebra: 'přejděte po přechodu',
+  signals: 'přejděte na semaforu',
+  unmarked: 'přejděte silnici',
+};
+
+function phrase(m: Maneuver): string {
+  if (m.type === 'crossing') return CROSSING_PHRASE[m.crossing ?? 'zebra'];
+  const base = PHRASE[m.type];
+  if (!m.crossing) return base;
+  return m.crossingFirst ? `${CROSSING_PHRASE[m.crossing]} a ${base}` : `${base} a ${CROSSING_PHRASE[m.crossing]}`;
+}
 
 export function formatDistance(m: number): string {
   if (m < 15) return 'teď';
@@ -203,15 +333,19 @@ export function formatDistance(m: number): string {
   return `${(m / 1000).toFixed(1).replace('.', ',')} km`;
 }
 
-/** Text pokynu: „Za 80 m odboč vlevo do ulice Vinohradská“. */
+/** Text pokynu: „Za 80 m odbočte vlevo do ulice Vinohradská“, „Vstup do metra“, „Přejděte po přechodu“. */
 export function instructionText(m: Maneuver, distance: number, targetName?: string): { headline: string; detail?: string } {
   if (m.type === 'arrive') {
     return { headline: distance < 15 ? `Jste na místě${targetName ? ` – ${targetName}` : ''}` : `${formatDistance(distance)} do cíle`, detail: targetName };
   }
-  const action = ACTION[m.type];
-  const street = m.street ? (m.type === 'stairs' ? m.street : `do ulice ${m.street}`) : undefined;
-  if (distance < 15) return { headline: `${action}${street ? ` ${street}` : ''}` };
-  return { headline: `Za ${formatDistance(distance)} ${action.charAt(0).toLowerCase()}${action.slice(1)}`, detail: street ? capitalizeFirst(street) : undefined };
+  const action = phrase(m);
+  if (m.note) {
+    const place = m.note === 'entrance' ? 'vstup do metra' : 'výstup z metra';
+    return distance < 15 ? { headline: capitalizeFirst(place), detail: capitalizeFirst(action) } : { headline: `Za ${formatDistance(distance)} ${place}`, detail: capitalizeFirst(action) };
+  }
+  const street = m.street && TURNS.has(m.type) ? `do ulice ${m.street}` : undefined;
+  if (distance < 15) return { headline: `${capitalizeFirst(action)}${street ? ` ${street}` : ''}` };
+  return { headline: `Za ${formatDistance(distance)} ${action}`, detail: street ? capitalizeFirst(street) : undefined };
 }
 
 function capitalizeFirst(s: string) {

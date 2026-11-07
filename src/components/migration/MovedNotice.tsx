@@ -13,7 +13,6 @@ import { createPairing } from '../../services/pairing';
 import { useAppStore } from '../../store/appStore';
 import { toast, useUiStore } from '../../store/uiStore';
 import { BrandMark } from '../layout/AppShell';
-import { Emoji3D } from '../ui/Emoji3D';
 
 const MOVED_KEY = 'stihnu:moved-to';
 const LATER_KEY = 'stihnu:move-later';
@@ -76,14 +75,11 @@ export function MovedNotice() {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[150] grid place-items-center bg-black/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Stihnu má novou adresu">
+    <div className="fixed inset-0 z-[150] grid place-items-center bg-black/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Stihnuto má novou adresu">
       <div className="card w-full max-w-md rounded-[30px] p-6 text-center shadow-2xl">
-        <div className="mx-auto flex w-fit items-center gap-3">
-          <BrandMark className="size-12" />
-          <Emoji3D name="luggage" size={48} />
-        </div>
+        <BrandMark className="mx-auto size-14" />
         <h2 className="mt-4 font-display text-[34px] leading-tight">
-          Stihnu má <em className="text-moss">novou adresu</em>
+          Stihnuto má <em className="text-moss">novou adresu</em>
         </h2>
         <p className="mt-2 text-[15px] font-bold">{hostOf(target)}</p>
         <p className="mt-3 text-[14.5px] leading-relaxed text-muted">
@@ -92,7 +88,7 @@ export function MovedNotice() {
         <button type="button" onClick={() => void move()} disabled={busy} className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-full bg-accent px-5 text-[15px] font-bold text-accent-fg shadow-[0_10px_24px_-12px_var(--accent)] hover:brightness-110 disabled:opacity-60">
           {busy ? 'Připravuji přesun…' : 'Přejít na novou adresu'}
         </button>
-        <p className="mt-3 text-[12.5px] text-subtle">Máte Stihnu jako ikonu na ploše telefonu? Po přesunu ji přidejte znovu z nové adresy (Sdílet → Přidat na plochu).</p>
+        <p className="mt-3 text-[12.5px] text-subtle">Máte Stihnuto jako ikonu na ploše telefonu? Po přesunu ji přidejte znovu z nové adresy (Sdílet → Přidat na plochu).</p>
         <button
           type="button"
           onClick={() => {

@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import type { Task } from '../types';
 import { duplicateSubjects, type SubjectDuplicate } from '../lib/dedupe';
 import { buildMatchContext, guessSubject, type MatchContext, type SubjectGuess } from '../lib/subjectMatch';
-import { useAppStore, type AppState } from '../store/appStore';
+import { resolveSubjectId, useAppStore, type AppState } from '../store/appStore';
 import { toast } from '../store/uiStore';
 
 let ctxCache: { key: unknown[]; ctx: MatchContext } | null = null;
@@ -70,13 +70,39 @@ function subjectUsage(state: AppState): Map<string, number> {
 
 const pairKey = (a: string, b: string) => [a, b].sort().join('|');
 
-/** Jistě zdvojené předměty (stejný kód nebo úplně stejný název) sloučí hned. */
+/**
+ * Sloučí bez ptaní:
+ *  - jistě zdvojené předměty (stejný kód nebo úplně stejný název),
+ *  - předměty, které student už jednou sloučil (pamatuje si to účet) a import je přinesl znovu,
+ *  - podobné dvojice, kde jeden z předmětů student dřív smazal nebo sloučil (starší verze si to nepamatovaly).
+ */
 export function autoMergeSubjects(): string[] {
-  const state = useAppStore.getState();
-  const distinct = new Set(state.settings.distinctSubjects ?? []);
-  const sure = duplicateSubjects(state.subjects, subjectUsage(state)).filter((d) => d.confidence === 'sure' && !distinct.has(pairKey(d.keep.id, d.drop.id)));
-  for (const d of sure) useAppStore.getState().mergeSubjects(d.drop.id, d.keep.id);
-  return sure.map((d) => d.keep.name);
+  const merged: string[] = [];
+  for (let round = 0; round < 20; round++) {
+    const state = useAppStore.getState();
+    const aliases = state.settings.subjectAliases ?? {};
+    const ids = new Set(state.subjects.map((x) => x.id));
+    // 1) Sloučené dřív, ale znovu přinesené importem.
+    const back = state.subjects.find((x) => aliases[x.id] && ids.has(resolveSubjectId(aliases, x.id) ?? ''));
+    if (back) {
+      const keepId = resolveSubjectId(aliases, back.id)!;
+      state.mergeSubjects(back.id, keepId);
+      continue;
+    }
+    const distinct = new Set(state.settings.distinctSubjects ?? []);
+    const tombs = state.tombstones ?? {};
+    const pair = duplicateSubjects(state.subjects, subjectUsage(state)).find(
+      (d) => !distinct.has(pairKey(d.keep.id, d.drop.id)) && (d.confidence === 'sure' || Boolean(tombs[`subject:${d.drop.id}`] || tombs[`subject:${d.keep.id}`])),
+    );
+    if (!pair) break;
+    // Když byl dřív smazaný „ponechávaný“ předmět, ponechat ten druhý.
+    const keepDeleted = Boolean(tombs[`subject:${pair.keep.id}`]) && !tombs[`subject:${pair.drop.id}`];
+    const [keep, drop] = keepDeleted ? [pair.drop, pair.keep] : [pair.keep, pair.drop];
+    state.mergeSubjects(drop.id, keep.id);
+    // O opravě dřívějšího sloučení není potřeba nic hlásit.
+    if (pair.confidence === 'sure' && !tombs[`subject:${pair.drop.id}`] && !tombs[`subject:${pair.keep.id}`]) merged.push(keep.name);
+  }
+  return merged;
 }
 
 /** Možné duplicity, na které se zeptáme (Předměty). */

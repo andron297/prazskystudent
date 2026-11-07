@@ -8,7 +8,7 @@ import { HttpError, errorResponse, json, methodNotAllowed } from './http.js';
 import { readTextLimited } from './security.js';
 
 const API = 'https://kam-septim-fe.is.cuni.cz/webcarecanteenapiweb';
-const USER_AGENT = 'Stihnu/2.4 (studijni aplikace, open source; +https://github.com/andron297/prazskystudent)';
+const USER_AGENT = 'Stihnuto/2.4 (studijni aplikace, open source; +https://github.com/andron297/prazskystudent)';
 
 /** ID menz v Septimu → název (seznam se mění zřídka; neznámá ID proxy odmítne). */
 export const CANTEENS: Record<number, string> = {

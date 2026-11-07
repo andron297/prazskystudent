@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { useUiStore } from '../../store/uiStore';
 import { SerifTitle } from '../ui/primitives';
 
-const EFFECTIVE = '6. listopadu 2026';
+const EFFECTIVE = '7. listopadu 2026';
 const OPERATOR = 'Ondřej Andrle';
 const REPO = 'https://github.com/andron297/prazskystudent';
 /** Výchozí kontakt provozovatele (platí i offline, když server neodpoví). */
@@ -21,18 +21,75 @@ function Contact() {
   );
 }
 
-function Page({ kicker, title, children }: { kicker: string; title: ReactNode; children: ReactNode }) {
+function Page({ kicker, title, children, dated = true }: { kicker: string; title: ReactNode; children: ReactNode; dated?: boolean }) {
   return (
     <article className="mx-auto max-w-3xl">
       <p className="eyebrow text-subtle">{kicker}</p>
       <SerifTitle as="h1" className="mt-1 text-[44px] sm:text-[56px]">
         {title}
       </SerifTitle>
-      <p className="mt-2 text-[14px] text-muted">Platné od {EFFECTIVE}</p>
+      {dated && <p className="mt-2 text-[14px] text-muted">Platné od {EFFECTIVE}</p>}
       <div className="card mt-6 space-y-6 rounded-[28px] p-6 text-[15px] leading-relaxed sm:p-9 [&_h2]:font-display [&_h2]:text-[26px] [&_h2]:leading-tight [&_li]:ml-5 [&_li]:list-disc [&_p]:text-muted [&_li]:text-muted">
         {children}
       </div>
     </article>
+  );
+}
+
+/** Veřejná stránka o aplikaci (domovská stránka pro ověření u Googlu): co aplikace dělá a proč chce přístup ke Googlu. */
+export function AboutView() {
+  return (
+    <Page kicker="O aplikaci" title={<>Stihnuto – studium <em className="text-moss">bez zmatku</em></>} dated={false}>
+      <section>
+        <p>
+          Stihnuto je bezplatná studijní aplikace pro studenty pražských vysokých škol (hlavně Univerzity Karlovy). Na jednom místě ukáže rozvrh, termíny a úkoly ze SISu a Moodlu, kdy vyrazit na přednášku a čím jet (jízdní řády PID se zpožděním), počasí na cestu i jídelníček menzy. Funguje v prohlížeči i jako aplikace na ploše telefonu.
+        </p>
+        <p className="mt-2">
+          Provozuje ji {OPERATOR} jako nekomerční projekt s otevřeným kódem (
+          <a href={REPO} target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
+            GitHub
+          </a>
+          ). Bez reklam a bez sledování.
+        </p>
+      </section>
+      <section>
+        <h2>Proč aplikace chce přístup ke Googlu</h2>
+        <p>Propojení s Googlem je dobrovolné – aplikace funguje i bez něj. Když si ho zapnete, pak:</p>
+        <ul>
+          <li>
+            <strong className="text-fg">Kalendář Google:</strong> do vlastního kalendáře „Stihnuto · studium“ zapíše rozvrh, zkoušky a termíny, takže je máte i v kalendáři v telefonu. Změny, které tam uděláte, převezme zpět.
+          </li>
+          <li>
+            <strong className="text-fg">Úkoly Google:</strong> do seznamu „Stihnuto“ zapíše úkoly a termíny a odškrtnutí synchronizuje oběma směry.
+          </li>
+          <li>
+            <strong className="text-fg">Disk Google:</strong> jen soubory, které k předmětu sami nahrajete nebo vyberete (materiály, poznámky). Ostatní soubory na Disku aplikace nevidí.
+          </li>
+        </ul>
+        <p className="mt-2">
+          Data z Googlu se zpracovávají jen ve vašem prohlížeči, nikomu se neprodávají a nepoužívají se k reklamě. Podrobnosti jsou v{' '}
+          <a href="/soukromi" className="font-semibold text-accent hover:underline">
+            zásadách ochrany osobních údajů
+          </a>{' '}
+          (oddíl 4) a{' '}
+          <a href="/podminky" className="font-semibold text-accent hover:underline">
+            podmínkách použití
+          </a>
+          .
+        </p>
+      </section>
+      <section>
+        <h2>Kontakt</h2>
+        <p>
+          Dotazy a žádosti týkající se údajů: <Contact />.
+        </p>
+        <p className="mt-4">
+          <a href="/#/dnes" className="inline-flex h-11 items-center rounded-full bg-accent px-5 text-[15px] font-bold text-accent-fg hover:brightness-110">
+            Otevřít Stihnuto
+          </a>
+        </p>
+      </section>
+    </Page>
   );
 }
 
@@ -50,7 +107,7 @@ export function PrivacyView() {
       <section>
         <h2>1. Kdo údaje zpracovává</h2>
         <p>
-          Správcem osobních údajů je provozovatel aplikace Stihnu, {OPERATOR}. Kontakt: <Contact />.
+          Správcem osobních údajů je provozovatel aplikace Stihnuto, {OPERATOR}. Kontakt: <Contact />.
         </p>
       </section>
       <section>
@@ -82,12 +139,44 @@ export function PrivacyView() {
         </ul>
         <p className="mt-2">Někteří poskytovatelé sídlí v USA; předání je chráněné standardními smluvními doložkami nebo rámcem EU–USA pro ochranu údajů.</p>
       </section>
+      <section id="google">
+        <h2>4. Data z účtu Google</h2>
+        <p>Když si propojíte Google, aplikace s vaším souhlasem používá:</p>
+        <ul>
+          <li>
+            <strong className="text-fg">Kalendář Google</strong> – založí kalendář „Stihnuto · studium“, zapisuje do něj rozvrh, termíny a důležité dny a čte zpět jejich změny (aby synchronizace fungovala oběma směry).
+          </li>
+          <li>
+            <strong className="text-fg">Úkoly Google</strong> – založí seznam „Stihnuto“ a synchronizuje v něm vaše úkoly a termíny oběma směry.
+          </li>
+          <li>
+            <strong className="text-fg">Disk Google</strong> – jen soubory a složky, které s aplikací sami vytvoříte nebo vyberete (materiály k předmětům). K ostatním souborům aplikace přístup nemá.
+          </li>
+        </ul>
+        <p className="mt-2">
+          Data z Googlu se zpracovávají jen ve vašem prohlížeči a mezi ním a Googlem. Náš server jen pomáhá s přihlášením: přihlašovací token zapečetí (zašifruje) a ten se uloží ve vašem zařízení, případně ve vašem zašifrovaném účtu – server sám nic z Googlu neukládá. Data z Googlu nikomu neprodáváme, nepoužíváme je k reklamě ani k trénování AI a nikdo je nečte – výjimkou je jen řešení problému na vaši výslovnou žádost, bezpečnost nebo zákonná povinnost. Propojení zrušíte v aplikaci (Nastavení → Propojení → Google) nebo na{' '}
+          <a href="https://myaccount.google.com/connections" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
+            myaccount.google.com/connections
+          </a>
+          .
+        </p>
+        <p className="mt-2">
+          Používání a předávání informací získaných z Google API se řídí zásadami{' '}
+          <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
+            Google API Services User Data Policy
+          </a>
+          , včetně požadavků na omezené použití (Limited Use).
+        </p>
+        <p className="mt-2 text-[13px] text-subtle" lang="en">
+          Stihnuto&apos;s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements.
+        </p>
+      </section>
       <section>
-        <h2>4. Jak dlouho</h2>
+        <h2>5. Jak dlouho</h2>
         <p>Dokud máte účet. Po jeho smazání data zmizí hned; ze záloh poskytovatele nejpozději do 30 dnů.</p>
       </section>
       <section>
-        <h2>5. Vaše práva</h2>
+        <h2>6. Vaše práva</h2>
         <ul>
           <li>přístup k údajům a jejich přenositelnost (Účet → Stáhnout moje data),</li>
           <li>oprava a výmaz (úpravy v aplikaci, Účet → Smazat účet),</li>
@@ -102,7 +191,7 @@ export function PrivacyView() {
         </ul>
       </section>
       <section>
-        <h2>6. Zabezpečení</h2>
+        <h2>7. Zabezpečení</h2>
         <p>
           Šifrování AES-256 přímo v zařízení, heslo se na server neposílá (jen z něj odvozený otisk), každý uživatel vidí v databázi jen svůj zašifrovaný záznam, veškerá komunikace běží přes HTTPS a kód aplikace je veřejný (
           <a href={REPO} target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
@@ -112,11 +201,11 @@ export function PrivacyView() {
         </p>
       </section>
       <section>
-        <h2>7. Věk a cookies</h2>
+        <h2>8. Věk a cookies</h2>
         <p>Účet si může založit člověk starší 15 let. Aplikace používá jen nezbytné místní úložiště a cookies pro přihlášení – žádné reklamní ani analytické.</p>
       </section>
       <section>
-        <h2>8. Změny</h2>
+        <h2>9. Změny</h2>
         <p>O podstatných změnách těchto zásad dáme vědět v aplikaci.</p>
       </section>
     </Page>
@@ -129,7 +218,7 @@ export function TermsView() {
       <section>
         <h2>1. O aplikaci</h2>
         <p>
-          Stihnu je bezplatná nekomerční aplikace pro studenty, kterou provozuje {OPERATOR} (dále „provozovatel“). Kód je veřejný pod licencí MIT. Kontakt: <Contact />.
+          Stihnuto je bezplatná nekomerční aplikace pro studenty, kterou provozuje {OPERATOR} (dále „provozovatel“). Kód je veřejný pod licencí MIT. Kontakt: <Contact />.
         </p>
       </section>
       <section>

@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import { useClockStore } from '../store/clockStore';
+import { clockOffsetAt, useClockStore } from '../store/clockStore';
 
 /* Jeden sdílený časovač pro celou aplikaci (místo setInterval v každé komponentě). */
 const listeners = new Set<() => void>();
@@ -29,11 +29,14 @@ function subscribe(listener: () => void): () => void {
  * překreslí jen při změně (např. jednou za minutu u seznamu termínů).
  */
 export function useNow(granularityMs = 1000): Date {
-  const offset = useClockStore((s) => s.offsetMs);
+  const offsetMs = useClockStore((s) => s.offsetMs);
+  const speed = useClockStore((s) => s.speed);
+  const speedFrom = useClockStore((s) => s.speedFrom);
+  const clock = { offsetMs, speed, speedFrom };
   const bucket = useSyncExternalStore(
     subscribe,
-    () => Math.floor((tick + offset) / granularityMs),
-    () => Math.floor((Date.now() + offset) / granularityMs),
+    () => Math.floor((tick + clockOffsetAt(clock, tick)) / granularityMs),
+    () => Math.floor((Date.now() + clockOffsetAt(clock, Date.now())) / granularityMs),
   );
   return useMemo(() => new Date(bucket * granularityMs), [bucket, granularityMs]);
 }

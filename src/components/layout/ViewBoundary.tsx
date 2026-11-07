@@ -39,7 +39,7 @@ export class ViewBoundary extends Component<{ children: ReactNode; compact?: boo
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     if (isChunkError(error) && reloadOnceForNewVersion()) return;
-    console.error('Stihnu: část aplikace se nevykreslila', error, info.componentStack);
+    console.error('Stihnuto: část aplikace se nevykreslila', error, info.componentStack);
   }
 
   render() {

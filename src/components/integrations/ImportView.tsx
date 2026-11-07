@@ -252,7 +252,7 @@ function MoodleActivityCard({ page, subjects, onDone }: { page: MoodleActivityPa
               const s = subjects.find((x) => x.id === r.subjectId);
               return (
                 <option key={r.id} value={r.id}>
-                  {r.id === matched?.id ? '✓ ' : ''}
+                  {r.id === matched?.id ? '(navrženo) ' : ''}
                   {r.title}
                   {s ? ` · ${s.code ?? s.name}` : ''}
                 </option>

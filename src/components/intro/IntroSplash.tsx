@@ -1,7 +1,7 @@
 /**
  * Úvodní animace při každém otevření (asi 4 s, klepnutím se dá přeskočit):
  *  1. logo se nakreslí a ručičky hodin se natočí na aktuální čas,
- *  2. „Stihnu – Stihnete to.“,
+ *  2. „Stihnuto – Stihnete to.“,
  *  3. tři karty „váš den“: pozdrav, co vás dnes čeká, odpočet nebo svátek,
  *  4. opona se zvedne a pod ní je hotová aplikace.
  * Jen transformace a průhlednost (plynulé i na slabším telefonu), texty až po
@@ -12,69 +12,108 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { calendarDayDiff, formatTime, isSameDay, plural, toDate } from '../../lib/dates';
 import { nameDayText, publicHoliday } from '../../lib/czechDays';
 import { visibleEvents } from '../../lib/dedupe';
-import { countdown3d, type Emoji3DName } from '../../lib/emoji3d';
 import { isRequirementComplete } from '../../lib/progress';
 import { useAppStore } from '../../store/appStore';
 import { appNow } from '../../store/clockStore';
 import { buildingForEvent } from '../../store/selectors';
 import { useUiStore } from '../../store/uiStore';
-import { Emoji3D } from '../ui/Emoji3D';
 
 interface Fact {
-  emoji: Emoji3DName;
+  /** Krátký štítek nad větou („Dnes“, „Termín“, „Svátek“). */
+  label: string;
   text: string;
+  /** Zvýraznit (termín dnes). */
+  strong?: boolean;
 }
 
-function greeting(h: number): [string, Emoji3DName] {
-  if (h < 5) return ['Dobrou noc', 'night-with-stars'];
-  if (h < 10) return ['Dobré ráno', 'sunrise'];
-  if (h < 12) return ['Dobré dopoledne', 'sun-behind-small-cloud'];
-  if (h < 18) return ['Dobré odpoledne', 'sun'];
-  if (h < 21) return ['Dobrý večer', 'sunset'];
-  return ['Dobrý večer', 'crescent-moon'];
+function greeting(h: number): string {
+  if (h < 5) return 'Dobrou noc';
+  if (h < 10) return 'Dobré ráno';
+  if (h < 12) return 'Dobré dopoledne';
+  if (h < 18) return 'Dobré odpoledne';
+  return 'Dobrý večer';
 }
 
-/** Tři věty o dnešku: pozdrav, co vás čeká, odpočet nebo svátek. */
-function dayFacts(now: Date): Fact[] {
+const DAY_NAMES = ['v neděli', 'v pondělí', 've středu', 've čtvrtek', 'v pátek', 'v sobotu'];
+function dayWord(d: Date, now: Date): string {
+  const diff = calendarDayDiff(d, now);
+  if (diff === 0) return 'dnes';
+  if (diff === 1) return 'zítra';
+  return ['v neděli', 'v pondělí', 'v úterý', 've středu', 've čtvrtek', 'v pátek', 'v sobotu'][d.getDay()] ?? DAY_NAMES[0];
+}
+
+/** Pozdrav a dvě věty o dnešku: výuka nebo termín, odpočet nebo svátek. */
+function dayFacts(now: Date): { hello: string; facts: Fact[] } {
   const s = useAppStore.getState();
-  const [hello, helloEmoji] = greeting(now.getHours());
   const name = s.settings.displayName.trim();
-  const facts: Fact[] = [{ emoji: helloEmoji, text: name ? `${hello}, ${name}` : hello }];
+  const hello = name ? `${greeting(now.getHours())}, ${name}` : greeting(now.getHours());
+  const facts: Fact[] = [];
 
   const holiday = publicHoliday(now);
   const deadline = s.requirements.find((r) => r.deadline && !isRequirementComplete(r) && isSameDay(new Date(r.deadline), now) && new Date(r.deadline) > now);
-  const classes = visibleEvents(s.events, s.subjects)
-    .filter((e) => e.kind !== 'personal' && !e.allDay && isSameDay(new Date(e.start), now) && new Date(e.end) > now)
+  const study = visibleEvents(s.events, s.subjects)
+    .filter((e) => e.kind !== 'personal' && !e.allDay && new Date(e.end) > now)
     .sort((a, b) => a.start.localeCompare(b.start));
-  if (now.getHours() < 5) facts.push({ emoji: 'sleeping-face', text: 'Zítřek je naplánovaný. Dopřejte si spánek.' });
-  else if (holiday) facts.push({ emoji: 'party-popper', text: `Dnes je svátek: ${holiday.charAt(0).toLowerCase()}${holiday.slice(1)}` });
-  else if (deadline) facts.push({ emoji: 'memo', text: `Dnes termín: ${deadline.title}` });
-  else if (classes.length > 0) {
-    const first = classes[0];
+  const today = study.filter((e) => isSameDay(new Date(e.start), now));
+  if (deadline) facts.push({ label: 'Termín dnes', text: `${deadline.title} – do ${formatTime(new Date(deadline.deadline!))}`, strong: true });
+  if (holiday) facts.push({ label: 'Svátek', text: holiday });
+  else if (today.length > 0) {
+    const first = today[0];
     const building = buildingForEvent(first, s.settings).building;
     const started = new Date(first.start) <= now;
-    const n = classes.length;
+    const n = today.length;
     facts.push({
-      emoji: 'graduation-cap',
-      text: started ? `Právě probíhá výuka · dnes ještě ${n} ${plural(n, ['hodina', 'hodiny', 'hodin'])}` : `První výuka v ${formatTime(new Date(first.start))}${building ? ` · ${building.name}` : ''}`,
+      label: 'Dnes',
+      text: started ? `Právě probíhá výuka, dnes ještě ${n} ${plural(n, ['hodina', 'hodiny', 'hodin'])}` : `První výuka v ${formatTime(new Date(first.start))}${building ? ` · ${building.name}` : ''}`,
     });
-  } else if (now.getDay() === 0 || now.getDay() === 6) facts.push({ emoji: 'beach-with-umbrella', text: 'Víkend. Plán počká, odpočinek ne.' });
-  else facts.push({ emoji: 'seedling', text: 'Dnes už žádná výuka – čas na vás.' });
+  } else {
+    const next = study[0];
+    if (next && calendarDayDiff(new Date(next.start), now) <= 7) {
+      const building = buildingForEvent(next, s.settings).building;
+      facts.push({ label: 'Další výuka', text: `${dayWord(new Date(next.start), now)} v ${formatTime(new Date(next.start))}${building ? ` · ${building.name}` : ''}` });
+    } else facts.push({ label: 'Dnes', text: 'Žádná výuka v rozvrhu.' });
+  }
 
   const countdown = (s.settings.countdowns ?? [])
     .map((c) => ({ c, days: calendarDayDiff(toDate(c.at), now) }))
     .filter((x) => x.days >= 0)
     .sort((a, b) => a.days - b.days)[0];
   const nameDay = nameDayText(now);
-  if (countdown) {
-    const d = countdown.days;
-    facts.push({ emoji: countdown3d(countdown.c.emoji), text: d === 0 ? `Dnes: ${countdown.c.title}` : `${countdown.c.title} za ${d} ${plural(d, ['den', 'dny', 'dní'])}` });
-  } else if (nameDay) facts.push({ emoji: 'wrapped-gift', text: nameDay });
-  return facts.slice(0, 3);
+  if (facts.length < 2) {
+    if (countdown) {
+      const d = countdown.days;
+      facts.push({ label: 'Odpočet', text: d === 0 ? `Dnes: ${countdown.c.title}` : `${countdown.c.title} za ${d} ${plural(d, ['den', 'dny', 'dní'])}` });
+    } else if (nameDay) facts.push({ label: 'Svátek', text: nameDay.replace(/^Svátek (má|mají) /, '') });
+  }
+  return { hello, facts: facts.slice(0, 2) };
+}
+
+/** Úhel ručičky plynule z nuly na cíl (atribut SVG transform – spolehlivé i v Safari). */
+function useSweep(target: number, delay: number, duration: number, reduce: boolean): number {
+  const [angle, setAngle] = useState(reduce ? target : 0);
+  useEffect(() => {
+    if (reduce) {
+      setAngle(target);
+      return;
+    }
+    let raf = 0;
+    const t0 = performance.now() + delay;
+    const ease = (x: number) => 1 - Math.pow(1 - x, 3);
+    const step = (t: number) => {
+      const k = Math.min(1, Math.max(0, (t - t0) / duration));
+      setAngle(target * ease(k));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, delay, duration, reduce]);
+  return angle;
 }
 
 function Mark({ minutesAngle, hoursAngle, reduce }: { minutesAngle: number; hoursAngle: number; reduce: boolean }) {
   const t = (delay: number, duration: number) => (reduce ? { duration: 0 } : { delay, duration, ease: [0.22, 1, 0.36, 1] as const });
+  const hour = useSweep(hoursAngle, 300, 1100, reduce);
+  const minute = useSweep(minutesAngle, 300, 1300, reduce);
   return (
     <svg viewBox="0 0 64 64" className="size-[88px] drop-shadow-[0_18px_40px_rgb(0_0_0/0.35)] sm:size-[104px]" aria-hidden>
       <defs>
@@ -86,13 +125,9 @@ function Mark({ minutesAngle, hoursAngle, reduce }: { minutesAngle: number; hour
       <motion.rect width="64" height="64" rx="20" fill="url(#intro-g)" initial={reduce ? false : { scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 240, damping: 20 }} style={{ transformBox: 'view-box', transformOrigin: '32px 32px' }} />
       <motion.circle cx="32" cy="33" r="16" fill="none" stroke="#f1ece0" strokeOpacity="0.28" strokeWidth="4.5" initial={reduce ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={t(0.15, 0.8)} />
       <motion.path d="M32 17a16 16 0 0 1 15.2 11" fill="none" stroke="#d4b98e" strokeWidth="4.5" strokeLinecap="round" initial={reduce ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={t(0.55, 0.5)} />
-      {/* Ručičky se otáčejí kolem středu ciferníku v souřadnicích SVG (view-box), ne kolem sebe. */}
-      <motion.g initial={reduce ? false : { rotate: 0 }} animate={{ rotate: hoursAngle }} transition={t(0.3, 1.1)} style={{ transformBox: 'view-box', transformOrigin: '32px 33px' }}>
-        <line x1="32" y1="33" x2="32" y2="24" stroke="#f1ece0" strokeWidth="4.5" strokeLinecap="round" />
-      </motion.g>
-      <motion.g initial={reduce ? false : { rotate: 0 }} animate={{ rotate: minutesAngle }} transition={t(0.3, 1.3)} style={{ transformBox: 'view-box', transformOrigin: '32px 33px' }}>
-        <line x1="32" y1="33" x2="32" y2="21" stroke="#f1ece0" strokeWidth="3.2" strokeLinecap="round" />
-      </motion.g>
+      {/* Ručičky ukážou aktuální čas (otáčí se kolem středu ciferníku 32,33). */}
+      <line x1="32" y1="33" x2="32" y2="24.5" stroke="#f1ece0" strokeWidth="4.5" strokeLinecap="round" transform={`rotate(${hour.toFixed(2)} 32 33)`} />
+      <line x1="32" y1="33" x2="32" y2="20.5" stroke="#f1ece0" strokeWidth="3.2" strokeLinecap="round" transform={`rotate(${minute.toFixed(2)} 32 33)`} />
       <circle cx="32" cy="33" r="2.6" fill="#f1ece0" />
       <motion.path d="M44 12c-5 0-8 3-8 7 4 0 8-2.5 8-7z" fill="#a8c79f" initial={reduce ? false : { scale: 0, rotate: -40, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 14, delay: 0.95 }} style={{ transformBox: 'view-box', transformOrigin: '40px 16px' }} />
     </svg>
@@ -102,15 +137,23 @@ function Mark({ minutesAngle, hoursAngle, reduce }: { minutesAngle: number; hour
 const TOTAL_MS = 4300;
 const REDUCED_MS = 1400;
 
+/** Veřejné stránky (zásady, podmínky, o aplikaci, propojení zařízení) se otevírají bez úvodní animace. */
+function openedOnPublicPage(): boolean {
+  if (typeof window === 'undefined') return false;
+  const where = `${window.location.pathname} ${window.location.hash}`;
+  return /\/(soukromi|privacy|podminky|terms|o-aplikaci|about|pripojit)\b/.test(where);
+}
+
 export function IntroSplash() {
-  const enabled = useAppStore((s) => s.settings.appearance?.intro !== false);
+  const enabled = useAppStore((s) => s.settings.appearance?.intro !== false) && !openedOnPublicPage();
   const reduce = Boolean(useReducedMotion());
   const [visible, setVisible] = useState(enabled);
   const [fontsReady, setFontsReady] = useState(false);
   const [run, setRun] = useState(0);
   const now = useMemo(() => appNow(), [run]); // eslint-disable-line react-hooks/exhaustive-deps
-  const facts = useMemo(() => dayFacts(now), [now]);
-  const minutesAngle = now.getMinutes() * 6 + 360;
+  const { hello, facts } = useMemo(() => dayFacts(now), [now]);
+  // Jedna celá otáčka navíc – ručičky se roztočí a zastaví na aktuálním čase.
+  const minutesAngle = now.getMinutes() * 6 + now.getSeconds() * 0.1 + 360;
   const hoursAngle = ((now.getHours() % 12) + now.getMinutes() / 60) * 30 + 360;
 
   // Ukázka z nastavení Vzhled
@@ -151,7 +194,7 @@ export function IntroSplash() {
     };
   }, [visible, reduce, run]);
 
-  const word = 'Stihnu';
+  const word = 'Stihnuto';
   const rise = (delay: number) => (reduce ? { initial: false as const, animate: { opacity: 1, y: 0 } } : { initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 }, transition: { delay, duration: 0.55, ease: [0.22, 1, 0.36, 1] as const } });
 
   return (
@@ -195,15 +238,18 @@ export function IntroSplash() {
                   Stihnete to.
                 </motion.p>
 
-                <ul className="mt-7 w-full max-w-[22rem] space-y-2 text-left">
+                <motion.p {...rise(1.4)} className="mt-7 font-display text-[25px] leading-tight text-[#f6f2e8] sm:text-[28px]">
+                  {hello}
+                </motion.p>
+                <ul className="mt-4 w-full max-w-[22rem] space-y-2 text-left">
                   {facts.map((f, i) => (
                     <motion.li
                       key={f.text}
-                      {...(reduce ? { initial: false as const, animate: { opacity: 1, y: 0 } } : { initial: { opacity: 0, y: 22, scale: 0.97 }, animate: { opacity: 1, y: 0, scale: 1 }, transition: { delay: 1.55 + i * 0.32, duration: 0.55, ease: [0.22, 1, 0.36, 1] as const } })}
-                      className="flex items-center gap-3 rounded-[18px] bg-white/[0.08] px-3.5 py-2.5 ring-1 ring-inset ring-white/15"
+                      {...(reduce ? { initial: false as const, animate: { opacity: 1, y: 0 } } : { initial: { opacity: 0, y: 18 }, animate: { opacity: 1, y: 0 }, transition: { delay: 1.75 + i * 0.3, duration: 0.55, ease: [0.22, 1, 0.36, 1] as const } })}
+                      className={f.strong ? 'rounded-[16px] bg-[#d4b98e] px-4 py-2.5 text-[#1b3626]' : 'rounded-[16px] bg-white/[0.08] px-4 py-2.5 ring-1 ring-inset ring-white/15'}
                     >
-                      <Emoji3D name={f.emoji} size={34} eager />
-                      <span className="min-w-0 text-[15px] font-semibold leading-snug text-[#f6f2e8]">{f.text}</span>
+                      <span className={f.strong ? 'block text-[11px] font-black uppercase tracking-[0.14em] text-[#1b3626]/70' : 'block text-[11px] font-bold uppercase tracking-[0.14em] text-white/55'}>{f.label}</span>
+                      <span className="block text-[15px] font-semibold leading-snug">{f.text}</span>
                     </motion.li>
                   ))}
                 </ul>

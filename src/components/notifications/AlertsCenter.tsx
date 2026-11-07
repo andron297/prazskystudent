@@ -203,7 +203,7 @@ function NotifySettings() {
       <Toggle checked={notifyLeave && permission === 'granted'} onChange={(v) => void enable({ notifyLeave: v })} label="Kdy vyrazit" description="5 minut před odchodem a ve chvíli odchodu." />
       <Toggle checked={notifyDeadlines && permission === 'granted'} onChange={(v) => void enable({ notifyDeadlines: v })} label="Termíny" description="Večer předem a 3 hodiny před termínem." />
       {permission === 'denied' && <p className="text-[12px] text-red-700 dark:text-red-300">Upozornění jsou v prohlížeči zakázaná – povolte je v nastavení webu.</p>}
-      <p className="text-[11.5px] leading-relaxed text-subtle">Upozornění chodí, dokud je Stihnu otevřené (i na pozadí). Nainstalovaná aplikace na ploše je nejspolehlivější.</p>
+      <p className="text-[11.5px] leading-relaxed text-subtle">Upozornění chodí, dokud je Stihnuto otevřené (i na pozadí). Nainstalovaná aplikace na ploše je nejspolehlivější.</p>
     </div>
   );
 }
@@ -317,7 +317,7 @@ function loadSent(): Record<string, number> {
   }
 }
 
-async function showNotification(title: string, body: string, tag: string) {
+export async function showNotification(title: string, body: string, tag: string) {
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
     if (reg) await reg.showNotification(title, { body, tag, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png' });

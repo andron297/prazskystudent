@@ -76,6 +76,8 @@ export interface SisSubjectPage {
   url: string;
   text: string;
   candidates: string[];
+  /** Při hledání podle názvu: nalezené předměty (kód a název, pokud ho SIS uvádí). */
+  matches?: { code: string; name?: string }[];
 }
 
 export interface StudyApi {
@@ -198,7 +200,7 @@ export async function testGolemioKey(key: string): Promise<{ ok: boolean; messag
     const live = departures.filter((d) => d.delaySeconds !== null).length;
     return {
       ok: true,
-      message: `Funguje ✓ – ${departures.length} odjezdů z Národního divadla, ${live} s online polohou.`,
+      message: `Funguje – ${departures.length} odjezdů z Národního divadla, ${live} s online polohou.`,
     };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : String(error) };

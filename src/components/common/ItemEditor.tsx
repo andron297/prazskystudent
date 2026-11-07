@@ -249,7 +249,7 @@ function EventForm({ event, onClose }: { event?: ScheduleEvent; onClose: () => v
         <Field label="Místo">
           <TextInput value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Adresa nebo místo" />
         </Field>
-        <Field label="Budova (pro MHD)" hint="Vyberte, a Stihnu spočítá cestu.">
+        <Field label="Budova (pro MHD)" hint="Vyberte, a Stihnuto spočítá cestu.">
           <Select value={buildingId} onChange={(e) => setBuildingId(e.target.value)}>
             <option value="">Žádná</option>
             {buildings.map((b) => (

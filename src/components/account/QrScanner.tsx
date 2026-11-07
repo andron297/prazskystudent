@@ -132,7 +132,7 @@ export function QrScanner({ onResult, onClose, title = 'Namiřte na QR kód', hi
           </div>
         )}
       </div>
-      <p className="relative px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-[14px] leading-relaxed text-white/85">{wrong ? 'Tohle není kód pro propojení se Stihnu.' : (hint ?? 'Kód najdete na počítači v Účtu → Propojit telefon.')}</p>
+      <p className="relative px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-[14px] leading-relaxed text-white/85">{wrong ? 'Tohle není kód pro propojení se Stihnutem.' : (hint ?? 'Kód najdete na počítači v Účtu → Propojit telefon.')}</p>
     </motion.div>,
     document.body,
   );

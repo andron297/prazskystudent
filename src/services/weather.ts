@@ -3,7 +3,8 @@
  * Výsledek se drží 30 minut v paměti i v localStorage; bez sítě se použije
  * věrohodná simulace, aby rada na cestu fungovala vždy.
  */
-import { useEffect, useState } from 'react';
+import { useTestStore, type SimWeather } from '../store/testStore';
+import { useEffect, useMemo, useState } from 'react';
 import type { LatLng } from '../types';
 import { openMeteoUrl, parseOpenMeteo, simulateForecast, type WeatherForecast } from '../lib/weather';
 import { haversineMeters } from '../lib/geo';
@@ -97,5 +98,17 @@ export function useWeather(location: LatLng, enabled = true): { forecast: Weathe
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, enabled]);
-  return { forecast, refresh: () => void fetchForecast(location, true).then(setForecast) };
+  // Testovací režim: simulované počasí přepíše teď i předpověď na dnešek.
+  const sim = useTestStore((s) => s.weather);
+  const shown = useMemo(() => (forecast && sim ? simulateWeather(forecast, sim) : forecast), [forecast, sim]);
+  return { forecast: shown, refresh: () => void fetchForecast(location, true).then(setForecast) };
+}
+
+function simulateWeather(f: WeatherForecast, sim: SimWeather): WeatherForecast {
+  const isDay = f.current.isDay;
+  return {
+    ...f,
+    current: { ...f.current, code: sim.code, temp: sim.temp, feels: sim.feels, isDay },
+    hourly: f.hourly.map((h) => ({ ...h, code: sim.code, temp: sim.temp, feels: sim.feels, precipProb: sim.precipProb, precip: sim.precipProb >= 50 ? 1.2 : 0 })),
+  };
 }

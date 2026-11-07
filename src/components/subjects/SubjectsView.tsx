@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, BookOpen, CalendarDays, Combine, ExternalLink, GraduationCap, ListChecks, ListTodo, MapPin, Paperclip, Pencil, Plug, Plus, RefreshCw, ScrollText, Trash } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarDays, Combine, ExternalLink, GraduationCap, ListChecks, ListTodo, MapPin, Paperclip, Pencil, Plus, RefreshCw, ScrollText, Trash } from 'lucide-react';
 import type { Subject, SubjectColor } from '../../types';
 import { requirementToCalendarItem } from '../../lib/calendarExport';
 import { SUBJECT_COLOR_CLASSES, SUBJECT_COLORS, nextSubjectColor } from '../../lib/colors';
@@ -24,6 +24,7 @@ import { Button, Card, Chip, cn, EmptyState, Field, TextInput } from '../ui/prim
 import { MaterialsPanel, MaterialViewer, useMaterialOpener } from './Materials';
 import { RequirementCard, RequirementEditor } from './RequirementCard';
 import { TaskRowItem } from '../tasks/TaskRow';
+import { AddSubjectDialog } from './AddSubject';
 
 const SOURCE_BADGE: Partial<Record<Subject['source'], string>> = {
   moodle: 'Moodle',
@@ -87,6 +88,13 @@ function SubjectGrid() {
   const materials = useAppStore((s) => s.materials);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addKey, setAddKey] = useState(0);
+  const [manualInitial, setManualInitial] = useState<{ name?: string; code?: string }>({});
+  const openAdd = () => {
+    setAddKey((k) => k + 1);
+    setAddOpen(true);
+  };
 
   return (
     <div className="space-y-4">
@@ -102,29 +110,30 @@ function SubjectGrid() {
               Předměty <em className="text-[#e7d6b5]">a materiály</em>
             </h1>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="glass" icon={Plug} onClick={() => navigateTo('propojeni', 'moodle')}>
-              Moodle
-            </Button>
-            <Button
-              variant="sand"
-              icon={Plus}
-              onClick={() => {
-                setEditorKey((k) => k + 1);
-                setEditorOpen(true);
-              }}
-            >
-              Předmět
-            </Button>
-          </div>
+          <Button variant="sand" icon={Plus} onClick={openAdd}>
+            Přidat předmět
+          </Button>
         </div>
       </header>
 
       <DuplicatePrompt />
 
       {subjects.length === 0 ? (
-        <EmptyState icon={BookOpen} title="Zatím žádné předměty" action={<Button variant="primary" icon={Plug} onClick={() => navigateTo('propojeni', 'sis')}>Propojit SIS</Button>}>
-          Předměty se vytvoří automaticky z rozvrhu (.ics) nebo z kurzů v Moodlu.
+        <EmptyState
+          icon={BookOpen}
+          title="Zatím žádné předměty"
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button variant="primary" icon={Plus} onClick={openAdd}>
+                Přidat předmět
+              </Button>
+              <Button variant="secondary" onClick={() => useUiStore.getState().openSetup('sis')}>
+                Načíst celý rozvrh ze SISu
+              </Button>
+            </div>
+          }
+        >
+          Předměty se vytvoří samy z rozvrhu SIS nebo z kurzů v Moodlu. Jednotlivý předmět přidáte podle kódu nebo názvu.
         </EmptyState>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -189,7 +198,18 @@ function SubjectGrid() {
           })}
         </div>
       )}
-      <SubjectEditor key={editorKey} open={editorOpen} onClose={() => setEditorOpen(false)} />
+      <AddSubjectDialog
+        key={`add-${addKey}`}
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onManual={(initial) => {
+          setAddOpen(false);
+          setManualInitial(initial);
+          setEditorKey((k) => k + 1);
+          setEditorOpen(true);
+        }}
+      />
+      <SubjectEditor key={editorKey} open={editorOpen} onClose={() => setEditorOpen(false)} initial={manualInitial} />
     </div>
   );
 }
@@ -408,11 +428,11 @@ function SubjectTasks({ subject }: { subject: Subject }) {
   );
 }
 
-export function SubjectEditor({ open, onClose, subject }: { open: boolean; onClose: () => void; subject?: Subject }) {
+export function SubjectEditor({ open, onClose, subject, initial }: { open: boolean; onClose: () => void; subject?: Subject; initial?: { name?: string; code?: string } }) {
   const subjects = useAppStore((s) => s.subjects);
   const upsertSubject = useAppStore((s) => s.upsertSubject);
-  const [name, setName] = useState(subject?.name ?? '');
-  const [code, setCode] = useState(subject?.code ?? '');
+  const [name, setName] = useState(subject?.name ?? initial?.name ?? '');
+  const [code, setCode] = useState(subject?.code ?? initial?.code ?? '');
   const [teacher, setTeacher] = useState(subject?.teacher ?? '');
   const [credits, setCredits] = useState(subject?.credits ? String(subject.credits) : '');
   const [completion, setCompletion] = useState(subject?.completion ?? '');
@@ -437,7 +457,7 @@ export function SubjectEditor({ open, onClose, subject }: { open: boolean; onClo
     <Modal
       open={open}
       onClose={onClose}
-      title={subject ? 'Upravit předmět' : 'Nový předmět'}
+      title={subject ? 'Upravit předmět' : 'Předmět ručně'}
       icon={BookOpen}
       footer={
         <>

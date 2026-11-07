@@ -15,7 +15,7 @@ function toGoogleEvent(item: CalendarItem, reminders: number[]) {
       useDefault: false,
       overrides: reminders.slice(0, 5).map((minutes) => ({ method: 'popup', minutes: Math.min(Math.max(0, minutes), 40_320) })),
     },
-    source: { title: 'Stihnu', url: window.location.origin },
+    source: { title: 'Stihnuto', url: window.location.origin },
   };
   if (item.allDay) {
     return { ...base, start: { date: toDateKey(item.start) }, end: { date: toDateKey(addDays(item.end ?? item.start, 1)) } };

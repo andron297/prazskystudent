@@ -1,4 +1,4 @@
-/** Přístupový token účtu Stihnu pro vlastní API (bez závislostí – kvůli cyklickým importům). */
+/** Přístupový token účtu Stihnuto pro vlastní API (bez závislostí – kvůli cyklickým importům). */
 let token: string | null = null;
 
 export function setAccountToken(next: string | null): void {

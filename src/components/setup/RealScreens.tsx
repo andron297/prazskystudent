@@ -1,7 +1,7 @@
 /**
- * Skutečné snímky obrazovky k návodům (žádné ilustrace): očíslované kroky
- * jsou vyznačené přímo na snímku. Na telefonu se dají posouvat do strany
- * a klepnutím zvětšit na celou obrazovku.
+ * Snímky obrazovky k návodům (u Moodlu skutečné, u Googlu věrné ilustrace –
+ * vždy s popiskem zdroje): očíslované kroky jsou vyznačené přímo na snímku.
+ * Na telefonu se dají posouvat do strany a klepnutím zvětšit na celou obrazovku.
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -34,7 +34,7 @@ export const MOODLE_SHOTS: RealShot[] = [
     alt: 'Moodle – pod formulářem se objeví URL kalendáře a tlačítko Zkopírovat adresu URL',
     caption: (
       <>
-        Pod formulářem se objeví adresa. Klikněte na <strong>Zkopírovat adresu URL</strong> (4) a vložte ji do Stihnu.
+        Pod formulářem se objeví adresa. Klikněte na <strong>Zkopírovat adresu URL</strong> (4) a vložte ji do Stihnuta.
       </>
     ),
   },

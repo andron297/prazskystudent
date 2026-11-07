@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SubjectColor } from '../types';
 import { detectFaculty, findPreset, LOCATION_PRESETS } from '../lib/buildings';
 import { CAMPUS_BUILDINGS, FACULTIES, facultyBuildings, facultyById, withCampus } from '../lib/campus';
-import { countdown3d, OUTFIT_3D, weather3d } from '../lib/emoji3d';
+import { OUTFIT_3D, weather3d } from '../lib/emoji3d';
 import { platformLabel } from '../lib/transitPlanner';
 import { spotifyEmbedUrl, spotifyOpenUrl } from '../lib/music';
 import { focusLeft, focusSummary, useFocusStore } from '../store/focusStore';
@@ -61,10 +62,8 @@ describe('3D obrázky', () => {
     expect(weather3d(95)).toBe('cloud-with-lightning-and-rain');
     expect(weather3d(45)).toBe('fog');
   });
-  it('každé oblečení i odpočet má obrázek', () => {
+  it('každé oblečení má obrázek', () => {
     expect(Object.values(OUTFIT_3D).every(Boolean)).toBe(true);
-    expect(countdown3d('🎓')).toBe('graduation-cap');
-    expect(countdown3d('nic')).toBe('hourglass-not-done');
   });
 });
 
@@ -161,5 +160,44 @@ describe('server: bezplatná AI a stěhování', () => {
     expect(canonicalOrigin()).toBeNull();
     delete process.env.PUBLIC_CANONICAL_ORIGIN;
     expect(canonicalOrigin()).toBeNull();
+  });
+});
+
+describe('sloučené předměty se už nevracejí', () => {
+  it('import z Moodlu znovu nevytvoří sloučený předmět a jeho termíny přesměruje', async () => {
+    const { useAppStore } = await import('../store/appStore');
+    const { autoMergeSubjects } = await import('../services/subjectAssist');
+    const st = useAppStore.getState();
+    st.clearAllData?.();
+    const base = { color: 'indigo' as SubjectColor, createdAt: '2026-09-01T10:00:00.000Z' };
+    useAppStore.setState({ subjects: [{ ...base, id: 'subj_sis_a', code: 'JSB022', name: 'Úvod do mediálních studií', source: 'sis' }, { ...base, id: 'moodle-course-7', name: 'Úvod do mediálních studií – ZS 2026/27', source: 'moodle', moodleCourseId: 7 }], requirements: [], events: [], tasks: [], materials: [] });
+    useAppStore.getState().mergeSubjects('moodle-course-7', 'subj_sis_a');
+    expect(useAppStore.getState().settings.subjectAliases).toEqual({ 'moodle-course-7': 'subj_sis_a' });
+    // Další import z Moodlu přinese tentýž kurz se stejným ID a termínem
+    useAppStore.getState().applyMoodleIcs({
+      subjects: [{ ...base, id: 'moodle-course-7', name: 'Úvod do mediálních studií – ZS 2026/27', source: 'moodle', moodleCourseId: 7 }],
+      requirements: [{ id: 'req-1', subjectId: 'moodle-course-7', title: 'Esej', type: 'assignment', status: 'todo', source: 'moodle', createdAt: base.createdAt } as never],
+      source: { id: 'moodle-ics', kind: 'moodle', url: 'https://dl1.cuni.cz/calendar/export_execute.php?userid=1&authtoken=x', autoRefresh: true } as never,
+    });
+    const s = useAppStore.getState();
+    expect(s.subjects.map((x) => x.id)).toEqual(['subj_sis_a']);
+    expect(s.subjects[0].moodleCourseId).toBe(7);
+    expect(s.requirements.find((r) => r.id === 'req-1')?.subjectId).toBe('subj_sis_a');
+    expect(autoMergeSubjects()).toEqual([]);
+  });
+
+  it('dvojici, kterou student dřív sloučil (jen náhrobek), sloučí potichu', async () => {
+    const { useAppStore } = await import('../store/appStore');
+    const { autoMergeSubjects, useSubjectDuplicates } = await import('../services/subjectAssist');
+    void useSubjectDuplicates;
+    const base = { color: 'indigo' as SubjectColor, createdAt: '2026-09-01T10:00:00.000Z' };
+    useAppStore.setState((s) => ({
+      subjects: [{ ...base, id: 'subj_sis_b', code: 'JSB065', name: 'Analýza mediálních obsahů', source: 'sis' }, { ...base, id: 'moodle-course-9', name: 'Analýza mediálních obsahů – seminář', source: 'moodle' }],
+      tombstones: { ...s.tombstones, 'subject:moodle-course-9': '2026-11-01T10:00:00.000Z' },
+      settings: { ...s.settings, subjectAliases: {} },
+    }));
+    expect(autoMergeSubjects()).toEqual([]);
+    expect(useAppStore.getState().subjects.map((x) => x.id)).toEqual(['subj_sis_b']);
+    expect(useAppStore.getState().settings.subjectAliases?.['moodle-course-9']).toBe('subj_sis_b');
   });
 });
