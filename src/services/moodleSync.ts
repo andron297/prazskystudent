@@ -9,7 +9,6 @@
  * synchronizace nic nezdvojí a zachová odškrtané podúkoly.
  */
 import type { Material, Requirement, Subject } from '../types';
-import { nextSubjectColor } from '../lib/colors';
 import { uid } from '../lib/id';
 import { defaultSubtasks, guessRequirementType } from '../lib/progress';
 import { extractSubjectCode, normalizeKey, stripHtml, truncate } from '../lib/text';
@@ -128,7 +127,7 @@ export async function syncMoodle(
   const subjects = [...existing.subjects];
   const touchedSubjects = new Map<string, Subject>();
   const courseToSubject = new Map<number, Subject>();
-  let newSubjects = 0;
+  const newSubjects = 0;
   for (const course of visibleCourses) {
     const code = extractSubjectCode(course.idnumber, course.shortname, course.fullname);
     const name = cleanCourseName(course, code);
@@ -141,18 +140,8 @@ export async function syncMoodle(
       subject = { ...subject, moodleCourseId: course.id, moodleCourseUrl: courseUrl, code: subject.code ?? code };
       subjects[subjects.findIndex((s) => s.id === subject!.id)] = subject;
     } else {
-      subject = {
-        id: uid('subj'),
-        code,
-        name,
-        color: nextSubjectColor(subjects.map((s) => s.color)),
-        source: 'moodle',
-        moodleCourseId: course.id,
-        moodleCourseUrl: courseUrl,
-        createdAt: nowIso,
-      };
-      subjects.push(subject);
-      newSubjects++;
+      // Kurz, který není v rozvrhu SIS (ani ho student nepřidal): nezakládat – závazný je SIS.
+      continue;
     }
     touchedSubjects.set(subject.id, subject);
     courseToSubject.set(course.id, subject);
@@ -180,7 +169,7 @@ export async function syncMoodle(
 
   // Odevzdávárny
   onProgress({ step: 'assignments', label: 'Načítám úkoly a odevzdávárny' });
-  const courseIds = visibleCourses.map((c) => c.id);
+  const courseIds = visibleCourses.filter((c) => courseToSubject.has(c.id)).map((c) => c.id);
   const assignmentData =
     courseIds.length > 0
       ? await client.call<MoodleAssignmentsResponse>('mod_assign_get_assignments', { courseids: courseIds })

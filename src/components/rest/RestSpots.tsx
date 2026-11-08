@@ -3,6 +3,7 @@
  * nezapomenout, hudba na cestu a jízdenka. Soustředění (pomodoro) je ve
  * components/focus. Animace respektují „omezit pohyb“.
  */
+import { litackaLink } from '../../lib/litacka';
 import { useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { Check } from 'lucide-react';
@@ -70,6 +71,7 @@ export function DepartureRest({ event, itinerary, now, rain }: { event: Schedule
   const items = useMemo(() => (rain ? ['deštník', ...PACKING] : PACKING), [rain]);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   useEffect(() => setChecked({}), [event.id]);
+  const litacka = useMemo(() => litackaLink(), []);
   if (minutes < 1 || minutes > 30) return null;
   return (
     <section className="card flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-[22px] px-4 py-3.5" aria-label="Než vyrazíte">
@@ -89,9 +91,11 @@ export function DepartureRest({ event, itinerary, now, rain }: { event: Schedule
           </button>
         ))}
       </div>
-      <a href="https://pid.cz/aplikace-pid-litacka/" target="_blank" rel="noreferrer" className="text-[12.5px] font-bold text-accent hover:underline">
-        Jízdenka v Lítačce
-      </a>
+      {litacka && (
+        <a href={litacka} className="text-[12.5px] font-bold text-accent hover:underline">
+          Otevřít PID Lítačku
+        </a>
+      )}
     </section>
   );
 }

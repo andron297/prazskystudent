@@ -8,6 +8,7 @@ import { useHashRoute, useThemeEffect } from './hooks/useAppShell';
 import { useSisBridge } from './services/sisBridge';
 import { useBackgroundSync } from './services/syncCenter';
 import { useAppStore } from './store/appStore';
+import { startPrefsBridge } from './store/prefsBridge';
 import { useClockStore } from './store/clockStore';
 import { toast, useUiStore } from './store/uiStore';
 import { SetupWizard } from './components/setup/SetupWizard';
@@ -24,6 +25,9 @@ import { useFacultyAutoDetect } from './hooks/useFacultyAutoDetect';
 import { MovedNotice } from './components/migration/MovedNotice';
 import { applySavedTestClock, useTestModeGuard } from './store/testStore';
 import { usePresentationStore } from './store/presentationStore';
+
+// Volby soustředění se ukládají do nastavení (a tím do účtu).
+startPrefsBridge();
 
 // Méně používané sekce se načítají až při otevření (menší první načtení PWA).
 const TransitMapView = lazy(() => import('./components/map/TransitMapView').then((m) => ({ default: m.TransitMapView })));
@@ -46,6 +50,7 @@ const GuideView = lazy(() => import('./components/tour/GuideView').then((m) => (
 const SettingsView = lazy(() => import('./components/settings/SettingsView').then((m) => ({ default: m.SettingsView })));
 const PresentationMode = lazy(() => import('./components/presentation/PresentationMode').then((m) => ({ default: m.PresentationMode })));
 const QuickTour = lazy(() => import('./components/tour/QuickTour').then((m) => ({ default: m.QuickTour })));
+const StageTour = lazy(() => import('./components/tour/StageTour').then((m) => ({ default: m.StageTour })));
 
 function ViewFallback() {
   return (
@@ -68,6 +73,7 @@ export default function App() {
   const editor = useUiStore((s) => s.editor);
   const navigation = useUiStore((s) => s.navigation);
   const slideshow = usePresentationStore((s) => s.slideshow);
+  const stage = usePresentationStore((s) => s.stage);
   const tour = useUiStore((s) => s.tour);
   const askStudyProfile = useUiStore((s) => s.askStudyProfile);
   const [connectMounted, setConnectMounted] = useState(false);
@@ -131,6 +137,9 @@ export default function App() {
       // Vlastní data nikdy nemíchat s ukázkou (i po starších verzích aplikace).
       const removed = useAppStore.getState().purgeSampleData();
       if (removed > 0) toast.info('Ukázková data jsou pryč – teď vidíte jen to svoje.');
+      // Předměty, které kdysi založil jen Moodle (nejsou v rozvrhu SIS), pryč.
+      const pruned = useAppStore.getState().pruneMoodleOnlySubjects();
+      if (pruned > 0) toast.info(`Předměty z Moodlu, které nemáte v rozvrhu SIS, jsou pryč (${pruned}).`);
     }
     document.documentElement.dataset.mode = mode;
   }, [mode]);
@@ -208,6 +217,11 @@ export default function App() {
           {tour && (
             <Suspense fallback={null}>
               <QuickTour />
+            </Suspense>
+          )}
+          {stage && (
+            <Suspense fallback={null}>
+              <StageTour />
             </Suspense>
           )}
           <CountdownEditor />

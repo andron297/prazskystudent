@@ -138,7 +138,7 @@ export function NextPlaceCard({ now, glanceEventId }: { now: Date; glanceEventId
     // Na další akci: s příjezdem včas (když je dost času), jinak co nejdřív.
     const arrive = Boolean(first.arriveBy && first.arriveBy.getTime() > appNow().getTime() + 20 * 60_000);
     const time = arrive && first.arriveBy ? first.arriveBy : appNow();
-    void planBetween({ from: { kind: 'origin', label: fromLabel, coords: from }, to: { kind: 'place', label: first.place.label, coords: first.place.coords }, time, arriveBy: arrive })
+    void planBetween({ from: { kind: 'origin', label: fromLabel, coords: from }, to: { kind: 'place', label: first.place.label, coords: first.place.coords }, time, arriveBy: arrive, modes: settings.transitModes })
       .then((r) => {
         if (!alive) return;
         const ranks = rankJourneys(r.itineraries, { now: appNow(), arriveBy: first.arriveBy ?? null });

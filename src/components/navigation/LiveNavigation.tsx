@@ -170,6 +170,15 @@ function useWakeLock() {
   }, []);
 }
 
+function readLocalFlag(key: string, fallback: boolean): boolean {
+  try {
+    const v = localStorage.getItem(key);
+    return v === null ? fallback : v === '1';
+  } catch {
+    return fallback;
+  }
+}
+
 function speak(text: string) {
   try {
     const synth = window.speechSynthesis;
@@ -307,20 +316,10 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
   const [arrived, setArrived] = useState(false);
   const [following, setFollowing] = useState(true);
   /** 3D pohled: náklon, budovy a mapa natočená ve směru chůze. */
-  const [tilt, setTilt] = useState(() => {
-    try {
-      return localStorage.getItem('stihnu:nav-3d') !== '0';
-    } catch {
-      return true;
-    }
-  });
-  const [voice, setVoice] = useState(() => {
-    try {
-      return localStorage.getItem('stihnu:nav-voice') === '1';
-    } catch {
-      return false;
-    }
-  });
+  // Volby navigace se pamatují v nastavení (a tedy i v účtu na všech zařízeních).
+  const prefs = useAppStore((s) => s.settings.prefs);
+  const [tilt, setTilt] = useState(() => prefs?.nav3d ?? readLocalFlag('stihnu:nav-3d', true));
+  const [voice, setVoice] = useState(() => prefs?.navVoice ?? readLocalFlag('stihnu:nav-voice', false));
   const [showSteps, setShowSteps] = useState(false);
   const simGps = useTestStore((s) => s.gps);
   const walkSim = useTestStore((s) => s.walkSim);
@@ -435,8 +434,14 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
   const spoken = useRef(new Set<string>());
   useEffect(() => {
     if (!walk || !next || offRoute) return;
+    if (next.maneuver.type === 'arrive') return;
+    // Dvakrát: s předstihem („Za sto metrů odbočte vlevo“) a na místě („Odbočte vlevo“).
+    const early = `${phaseIndex}:${next.maneuver.at}:early`;
     const key = `${phaseIndex}:${next.maneuver.at}`;
-    if (next.distance < 40 && !spoken.current.has(key) && next.maneuver.type !== 'arrive') {
+    if (next.distance >= 70 && next.distance <= 160 && !spoken.current.has(early)) {
+      spoken.current.add(early);
+      if (voice) speak(spokenInstruction(next.maneuver, next.distance, walk.target.name));
+    } else if (next.distance < 30 && !spoken.current.has(key)) {
       spoken.current.add(key);
       buzz([60]);
       if (voice) speak(spokenInstruction(next.maneuver, next.distance, walk.target.name));
@@ -448,14 +453,15 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
     if (rideState.left <= 1 && !spoken.current.has(key)) {
       spoken.current.add(key);
       buzz([200, 100, 200, 100, 200]);
-      if (voice) speak(`Příští zastávka ${ride.ride.toStop}. Připravte se k výstupu.`);
+      if (voice) speak(`Příští zastávka ${ride.ride.toStop}. Tam vystupujete, připravte se.`);
     }
   }, [rideState, ride, phaseIndex, voice]);
   useEffect(() => {
     if (!voice || !phase) return;
     if (phase.kind === 'walk') {
       const nr = phases[phaseIndex + 1];
-      speak(walkToStopSentence(phase.target, nr?.kind === 'ride' ? nr.ride : undefined));
+      const pr = phases[phaseIndex - 1];
+      speak(walkToStopSentence(phase.target, nr?.kind === 'ride' ? nr.ride : undefined, pr?.kind === 'ride' ? pr.ride : undefined));
     }
     if (phase.kind === 'ride') speak(boardingSentence(phase.ride));
   }, [phaseIndex]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -582,10 +588,9 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
   }, [fix, heading, following, mapReady, ride, tilt]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('stihnu:nav-3d', tilt ? '1' : '0');
-    } catch {
-      /* bez úložiště */
+    if (useAppStore.getState().settings.prefs?.nav3d !== tilt) {
+      const st = useAppStore.getState();
+      st.updateSettings({ prefs: { ...st.settings.prefs, nav3d: tilt } });
     }
     const map = mapRef.current;
     if (map?.getLayer('nav-3d-buildings')) map.setLayoutProperty('nav-3d-buildings', 'visibility', tilt ? 'visible' : 'none');
@@ -703,11 +708,8 @@ function NavigationScreen({ target }: { target: NavigationTarget }) {
           onClick={() => {
             const v = !voice;
             setVoice(v);
-            try {
-              localStorage.setItem('stihnu:nav-voice', v ? '1' : '0');
-            } catch {
-              /* nevadí */
-            }
+            const st = useAppStore.getState();
+            st.updateSettings({ prefs: { ...st.settings.prefs, navVoice: v } });
             if (v) speak('Hlasové pokyny jsou zapnuté.');
           }}
           className={cn('grid size-11 place-items-center rounded-full shadow-lg ring-1 ring-line', voice ? 'bg-accent text-accent-fg' : 'bg-[var(--surface)] text-fg')}

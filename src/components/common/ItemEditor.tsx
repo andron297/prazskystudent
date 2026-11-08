@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, ExternalLink, ListTodo, Sparkles, Trash } from 'lucide-react';
+import { CalendarClock, ExternalLink, Lightbulb, ListTodo, Trash, Zap } from 'lucide-react';
 import type { ScheduleEvent, Task } from '../../types';
 import { addDays, fromLocalInputValue, isDateKey, startOfDay, toDateKey, toLocalInputValue } from '../../lib/dates';
 import { guessForText } from '../../services/subjectAssist';
@@ -88,7 +88,7 @@ function TaskForm({ task, onClose }: { task?: Task; onClose: () => void }) {
         hint={
           guessSubject ? (
             <button type="button" onClick={() => setSubjectId(guessSubject.id)} className="inline-flex items-center gap-1 font-semibold text-moss hover:underline">
-              <Sparkles className="size-3.5" aria-hidden /> Navrhuji: {guessSubject.name} ({guess!.reason}) – použít
+              <Lightbulb className="size-3.5" aria-hidden /> Navrhuji: {guessSubject.name} ({guess!.reason}) – použít
             </button>
           ) : undefined
         }
@@ -324,14 +324,14 @@ export function ItemEditor() {
   const title = task ? 'Úkol' : event ? (event.kind === 'personal' ? 'Událost' : 'Výuka') : 'Přidat';
 
   return (
-    <Modal open={Boolean(editor)} onClose={close} title={title} icon={mode === 'event' ? CalendarClock : mode === 'task' ? ListTodo : Sparkles} size="md">
+    <Modal open={Boolean(editor)} onClose={close} title={title} icon={mode === 'event' ? CalendarClock : mode === 'task' ? ListTodo : Zap} size="md">
       {!editing && (
         <Segmented
           className="mb-4"
           value={mode}
           onChange={setMode}
           options={[
-            { value: 'quick', label: 'Rychle', icon: Sparkles },
+            { value: 'quick', label: 'Rychle', icon: Zap },
             { value: 'task', label: 'Úkol', icon: ListTodo },
             { value: 'event', label: 'Událost', icon: CalendarClock },
           ]}

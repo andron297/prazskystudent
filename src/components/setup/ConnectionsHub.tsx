@@ -31,7 +31,7 @@ const VISUAL: Record<Exclude<ServiceId, 'google'>, GlyphName> = {
   moodle: 'book',
   music: 'note',
   notifications: 'bell',
-  ai: 'spark',
+  ai: 'ai',
 };
 
 /** Ikona služby: vlastní kresba, u Googlu jeho logo. */

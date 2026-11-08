@@ -12,11 +12,11 @@ export const LOCATION_PRESETS: LocationPreset[] = [
   { id: 'andel', label: 'Anděl', coords: { lat: 50.0712, lng: 14.4031 } },
   { id: 'dejvicka', label: 'Dejvická', coords: { lat: 50.1006, lng: 14.3918 } },
   { id: 'florenc', label: 'Florenc', coords: { lat: 50.0911, lng: 14.4388 } },
-  { id: 'kajetanka', label: 'Kolej Kajetánka (Břevnov)', coords: { lat: 50.0862, lng: 14.3712 } },
-  { id: 'hvezda', label: 'Kolej Hvězda (Praha 6)', coords: { lat: 50.0818, lng: 14.3422 } },
+  { id: 'kajetanka', label: 'Kolej Kajetánka (Břevnov)', coords: { lat: 50.0875, lng: 14.3713 } },
+  { id: 'hvezda', label: 'Kolej Hvězda (Praha 6)', coords: { lat: 50.0851, lng: 14.3494 } },
   { id: 'strahov', label: 'Koleje Strahov', coords: { lat: 50.0811, lng: 14.3897 } },
-  { id: 'jednota', label: 'Kolej Jednota (Opletalova)', coords: { lat: 50.0828, lng: 14.4318 } },
-  { id: 'trojska', label: 'Koleje v Troji (17. listopadu)', coords: { lat: 50.1147, lng: 14.4447 } },
+  { id: 'jednota', label: 'Kolej Jednota (Opletalova)', coords: { lat: 50.0868, lng: 14.4354 } },
+  { id: 'trojska', label: 'Koleje v Troji (17. listopadu)', coords: { lat: 50.1163, lng: 14.443 } },
 ];
 
 export function findPreset(id: string): LocationPreset {

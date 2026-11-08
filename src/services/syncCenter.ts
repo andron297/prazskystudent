@@ -5,6 +5,7 @@
  *  - Moodle přes token (pokud je propojený) – obnova jednou za pár hodin.
  * Běží v Sandboxu (simulovaný Google, ukázková data) i v Live režimu.
  */
+import { bindingSubjects } from '../lib/bindingSubjects';
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import type { AppMode, IcsSource, SyncReport, SyncService } from '../types';
@@ -133,6 +134,7 @@ function localSnapshot(mode: AppMode) {
     tombstones: s.tombstones,
     settings: pickSharedSettings(s.settings),
     settingsUpdatedAt: s.meta.settingsUpdatedAt,
+    settingsStamps: s.meta.settingsStamps,
     google: mode === 'live' ? { links: gs.links, containers: gs.containers, excluded: gs.excluded } : undefined,
   });
 }
@@ -352,7 +354,7 @@ export async function refreshIcsSource(source: IcsSource, options: { manual?: bo
     let count = 0;
     let message = '';
     if (source.kind === 'moodle') {
-      const result = buildMoodleIcsImport(calendar, { subjects: app.subjects, requirements: app.requirements, now });
+      const result = buildMoodleIcsImport(calendar, { subjects: bindingSubjects(app.subjects, app.events), requirements: app.requirements, now });
       const total = app.requirements.filter((r) => r.externalId?.startsWith('moodle-ics:')).length + result.created;
       count = total;
       app.applyMoodleIcs({ subjects: result.newSubjects, requirements: result.requirements, source: { ...source, lastSync: new Date().toISOString(), lastError: undefined, itemCount: total }, demo: mode === 'demo' });
@@ -396,7 +398,7 @@ export async function runMoodleTokenSync(manual = false): Promise<boolean> {
   try {
     const api = createApi(app.settings, useUiStore.getState().server, appNow);
     const client = api.moodle(conn.baseUrl, conn.token);
-    const result = await syncMoodle(client, { subjects: app.subjects, requirements: app.requirements, materials: app.materials }, appNow());
+    const result = await syncMoodle(client, { subjects: bindingSubjects(app.subjects, app.events), requirements: app.requirements, materials: app.materials }, appNow());
     useAppStore.getState().applyMoodleSync(result, conn, app.settings.mode === 'demo');
     if (manual) toast.success(`Moodle aktualizován · ${result.stats.requirements} úkolů`);
     return true;

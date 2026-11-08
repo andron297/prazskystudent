@@ -13,20 +13,20 @@ export interface Canteen {
 }
 
 export const CANTEENS: Canteen[] = [
-  { id: 22, name: 'Menza Jinonice', short: 'Jinonice', coords: { lat: 50.0546, lng: 14.3709 } },
-  { id: 16, name: 'Menza Kajetánka', short: 'Kajetánka', coords: { lat: 50.0851, lng: 14.3632 } },
-  { id: 25, name: 'Menza Malostranská', short: 'Malostranská', coords: { lat: 50.088, lng: 14.4034 } },
-  { id: 1, name: 'Menza Jednota', short: 'Jednota', coords: { lat: 50.0822, lng: 14.4334 } },
-  { id: 11, name: 'Menza Právnická', short: 'Právnická', coords: { lat: 50.0914, lng: 14.417 } },
-  { id: 12, name: 'Menza Albertov', short: 'Albertov', coords: { lat: 50.0672, lng: 14.4232 } },
-  { id: 13, name: 'Kavárna U Rotlevů', short: 'U Rotlevů', coords: { lat: 50.0866, lng: 14.4232 } },
-  { id: 9, name: 'Menza Arnošta z Pardubic', short: 'Arnošta z Pardubic', coords: { lat: 50.0805, lng: 14.4165 } },
-  { id: 14, name: 'Menza Budeč', short: 'Budeč', coords: { lat: 50.0718, lng: 14.4384 } },
-  { id: 17, name: 'Menza Troja', short: 'Troja', coords: { lat: 50.1182, lng: 14.4392 } },
-  { id: 15, name: 'Výdejna Hvězda', short: 'Hvězda', coords: { lat: 50.0807, lng: 14.3348 } },
-  { id: 20, name: 'Výdejna HTF', short: 'HTF', coords: { lat: 50.0393, lng: 14.4475 } },
-  { id: 26, name: 'Menza Na Kotli (Hradec Králové)', short: 'Na Kotli', coords: { lat: 50.2008, lng: 15.8237 } },
-  { id: 27, name: 'Mephared 2 (Hradec Králové)', short: 'Mephared 2', coords: { lat: 50.2051, lng: 15.8114 } },
+  { id: 22, name: 'Menza Jinonice', short: 'Jinonice', coords: { lat: 50.0543, lng: 14.3686 } },
+  { id: 16, name: 'Menza Kajetánka', short: 'Kajetánka', coords: { lat: 50.0875, lng: 14.3713 } },
+  { id: 25, name: 'Menza Malostranská', short: 'Malostranská', coords: { lat: 50.0883, lng: 14.4036 } },
+  { id: 1, name: 'Menza Jednota', short: 'Jednota', coords: { lat: 50.0868, lng: 14.4354 } },
+  { id: 11, name: 'Menza Právnická', short: 'Právnická', coords: { lat: 50.0916, lng: 14.4169 } },
+  { id: 12, name: 'Menza Albertov', short: 'Albertov', coords: { lat: 50.0688, lng: 14.4225 } },
+  { id: 13, name: 'Kavárna U Rotlevů', short: 'U Rotlevů', coords: { lat: 50.0865, lng: 14.4229 } },
+  { id: 9, name: 'Menza Arnošta z Pardubic', short: 'Arnošta z Pardubic', coords: { lat: 50.0804, lng: 14.4167 } },
+  { id: 14, name: 'Menza Budeč', short: 'Budeč', coords: { lat: 50.0706, lng: 14.4327 } },
+  { id: 17, name: 'Menza Troja', short: 'Troja', coords: { lat: 50.1161, lng: 14.4428 } },
+  { id: 15, name: 'Výdejna Hvězda', short: 'Hvězda', coords: { lat: 50.0851, lng: 14.3494 } },
+  { id: 20, name: 'Výdejna HTF', short: 'HTF', coords: { lat: 50.0451, lng: 14.4417 } },
+  { id: 26, name: 'Menza Na Kotli (Hradec Králové)', short: 'Na Kotli', coords: { lat: 50.2021, lng: 15.8446 } },
+  { id: 27, name: 'Mephared 2 (Hradec Králové)', short: 'Mephared 2', coords: { lat: 50.2015, lng: 15.8358 } },
 ];
 
 export const MENZA_WEB = 'https://kam-septim-fe.is.cuni.cz/';

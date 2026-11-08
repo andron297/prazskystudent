@@ -116,7 +116,7 @@ describe('Navigace: přechody, schody a vstup do metra (skutečná trasa Opletal
 
   it('přechod u odbočení je jeden pokyn', () => {
     expect(instructionText({ at: 100, type: 'left', crossing: 'zebra' }, 40).headline).toBe('Za 40 m odbočte vlevo a přejděte po přechodu');
-    expect(instructionText({ at: 100, type: 'right', crossing: 'signals', crossingFirst: true }, 5).headline).toBe('Přejděte na semaforu a odbočte vpravo');
+    expect(instructionText({ at: 100, type: 'right', crossing: 'signals', crossingFirst: true }, 5).headline).toBe('Přejděte na přechodu se semaforem a odbočte vpravo');
   });
 });
 
@@ -180,12 +180,12 @@ describe('Navigace: vstupy do metra z dat PID a věty nahlas', () => {
   });
 
   it('věty nahlas: metry, směr (konečná) a kolej', () => {
-    expect(spokenInstruction({ at: 0, type: 'left', street: 'Vodičkova' }, 83)).toBe('Za 80 metrů odbočte vlevo do ulice Vodičkova.');
-    expect(spokenInstruction({ at: 0, type: 'crossing', crossing: 'signals' }, 5)).toBe('Přejděte na semaforu.');
-    expect(spokenInstruction({ at: 0, type: 'stairs-down', note: 'entrance' }, 60)).toBe('Za 60 metrů sejděte do metra po schodech dolů.');
-    expect(spokenInstruction({ at: 0, type: 'right' }, 1240)).toBe('Za 1,2 kilometru odbočte vpravo.');
+    expect(spokenInstruction({ at: 0, type: 'left', street: 'Vodičkova' }, 83)).toBe('Za osmdesát metrů odbočte vlevo do ulice Vodičkova.');
+    expect(spokenInstruction({ at: 0, type: 'crossing', crossing: 'signals' }, 5)).toBe('Přejděte na přechodu se semaforem.');
+    expect(spokenInstruction({ at: 0, type: 'stairs-down', note: 'entrance' }, 60)).toBe('Za šedesát metrů sejděte po schodech do metra.');
+    expect(spokenInstruction({ at: 0, type: 'right' }, 1240)).toBe('Za jeden kilometr odbočte vpravo.');
     expect(walkToStopSentence({ name: 'Můstek', coords: path[0], isStop: true, platform: '1', mode: 'metro' }, ride)).toBe('Jděte do metra Můstek. Metro B směr Zličín odjíždí v 9:20 z koleje 1.');
-    expect(boardingSentence(ride, true)).toBe('Jste na nástupišti. Nastupte do metra B směr Zličín, kolej 1. Vystupujete na zastávce Jinonice.');
+    expect(boardingSentence(ride, true)).toBe('Jste na nástupišti. Nastupte do metra B směr Zličín, kolej 1. Vystoupíte na zastávce Jinonice.');
     const tram: RideLeg = { ...ride, mode: 'tram', line: '22', headsign: 'Nádraží Hostivař', platform: 'A', fromStop: 'Drinopol', toStop: 'Národní divadlo', predictedDeparture: '2026-11-09T12:30:00.000Z' };
     expect(walkToStopSentence({ name: 'Drinopol', coords: path[0], isStop: true, platform: 'A', mode: 'tram' }, tram)).toBe('Jděte na zastávku Drinopol, nástupiště A. Tramvaj 22 směr Nádraží Hostivař odjíždí ve 13:30.');
   });
@@ -211,7 +211,7 @@ describe('Režim prezentace', () => {
     const m = maskState(base);
     expect(maskState(base)).toBe(m);
     expect(m.subjects[0].name).not.toBe('Tajný předmět');
-    expect(m.subjects[0].code).not.toBe('JSB022');
+    expect(m.subjects[0].code).toBe('JSB022'); // kódy předmětů zůstávají skutečné
     expect(m.events[0].title).toBe(m.subjects[0].name);
     expect(m.events[0].start).toBe(base.events[0].start);
     expect(m.events[1].title).not.toContain('Petr');

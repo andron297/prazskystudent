@@ -33,6 +33,8 @@ export interface LivePlanParams {
   accessibleOnly?: boolean;
   /** Ruční obnovení – nepoužít starší výsledek z cache. */
   fresh?: boolean;
+  /** Povolené dopravní prostředky (nevyplněno = všechny). */
+  modes?: TransitMode[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -477,6 +479,7 @@ export async function planWithTransitous(params: LivePlanParams): Promise<Itiner
     now: params.now,
     wheelchair: params.accessibleOnly,
     fresh: params.fresh,
+    modes: params.modes,
   });
   const its: Itinerary[] = [];
   for (const r of raw) {

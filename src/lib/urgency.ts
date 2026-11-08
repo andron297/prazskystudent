@@ -137,8 +137,8 @@ export const TRANSIT_STYLES: Record<TransitStatus, TransitStyle> = {
     glass: 'bg-amber-300/30 text-amber-50 ring-1 ring-inset ring-amber-200/50',
   },
   critical: {
-    label: 'Last call',
-    short: 'Last call',
+    label: 'Vyrazte teď',
+    short: 'Vyrazte teď',
     text: 'text-red-700 dark:text-red-300',
     chip: 'bg-red-500/15 text-red-800 ring-1 ring-inset ring-red-500/35 dark:text-red-200',
     dot: 'bg-red-500',

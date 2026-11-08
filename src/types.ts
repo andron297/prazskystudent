@@ -54,10 +54,25 @@ export interface LocationPreset {
   coords: LatLng;
 }
 
+/** Drobné volby z obrazovek (ukládají se do účtu jako ostatní nastavení). */
+export interface UserPrefs {
+  navVoice?: boolean;
+  nav3d?: boolean;
+  focusPreset?: string;
+  focusAutoNext?: boolean;
+  focusSound?: boolean;
+}
+
 export interface OriginPref {
+  /**
+   * Odkud se počítá cesta, když GPS není k dispozici (preset/custom). Aktuální
+   * poloha má v Live režimu vždy přednost – kromě ruční volby s `until`.
+   */
   source: 'gps' | 'preset' | 'custom';
   presetId: string;
   custom?: { label: string; coords: LatLng };
+  /** Ruční volba místa platí jen do této chvíle (pak zase podle polohy). */
+  until?: ISODateTime;
 }
 
 /** Zastávka, ze které chce student vyjíždět (místo automatického výběru nejbližší). */
@@ -65,6 +80,8 @@ export interface OriginStopPref {
   /** Název skupiny zastávek v PID (shodný s Golemio `stop_name`). */
   name: string;
   coords: LatLng;
+  /** Ruční volba zastávky platí jen do této chvíle. */
+  until?: ISODateTime;
 }
 
 /* ------------------------------------------------------------------ */
@@ -419,6 +436,10 @@ export interface Settings {
   walkSpeed: WalkSpeed;
   accessibleOnly: boolean;
   preferAirConditioned: boolean;
+  /** Čím chce student jezdit (nevyplněno = vším). */
+  transitModes?: TransitMode[];
+  /** Drobné volby, které se mají pamatovat na všech zařízeních (navigace, soustředění). */
+  prefs?: UserPrefs;
   origin: Record<AppMode, OriginPref>;
   /** Preferovaná výchozí zastávka (null = automaticky nejbližší). */
   originStop: Record<AppMode, OriginStopPref | null>;

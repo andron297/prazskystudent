@@ -1,3 +1,4 @@
+import { useOriginStop } from '../../hooks/useOrigin';
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -94,7 +95,7 @@ export function TransitPanel({
   const settings = useAppStore((s) => s.settings);
   const updateSettings = useAppStore((s) => s.updateSettings);
   const setLocationAlias = useAppStore((s) => s.setLocationAlias);
-  const stop = useAppStore((s) => s.settings.originStop[s.settings.mode]);
+  const stop = useOriginStop(transit.origin.coords);
   // „Pojedu tímto“ – volba se pamatuje a řídí odpočet nahoře.
   const selectTrip = (eventId: string, it: Itinerary) =>
     useTripStore.getState().choose({ itinerary: it, eventId, label: building?.name ?? event?.title ?? 'Cíl', coords: building?.coords });

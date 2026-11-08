@@ -3,7 +3,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import { MapLibreMap, Marker, NavigationControl, setWorkerUrl, type GeoJSONSource, type MapLayerMouseEvent } from 'maplibre-gl';
 import { AnimatePresence, motion } from 'motion/react';
-import { Accessibility, Check, ChevronLeft, Crosshair, Footprints, GraduationCap, List, LoaderCircle, Map as MapIcon, MapPin, Search, Snowflake, Sparkles, X } from 'lucide-react';
+import { Accessibility, Check, ChevronLeft, Crosshair, Footprints, GraduationCap, List, LoaderCircle, Map as MapIcon, MapPin, Search, Snowflake, X } from 'lucide-react';
 import type { TransitMode } from '../../types';
 import { vTime, formatTime } from '../../lib/dates';
 import { formatDistance, haversineMeters, walkingMinutes } from '../../lib/geo';
@@ -11,7 +11,7 @@ import { findStop, nearbyStops, platformsToGeoJSON, searchStops, sortLines, stop
 import { delayChipClasses, formatDelay } from '../../lib/urgency';
 import { useResolvedTheme } from '../../hooks/useAppShell';
 import { useNow } from '../../hooks/useNow';
-import { useOrigin } from '../../hooks/useOrigin';
+import { overrideUntil, useOrigin, useOriginStop } from '../../hooks/useOrigin';
 import { departuresFor, useStops, type DepartureBoard } from '../../services/stops';
 import { useVisibleEvents } from '../../hooks/useVisibleEvents';
 import { useAppStore } from '../../store/appStore';
@@ -243,7 +243,7 @@ export function TransitMapView() {
   const origin = useOrigin();
   const mode = useAppStore((s) => s.settings.mode);
   const walkSpeed = useAppStore((s) => s.settings.walkSpeed);
-  const originStop = useAppStore((s) => s.settings.originStop[s.settings.mode]);
+  const originStop = useOriginStop(origin.coords);
   const setOriginStop = useAppStore((s) => s.setOriginStop);
   const events = useVisibleEvents();
   const settings = useAppStore((s) => s.settings);
@@ -451,7 +451,7 @@ export function TransitMapView() {
   const chooseOrigin = (stop: StopGroup) => {
     const map = mapRef.current;
     if (map && originStop && map.getSource('stops')) map.setFeatureState({ source: 'stops', id: originStop.name }, { origin: false });
-    setOriginStop(mode, { name: stop.name, coords: stop.coords });
+    setOriginStop(mode, { name: stop.name, coords: stop.coords, until: overrideUntil() });
     toast.success(`Jedete ze zastávky ${stop.name}`);
   };
 
@@ -607,7 +607,7 @@ export function TransitMapView() {
                       <Button size="sm" variant="soft" icon={Check}>
                         Jedete odsud
                       </Button>
-                      <Button size="sm" variant="ghost" icon={Sparkles} onClick={() => setOriginStop(mode, null)}>
+                      <Button size="sm" variant="ghost" icon={Crosshair} onClick={() => setOriginStop(mode, null)}>
                         Automaticky
                       </Button>
                     </>

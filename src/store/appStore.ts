@@ -3,6 +3,8 @@
  * Každá změna položky nastaví `updatedAt` a každé výslovné smazání zapíše
  * tombstone – z toho žije synchronizace s Googlem i mezi zařízeními.
  */
+import { useMemo } from 'react';
+import { hasSisTimetable, isBindingSubject } from '../lib/bindingSubjects';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type {
@@ -38,7 +40,7 @@ import { keyOf, pruneTombstones } from '../lib/sync/keys';
 import type { LocalOp } from '../lib/sync/mapping';
 import { createDemoSeed } from '../services/demo/seed';
 import type { MoodleSyncResult } from '../services/moodleSync';
-import { usePresentationStore } from './presentationStore';
+import { isPresentationItem, usePresentationStore, type DemoItemKind } from './presentationStore';
 import { maskState, touchesText } from '../lib/presentationMask';
 
 export const DEFAULT_GOOGLE: GoogleSyncSettings = {
@@ -120,6 +122,8 @@ export interface AppMeta {
   /** Služby, které student v průvodci přeskočil. */
   setupSkipped?: string[];
   settingsUpdatedAt?: string;
+  /** Kdy se která položka nastavení naposledy změnila (slučování mezi zařízeními po položkách). */
+  settingsStamps?: Record<string, string>;
   /** Krátkou prohlídku aplikace už student viděl (nebo odmítl). */
   tourSeen?: boolean;
   deviceId: string;
@@ -218,6 +222,8 @@ export interface AppState extends AppData {
   applyMoodleSync: (result: MoodleSyncResult, connection: MoodleConnection, demo: boolean) => void;
   applyMoodleIcs: (payload: { subjects: Subject[]; requirements: Requirement[]; source: IcsSource; demo?: boolean }) => void;
   disconnectMoodle: () => void;
+  /** Smaže předměty, které založil jen Moodle (nejsou v rozvrhu SIS). Vrátí počet smazaných. */
+  pruneMoodleOnlySubjects: () => number;
   upsertIcsSource: (source: IcsSource) => void;
   removeIcsSource: (sourceId: string, removeItems: boolean) => void;
 
@@ -276,8 +282,18 @@ function initialData(): AppData & { meta: AppMeta } {
 }
 
 /** V režimu prezentace se neukládají změny textů (mohly by obsahovat vymyšlené popisky). */
-function presentationLocked(patch?: object): boolean {
-  return usePresentationStore.getState().masked && (!patch || touchesText(patch));
+/**
+ * V režimu prezentace se skutečné texty neupravují (na obrazovce jsou vymyšlené).
+ * Výjimka: položky přidané během prezentace – ty jsou skutečné a jdou upravit.
+ */
+function presentationLocked(patch?: object, id?: string): boolean {
+  if (!usePresentationStore.getState().masked || isPresentationItem(id)) return false;
+  return !patch || touchesText(patch);
+}
+
+/** Během prezentace si zapamatovat novou položku (po konci prezentace se smaže). */
+function trackDemo(kind: DemoItemKind, id: string): void {
+  if (usePresentationStore.getState().masked) usePresentationStore.getState().track(kind, id);
 }
 
 function mapRequirement(list: Requirement[], id: string, fn: (r: Requirement) => Requirement): Requirement[] {
@@ -378,6 +394,9 @@ function tomb(tombstones: Record<string, string>, keys: string[]): Record<string
 
 const PERSIST_KEY = 'stihnu:v1';
 
+/** Právě se přebírá nastavení z jiného zařízení – jeho časy změn se nepřepisují. */
+let applyingRemoteSettings = false;
+
 const rawAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -403,7 +422,7 @@ const rawAppStore = create<AppState>()(
           })),
         })),
       renameSubtask: (requirementId, subtaskId, title) =>
-        presentationLocked() ? undefined :
+        presentationLocked(undefined, requirementId) ? undefined :
         set((s) => ({
           requirements: mapRequirement(s.requirements, requirementId, (r) => ({
             ...r,
@@ -426,7 +445,12 @@ const rawAppStore = create<AppState>()(
             return { ...r, done: target, subtasks: r.subtasks.map((st) => ({ ...st, done: target })) };
           }),
         })),
-      upsertRequirement: (requirement) => (presentationLocked() ? undefined : set((s) => ({ requirements: upsertById(s.requirements, [{ ...requirement, updatedAt: nowIso() }]) }))),
+      upsertRequirement: (requirement) => {
+        const isNew = !get().requirements.some((r) => r.id === requirement.id);
+        if (isNew) trackDemo('requirement', requirement.id);
+        else if (presentationLocked(undefined, requirement.id)) return;
+        set((s) => ({ requirements: upsertById(s.requirements, [{ ...requirement, updatedAt: nowIso() }]) }));
+      },
       addRequirements: (requirements) => set((s) => ({ requirements: upsertById(s.requirements, requirements.map((r) => ({ ...r, updatedAt: r.updatedAt ?? nowIso() }))) })),
       removeRequirement: (requirementId) =>
         set((s) => {
@@ -440,7 +464,12 @@ const rawAppStore = create<AppState>()(
 
       /* ------------------------------- předměty ------------------------------- */
 
-      upsertSubject: (subject) => (presentationLocked() ? undefined : set((s) => ({ subjects: upsertById(s.subjects, [{ ...subject, updatedAt: nowIso() }]) }))),
+      upsertSubject: (subject) => {
+        const isNew = !get().subjects.some((x) => x.id === subject.id);
+        if (isNew) trackDemo('subject', subject.id);
+        else if (presentationLocked(undefined, subject.id)) return;
+        set((s) => ({ subjects: upsertById(s.subjects, [{ ...subject, updatedAt: nowIso() }]) }));
+      },
       removeSubject: (subjectId) => {
         const { materials } = get();
         for (const m of materials) if (m.subjectId === subjectId && m.blobKey) void deleteBlob(m.blobKey);
@@ -545,9 +574,12 @@ const rawAppStore = create<AppState>()(
 
       /* ------------------------------- materiály ------------------------------ */
 
-      addMaterial: (material) => set((s) => ({ materials: [...s.materials, { ...material, updatedAt: material.updatedAt ?? nowIso() }] })),
+      addMaterial: (material) => {
+        trackDemo('material', material.id);
+        set((s) => ({ materials: [...s.materials, { ...material, updatedAt: material.updatedAt ?? nowIso() }] }));
+      },
       updateMaterial: (materialId, patch) =>
-        presentationLocked(patch) ? undefined :
+        presentationLocked(patch, materialId) ? undefined :
         set((s) => ({
           materials: s.materials.map((m) => (m.id === materialId ? { ...m, ...patch, updatedAt: nowIso() } : m)),
         })),
@@ -582,11 +614,12 @@ const rawAppStore = create<AppState>()(
           createdAt: stamp,
           updatedAt: stamp,
         };
+        trackDemo('event', id);
         set((s) => ({ events: [...s.events, event].sort((a, b) => a.start.localeCompare(b.start)) }));
         return id;
       },
       updateEvent: (eventId, patch) =>
-        presentationLocked(patch) ? undefined :
+        presentationLocked(patch, eventId) ? undefined :
         set((s) => ({
           events: s.events.map((e) => (e.id === eventId ? { ...e, ...patch, updatedAt: nowIso() } : e)).sort((a, b) => a.start.localeCompare(b.start)),
         })),
@@ -635,10 +668,11 @@ const rawAppStore = create<AppState>()(
           createdAt: stamp,
           updatedAt: stamp,
         };
+        trackDemo('task', id);
         set((s) => ({ tasks: [task, ...s.tasks] }));
         return id;
       },
-      updateTask: (taskId, patch) => (presentationLocked(patch) ? undefined : set((s) => ({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, ...patch, updatedAt: nowIso() } : t)) }))),
+      updateTask: (taskId, patch) => (presentationLocked(patch, taskId) ? undefined : set((s) => ({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, ...patch, updatedAt: nowIso() } : t)) }))),
       toggleTask: (taskId) =>
         set((s) => ({
           tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done, completedAt: !t.done ? nowIso() : undefined, updatedAt: nowIso() } : t)),
@@ -725,6 +759,26 @@ const rawAppStore = create<AppState>()(
             settings: { ...s.settings, icsSources: upsertById(s.settings.icsSources, [source]) },
           };
         }),
+      pruneMoodleOnlySubjects: () => {
+        const s = get();
+        const own = s.subjects.filter((x) => !x.demo);
+        if (!hasSisTimetable(own, s.events)) return 0;
+        const drop = own.filter((x) => !isBindingSubject(x, s.events));
+        if (drop.length === 0) return 0;
+        const ids = new Set(drop.map((x) => x.id));
+        const reqs = s.requirements.filter((r) => ids.has(r.subjectId));
+        const mats = s.materials.filter((m) => m.subjectId && ids.has(m.subjectId));
+        const at = nowIso();
+        set({
+          subjects: s.subjects.filter((x) => !ids.has(x.id)),
+          requirements: s.requirements.filter((r) => !ids.has(r.subjectId)),
+          materials: s.materials.filter((m) => !(m.subjectId && ids.has(m.subjectId))),
+          tasks: s.tasks.map((t) => (t.subjectId && ids.has(t.subjectId) ? { ...t, subjectId: undefined, subjectAuto: undefined, updatedAt: at } : t)),
+          events: s.events.map((e) => (e.subjectId && ids.has(e.subjectId) ? { ...e, subjectId: undefined, updatedAt: at } : e)),
+          tombstones: tomb(s.tombstones, [...drop.map((x) => keyOf.subject(x.id)), ...reqs.map((r) => keyOf.req(r.id)), ...mats.map((m) => keyOf.material(m.id))]),
+        });
+        return drop.length;
+      },
       disconnectMoodle: () => set((s) => ({ settings: { ...s.settings, moodle: null } })),
       upsertIcsSource: (source) => set((s) => ({ settings: { ...s.settings, icsSources: upsertById(s.settings.icsSources, [source]) }, meta: { ...s.meta, settingsUpdatedAt: nowIso() } })),
       removeIcsSource: (sourceId, removeItems) =>
@@ -751,15 +805,29 @@ const rawAppStore = create<AppState>()(
         }),
       patchGoogleSync: (mode, patch) => set((s) => ({ googleSync: { ...s.googleSync, [mode]: { ...s.googleSync[mode], ...patch } } })),
       resetGoogleSync: (mode) => set((s) => ({ googleSync: { ...s.googleSync, [mode]: emptySyncState() } })),
-      applyDriveMerge: (merged) =>
+      applyDriveMerge: (merged) => {
+        applyingRemoteSettings = true;
+        try {
         set((s) => {
           const keepDemo = <T extends { demo?: boolean }>(list: T[]) => list.filter((x) => x.demo);
           const mirrors = s.events.filter((e) => e.google?.readOnly);
-          const newer = merged.settings && (merged.settingsUpdatedAt ?? '') > (s.meta.settingsUpdatedAt ?? '') ? { ...s.settings, ...merged.settings } : s.settings;
+          // Nastavení po položkách: převezme se jen to, co se jinde změnilo později než tady.
+          const localStamps = s.meta.settingsStamps ?? {};
+          const localAt = s.meta.settingsUpdatedAt ?? '';
+          const mergedStamps = merged.settingsStamps ?? {};
+          const newer: Record<string, unknown> = { ...s.settings };
+          const stamps: Record<string, string> = { ...localStamps };
+          for (const [key, value] of Object.entries(merged.settings ?? {})) {
+            const remoteAt = mergedStamps[key] ?? merged.settingsUpdatedAt ?? '';
+            if (remoteAt > (localStamps[key] ?? localAt)) {
+              newer[key] = value;
+              stamps[key] = remoteAt;
+            }
+          }
           // Rozhodnutí o předmětech se nikdy neztratí: sloučení a „jsou různé“ ze všech zařízení se sčítají.
           const aliases = { ...(merged.settings?.subjectAliases ?? {}), ...(s.settings.subjectAliases ?? {}) };
           const distinct = [...new Set([...(merged.settings?.distinctSubjects ?? []), ...(s.settings.distinctSubjects ?? [])])];
-          const settings = { ...newer, subjectAliases: aliases, distinctSubjects: distinct };
+          const settings = { ...(newer as unknown as Settings), subjectAliases: aliases, distinctSubjects: distinct };
           const live = s.googleSync.live;
           return {
             subjects: upsertSubjects(keepDemo(s.subjects), merged.subjects, aliases),
@@ -770,12 +838,16 @@ const rawAppStore = create<AppState>()(
             milestones: [...s.milestones.filter((m) => m.source === 'demo'), ...remapSubjects(merged.milestones, aliases)],
             tombstones: pruneTombstones(merged.tombstones, new Date()),
             settings,
-            meta: { ...s.meta, settingsUpdatedAt: merged.settingsUpdatedAt ?? s.meta.settingsUpdatedAt },
+            meta: { ...s.meta, settingsStamps: stamps, settingsUpdatedAt: [merged.settingsUpdatedAt ?? '', localAt].sort().pop() || undefined },
             googleSync: merged.google
               ? { ...s.googleSync, live: { ...live, links: merged.google.links, containers: { ...merged.google.containers, ...live.containers }, excluded: merged.google.excluded } }
               : s.googleSync,
           };
-        }),
+        });
+        } finally {
+          applyingRemoteSettings = false;
+        }
+      },
       updateGoogleSettings: (patch) => set((s) => ({ settings: { ...s.settings, google: { ...s.settings.google, ...patch } } })),
 
       /* -------------------------------- nastavení ----------------------------- */
@@ -972,7 +1044,7 @@ const rawAppStore = create<AppState>()(
     }),
     {
       name: PERSIST_KEY,
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => safeLocalStorage),
       partialize: (s) => ({
         subjects: s.subjects,
@@ -1006,6 +1078,15 @@ const rawAppStore = create<AppState>()(
           const live = settings.origin?.live;
           if (live && live.source === 'gps' && live.presetId === 'kajetanka') live.presetId = 'centrum';
         }
+        if (version < 4) {
+          // Úvodní animaci mohla vypnout starší synchronizace (přepisovala celé nastavení) – zapnout znovu.
+          const settings = (p.settings ?? {}) as { appearance?: Record<string, unknown> };
+          settings.appearance = { ...(settings.appearance ?? {}), intro: true };
+          p.settings = settings as Record<string, unknown>;
+          const meta = (p.meta ?? {}) as { settingsStamps?: Record<string, string> };
+          meta.settingsStamps = { ...(meta.settingsStamps ?? {}), appearance: new Date().toISOString() };
+          (p as Record<string, unknown>).meta = meta;
+        }
         return p as unknown as AppState;
       },
       merge: (persisted, current) => {
@@ -1028,16 +1109,70 @@ const rawAppStore = create<AppState>()(
 );
 
 /**
+ * Po každém importu (SIS, Moodle) uklidit předměty, které založil jen Moodle:
+ * závazné jsou jen předměty z rozvrhu SIS a ty, které student sám přidal.
+ */
+for (const name of ['applyIcsImport', 'applyMoodleSync', 'applyMoodleIcs'] as const) {
+  const original = rawAppStore.getState()[name] as (...args: unknown[]) => void;
+  rawAppStore.setState({
+    [name]: (...args: unknown[]) => {
+      original(...args);
+      rawAppStore.getState().pruneMoodleOnlySubjects();
+    },
+  } as Partial<AppState>);
+}
+
+/**
+ * Každá změna nastavení (odkudkoli – i setOrigin, režim, vzhled…) dostane čas
+ * změny po položkách. Synchronizace mezi zařízeními pak převezme jen to, co se
+ * jinde změnilo později – nic, co jste tu nastavili, se samo nepřepíše.
+ */
+rawAppStore.subscribe((state, prev) => {
+  if (state.settings === prev.settings || applyingRemoteSettings) return;
+  const a = state.settings as unknown as Record<string, unknown>;
+  const b = prev.settings as unknown as Record<string, unknown>;
+  const changed = [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((k) => a[k] !== b[k]);
+  if (changed.length === 0) return;
+  const at = nowIso();
+  const stamps = { ...(state.meta.settingsStamps ?? {}) };
+  for (const k of changed) stamps[k] = at;
+  rawAppStore.setState({ meta: { ...state.meta, settingsStamps: stamps, settingsUpdatedAt: at } });
+});
+
+/**
  * Hook úložiště. V režimu prezentace vrací data s vymyšlenými popisky
  * (getState() i zápisy pracují vždy se skutečnými daty).
  */
 function useAppStoreView<T>(selector?: (s: AppState) => T): T {
   const masked = usePresentationStore((p) => p.masked);
+  const created = usePresentationStore((p) => p.created);
+  const keep = useMemo(() => new Set(created.map((x) => x.id)), [created]);
   return rawAppStore((s) => {
-    const view = masked ? maskState(s) : s;
+    const view = masked ? maskState(s, keep) : s;
     return (selector ? selector(view) : view) as T;
   });
 }
+
+/** Konec prezentace (nebo prezentační prohlídky): smazat, co se přidalo na ukázku. */
+export function removePresentationItems(by?: 'tour'): void {
+  const items = usePresentationStore.getState().created.filter((x) => !by || x.by === by);
+  if (items.length > 0) {
+    const st = rawAppStore.getState();
+    for (const { kind, id } of items) {
+      if (kind === 'task' && st.tasks.some((t) => t.id === id)) st.removeTask(id);
+      if (kind === 'event' && st.events.some((e) => e.id === id)) st.removeEvent(id);
+      if (kind === 'requirement' && st.requirements.some((r) => r.id === id)) st.removeRequirement(id);
+      if (kind === 'material' && st.materials.some((m) => m.id === id)) st.removeMaterial(id);
+      if (kind === 'subject' && st.subjects.some((x) => x.id === id)) st.removeSubject(id);
+    }
+  }
+  usePresentationStore.getState().clearTracked(by);
+}
+usePresentationStore.subscribe((p, prev) => {
+  if (prev.masked && !p.masked) removePresentationItems();
+});
+// Prezentace (nebo prohlídka) skončila jinde (zavřená karta) – uklidit při dalším spuštění.
+removePresentationItems(usePresentationStore.getState().masked ? 'tour' : undefined);
 export const useAppStore = Object.assign(useAppStoreView, rawAppStore) as unknown as typeof rawAppStore;
 
 /** Sloučí uložené nastavení s výchozím (včetně vnořených objektů nových verzí). */

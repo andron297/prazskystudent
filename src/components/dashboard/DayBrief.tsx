@@ -124,7 +124,7 @@ function TransitHint({ event }: { event: ScheduleEvent }) {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[18px] bg-white/[0.07] px-4 py-3">
       <p className="min-w-0 flex-1 text-[13.5px] leading-snug opacity-90">
-        Spoj a odpočet odchodu se ukáže nahoře na hlavní stránce {dayPhrase(from, appNow())} {vTime(from)}.
+        Odpočet, kdy vyrazit, začne na hlavní stránce {dayPhrase(from, appNow())} {vTime(from)}.
       </p>
       <button type="button" onClick={() => planTripTo(building.name, building.coords, building.address, arrive)} className="shrink-0 rounded-full bg-[#e7d6b5] px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a2a] hover:brightness-105">
         Naplánovat cestu

@@ -132,19 +132,20 @@ function Hub() {
             checked={masked}
             onChange={(v) => {
               usePresentationStore.getState().setMasked(v);
-              toast.info(v ? 'Režim prezentace: na obrazovce jsou vymyšlené názvy, vaše data zůstávají beze změny.' : 'Režim prezentace je vypnutý.');
+              toast.info(v ? 'Režim prezentace: na obrazovce jsou vymyšlené názvy, vaše data zůstávají beze změny.' : 'Režim prezentace je vypnutý – ukázkové položky jsou pryč.');
             }}
             label="Režim prezentace (skrýt moje popisky)"
-            description="Předměty, události a úkoly se na obrazovce ukážou s vymyšlenými názvy – časy a rozvrh zůstanou. Hodí se, když promítáte. Úpravy se v tomto režimu neukládají."
+            description="Názvy předmětů, událostí a úkolů se na obrazovce nahradí vymyšlenými, kódy předmětů, časy a rozvrh zůstanou. Co během prezentace na ukázku přidáte, je vidět normálně a po vypnutí se samo smaže."
           />
         </li>
       </Group>
 
       <Group title="Pomoc">
         <Row glyph="compass" title="Průvodce aplikací" detail="Co aplikace umí a jak na to" onClick={() => go('pruvodce')} />
-        <Row glyph="spark" title="Krátká prohlídka" detail="Minuta, ukáže, co kde najdete" onClick={startTour} />
+        <Row glyph="compass" title="Krátká prohlídka" detail="Minuta, ukáže, co kde najdete" onClick={startTour} />
         <Row glyph="sliders" title="Průvodce nastavením" detail="Propojit SIS, Moodle a Google krok za krokem" onClick={() => useUiStore.getState().openSetup('start')} />
-        <Row glyph="spark" title="Prezentace aplikace" detail="Velká prohlídka na plátno – šipkami nebo klikrem" onClick={() => usePresentationStore.getState().setSlideshow(true)} />
+        <Row glyph="present" title="Prezentace na plátno" detail="Prohlídka aplikace s velkými popisky – šipkami nebo klikrem" onClick={() => usePresentationStore.getState().setStage(true)} />
+        <Row glyph="palette" title="Snímky o aplikaci" detail="Animované snímky s ukázkami a QR kódem" onClick={() => usePresentationStore.getState().setSlideshow(true)} />
       </Group>
 
       {owner && (

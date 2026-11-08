@@ -3,7 +3,7 @@
  * Předmět se mění klepnutím na štítek (nativní výběr, pohodlný i v mobilu).
  */
 import { motion } from 'motion/react';
-import { Check, Flag, Plus, Sparkles, X } from 'lucide-react';
+import { Check, Flag, Lightbulb, Plus, X } from 'lucide-react';
 import type { Subject } from '../../types';
 import { SUBJECT_COLOR_CLASSES } from '../../lib/colors';
 import { formatDeadline } from '../../lib/dates';
@@ -34,7 +34,7 @@ function SubjectChip({ row, subjects, byId }: { row: TaskRow; subjects: Subject[
     >
       {subject ? <span className={cn('size-1.5 shrink-0 rounded-full', color!.dot)} /> : <Plus className="size-3" aria-hidden />}
       <span className="truncate">{subject ? subjectShort(subject) : 'předmět'}</span>
-      {row.task?.subjectAuto && <Sparkles className="size-3 shrink-0 opacity-70" aria-label="odhad aplikace" />}
+      {row.task?.subjectAuto && <Lightbulb className="size-3 shrink-0 opacity-70" aria-label="odhad aplikace" />}
     </span>
   );
   if (row.kind !== 'task' || !row.task || subjects.length === 0) return subject ? chip : null;
@@ -69,7 +69,7 @@ export function SuggestionBar({ taskId, guess, byId }: { taskId: string; guess: 
   return (
     <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px]">
       <span className="inline-flex items-center gap-1 font-semibold text-moss">
-        <Sparkles className="size-3.5" aria-hidden /> Patří k předmětu
+        <Lightbulb className="size-3.5" aria-hidden /> Patří k předmětu
       </span>
       {options.map((s, i) => (
         <span key={s.id} className="inline-flex items-center gap-1">

@@ -35,17 +35,10 @@ const PLACES = ['Kavárna u parku', 'Městská knihovna', 'Sportovní hala', 'N�
 const TASKS = ['Přečíst 3. kapitolu', 'Připravit prezentaci', 'Napsat esej', 'Zopakovat přednášky', 'Vyplnit dotazník', 'Domluvit skupinový projekt', 'Odevzdat domácí úkol', 'Projít skripta', 'Nachystat poznámky ke zkoušce', 'Přihlásit se na termín'];
 const REQUIREMENTS = ['Seminární práce', 'Průběžný test', 'Prezentace', 'Esej', 'Domácí úkol', 'Referát', 'Projekt', 'Zápočtový test', 'Reflexe četby', 'Ústní zkouška'];
 const MATERIALS = ['Přednáška – úvod.pdf', 'Sylabus.pdf', 'Prezentace z cvičení.pptx', 'Povinná četba.pdf', 'Zadání úkolu.docx', 'Poznámky ze semináře', 'Skripta.pdf', 'Vzorový test.pdf'];
-const LETTERS = ['A', 'B', 'J', 'K', 'M', 'N', 'O', 'P', 'S', 'X'];
 
 const pick = <T,>(list: T[], id: string, salt: string): T => list[hashString(`${salt}:${id}`) % list.length];
 
 const cache = new WeakMap<object, unknown>();
-function memo<T extends object, R>(key: T, fn: (k: T) => R): R {
-  if (cache.has(key)) return cache.get(key) as R;
-  const value = fn(key);
-  cache.set(key, value);
-  return value;
-}
 
 /** Každý předmět dostane jiný vymyšlený název (stejné id = vždy stejný název). */
 function subjectNames(list: Subject[]): Map<string, string> {
@@ -63,11 +56,11 @@ function subjectNames(list: Subject[]): Map<string, string> {
 export function maskSubject(s: Subject, fakeName?: string): Subject {
   const name = fakeName ?? pick(SUBJECTS, s.id, 'subject');
   const teacher = pick(TEACHERS, s.id, 'teacher');
-  const code = `${pick(LETTERS, s.id, 'c1')}${pick(LETTERS, s.id, 'c2')}${pick(LETTERS, s.id, 'c3')}${100 + (hashString(`code:${s.id}`) % 900)}`;
   return {
     ...s,
     name,
-    code: s.code ? code : undefined,
+    // Kódy předmětů zůstávají skutečné (přání studenta).
+    code: s.code,
     teacher: s.teacher ? teacher : undefined,
     syllabus: s.syllabus
       ? {
@@ -84,26 +77,50 @@ export function maskSubject(s: Subject, fakeName?: string): Subject {
   };
 }
 
-export function maskState<S extends { subjects: Subject[]; events: ScheduleEvent[]; tasks: Task[]; requirements: Requirement[]; materials: Material[]; settings: { displayName: string } }>(state: S): S {
-  return memo(state, (st) => {
-    const subjects = memo(st.subjects, (list) => {
-      const names = subjectNames(list);
-      return list.map((x) => maskSubject(x, names.get(x.id)));
+/** Cache podle objektu a sady ponechaných id (stabilní pole = žádné zbytečné překreslování). */
+function memoKeyed<T extends object, R>(key: T, keepKey: string, fn: (k: T) => R): R {
+  const hit = cache.get(key) as { key: string; value: R } | undefined;
+  if (hit && hit.key === keepKey) return hit.value;
+  const value = fn(key);
+  cache.set(key, { key: keepKey, value });
+  return value;
+}
+
+export function maskState<S extends { subjects: Subject[]; events: ScheduleEvent[]; tasks: Task[]; requirements: Requirement[]; materials: Material[]; settings: { displayName: string } }>(state: S, keep: ReadonlySet<string> = new Set()): S {
+  // Položky přidané během prezentace se ukazují skutečně (klíč cache tedy zahrnuje i je).
+  const keepKey = [...keep].sort().join(',');
+  return memoKeyed(state, keepKey, (st) => {
+    const subjects = memoKeyed(st.subjects, keepKey, (list) => {
+      const names = subjectNamesFor(list);
+      return list.map((x) => (keep.has(x.id) ? x : maskSubject(x, names.get(x.id))));
     });
     const subjectName = new Map(subjects.map((x) => [x.id, x.name]));
-    const events = memo(st.events, (list) =>
+    const events = memoKeyed(st.events, `${keepKey}|${subjects.length}`, (list) =>
       list.map((e) =>
-        e.subjectId && subjectName.has(e.subjectId)
-          ? { ...e, title: subjectName.get(e.subjectId)!, teacher: e.teacher ? pick(TEACHERS, e.subjectId, 'teacher') : undefined, notes: undefined }
-          : { ...e, title: pick(PERSONAL, e.id, 'personal'), location: e.buildingId ? e.location : e.location ? pick(PLACES, e.id, 'place') : undefined, teacher: undefined, notes: undefined },
+        keep.has(e.id)
+          ? e
+          : e.subjectId && subjectName.has(e.subjectId)
+            ? { ...e, title: subjectName.get(e.subjectId)!, teacher: e.teacher ? pick(TEACHERS, e.subjectId, 'teacher') : undefined, notes: undefined }
+            : { ...e, title: pick(PERSONAL, e.id, 'personal'), location: e.buildingId ? e.location : e.location ? pick(PLACES, e.id, 'place') : undefined, teacher: undefined, notes: undefined },
       ),
     );
-    const tasks = memo(st.tasks, (list) => list.map((t) => ({ ...t, title: pick(TASKS, t.id, 'task'), notes: undefined })));
-    const requirements = memo(st.requirements, (list) => list.map((r) => ({ ...r, title: pick(REQUIREMENTS, r.id, 'req'), description: undefined })));
-    const materials = memo(st.materials, (list) => list.map((m) => ({ ...m, title: pick(MATERIALS, m.id, 'mat'), fileName: m.fileName ? pick(MATERIALS, m.id, 'mat') : undefined, markdown: undefined })));
-    const settings = memo(st.settings, (x) => ({ ...x, displayName: '' }));
+    const tasks = memoKeyed(st.tasks, keepKey, (list) => list.map((t) => (keep.has(t.id) ? t : { ...t, title: pick(TASKS, t.id, 'task'), notes: undefined })));
+    const requirements = memoKeyed(st.requirements, keepKey, (list) => list.map((r) => (keep.has(r.id) ? r : { ...r, title: pick(REQUIREMENTS, r.id, 'req'), description: undefined })));
+    const materials = memoKeyed(st.materials, keepKey, (list) => list.map((m) => (keep.has(m.id) ? m : { ...m, title: pick(MATERIALS, m.id, 'mat'), fileName: m.fileName ? pick(MATERIALS, m.id, 'mat') : undefined, markdown: undefined })));
+    const settings = memoKeyed(st.settings, '', (x) => ({ ...x, displayName: '' }));
     return { ...st, subjects, events, tasks, requirements, materials, settings };
   });
+}
+
+/** Vymyšlené názvy předmětů (cache podle seznamu). */
+const namesCache = new WeakMap<Subject[], Map<string, string>>();
+function subjectNamesFor(list: Subject[]): Map<string, string> {
+  let names = namesCache.get(list);
+  if (!names) {
+    names = subjectNames(list);
+    namesCache.set(list, names);
+  }
+  return names;
 }
 
 /** Změny, které by mohly uložit vymyšlený popisek místo skutečného (v režimu prezentace se blokují). */

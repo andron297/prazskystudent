@@ -3,10 +3,11 @@
  * varianty s přestupy, chůzí a dobou cesty, dřívější a pozdější spoje.
  * Před přednáškou se sám nastaví na cestu do školy a průběžně obnovuje.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { MODE_CHOICES, normalizeModes, toggleMode } from '../../lib/transitModes';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowDownUp, Building2, Check, ChevronDown, ChevronUp, Clock, CloudRain, Footprints, GraduationCap, History, LoaderCircle, LocateFixed, MapPin, Navigation2, RefreshCw, Search, TrainFront, X } from 'lucide-react';
-import type { Itinerary, RideLeg, WalkLeg } from '../../types';
+import { ArrowDownUp, Building2, Check, ChevronDown, ChevronUp, Clock, CloudRain, Footprints, GraduationCap, History, LoaderCircle, LocateFixed, Map as MapIcon, MapPin, Navigation2, RefreshCw, Search, TrainFront, X } from 'lucide-react';
+import type { Itinerary, LatLng, RideLeg, WalkLeg } from '../../types';
 import { vTime, calendarDayDiff, capitalize, formatDayMonth, formatDuration, formatRelative, formatTime, formatWeekdayShort, isSameDay, plural, toLocalInputValue, fromLocalInputValue } from '../../lib/dates';
 import { haversineMeters } from '../../lib/geo';
 import { searchStops } from '../../lib/stops';
@@ -30,13 +31,15 @@ import { servesEvent } from '../../lib/transitWindow';
 import { useWeather } from '../../services/weather';
 import { useTripStore } from '../../store/tripStore';
 
+const MapPicker = lazy(() => import('../map/MapPicker'));
+
 const KIND_ICON = { gps: LocateFixed, origin: MapPin, stop: TrainFront, address: MapPin, place: MapPin, building: Building2, recent: History } as const;
 
 /* ------------------------------------------------------------------ */
 /* Pole s našeptávačem                                                 */
 /* ------------------------------------------------------------------ */
 
-function PlaceField({ label, value, onChange, placeholder, base }: { label: string; value: Place | null; onChange: (p: Place) => void; placeholder: string; base: Place[] }) {
+function PlaceField({ label, value, onChange, placeholder, base, near, onMap }: { label: string; value: Place | null; onChange: (p: Place) => void; placeholder: string; base: Place[]; near: LatLng; onMap: () => void }) {
   const { stops } = useStops();
   const buildings = useAppStore((s) => s.settings.buildings);
   const [text, setText] = useState('');
@@ -54,7 +57,7 @@ function PlaceField({ label, value, onChange, placeholder, base }: { label: stri
     const ctrl = new AbortController();
     setLoading(true);
     const t = setTimeout(() => {
-      geocode(q, ctrl.signal)
+      geocode(q, ctrl.signal, near)
         .then((r) => setRemote(r.filter((p) => p.kind !== 'stop')))
         .catch(() => setRemote([]))
         .finally(() => setLoading(false));
@@ -63,6 +66,7 @@ function PlaceField({ label, value, onChange, placeholder, base }: { label: stri
       clearTimeout(t);
       ctrl.abort();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
 
   const suggestions = useMemo<Place[]>(() => {
@@ -107,7 +111,7 @@ function PlaceField({ label, value, onChange, placeholder, base }: { label: stri
         {loading && focused && <LoaderCircle className="size-4 animate-spin text-subtle" aria-hidden />}
       </label>
       <AnimatePresence>
-        {focused && suggestions.length > 0 && (
+        {focused && (
           <motion.ul initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="glass-strong absolute inset-x-0 top-[calc(100%+6px)] z-30 max-h-80 overflow-y-auto rounded-[18px] border border-line p-1.5 shadow-[var(--card-shadow)]">
             {suggestions.map((p, i) => {
               const Icon = KIND_ICON[p.kind];
@@ -123,6 +127,12 @@ function PlaceField({ label, value, onChange, placeholder, base }: { label: stri
                 </li>
               );
             })}
+            <li>
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { setFocused(false); inputRef.current?.blur(); onMap(); }} className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left font-semibold text-accent hover:bg-surface-2">
+                <MapIcon className="size-4 shrink-0" aria-hidden />
+                <span className="text-[14px]">Vybrat místo na mapě</span>
+              </button>
+            </li>
           </motion.ul>
         )}
       </AnimatePresence>
@@ -366,6 +376,7 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
   const now = useNow(30_000);
   const origin = useOrigin();
   const settings = useAppStore((s) => s.settings);
+  const updateSettings = useAppStore((s) => s.updateSettings);
   const events = useVisibleEvents();
   const [from, setFrom] = useState<Place | null>(null);
   const [to, setTo] = useState<Place | null>(null);
@@ -381,6 +392,9 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
   const touched = useRef(false);
   const [more, setMore] = useState<{ busy: 'prev' | 'next' | null; error: string | null }>({ busy: null, error: null });
   const tripsByEvent = useTripStore((s) => s.byEvent);
+  const [mapFor, setMapFor] = useState<'from' | 'to' | null>(null);
+  const modes = normalizeModes(settings.transitModes);
+  const modesKey = modes.join(',');
   const adhocTrip = useTripStore((s) => s.adhoc);
 
   const myPlace: Place = useMemo(
@@ -419,7 +433,7 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
       if (!opts.silent) setStatus('loading');
       setError(null);
       try {
-        const r = await planBetween({ from, to, time: queryTime(), arriveBy, wheelchair: settings.accessibleOnly });
+        const r = await planBetween({ from, to, time: queryTime(), arriveBy, wheelchair: settings.accessibleOnly, modes: settings.transitModes });
         setResult(r);
         setExtra({ before: [], after: [], prev: r.previous, next: r.next });
         setStatus('idle');
@@ -429,7 +443,7 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
         setError(errorMessage(e));
       }
     },
-    [from, to, arriveBy, queryTime, settings.accessibleOnly],
+    [from, to, arriveBy, queryTime, settings.accessibleOnly, settings.transitModes],
   );
 
   // Požadavek odjinud (např. „Trasa“ u menzy): cíl je dané místo, odjezd teď.
@@ -470,7 +484,7 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
   useEffect(() => {
     if (from && to) void search();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from?.label, from?.coords.lat, to?.label, to?.coords.lat, arriveBy, timeMode, timeValue]);
+  }, [from?.label, from?.coords.lat, to?.label, to?.coords.lat, arriveBy, timeMode, timeValue, modesKey]);
 
   // Živé obnovování (zpoždění) – každou minutu, když je vyhledávač vidět.
   useEffect(() => {
@@ -487,7 +501,7 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
     if (!cursor) return;
     setMore({ busy: dir, error: null });
     try {
-      const r = await planBetween({ from, to, time: queryTime(), arriveBy, cursor, wheelchair: settings.accessibleOnly });
+      const r = await planBetween({ from, to, time: queryTime(), arriveBy, cursor, wheelchair: settings.accessibleOnly, modes: settings.transitModes });
       setExtra((x) => (dir === 'prev' ? { ...x, before: [...r.itineraries, ...x.before], prev: r.previous } : { ...x, after: [...x.after, ...r.itineraries], next: r.next }));
       setMore({ busy: null, error: r.itineraries.length ? null : dir === 'next' ? 'Další spoje už plánovač nenašel.' : 'Dřívější spoje plánovač nenašel.' });
     } catch (e) {
@@ -563,9 +577,29 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
 
   return (
     <div className="space-y-3">
+      {mapFor && (
+        <Suspense fallback={null}>
+          <MapPicker
+            open
+            title={mapFor === 'from' ? 'Odkud jedete' : 'Kam jedete'}
+            start={(mapFor === 'from' ? from?.coords : to?.coords) ?? origin.coords}
+            onClose={() => setMapFor(null)}
+            onPick={(p) => {
+              touched.current = true;
+              rememberPlace(p);
+              if (mapFor === 'from') setFrom(p);
+              else {
+                setTo(p);
+                setLecture(null);
+              }
+              setMapFor(null);
+            }}
+          />
+        </Suspense>
+      )}
       <div className="relative space-y-2">
-        <PlaceField label="Odkud" value={from} onChange={(p) => { touched.current = true; setFrom(p); }} placeholder="Zastávka, adresa, místo…" base={base} />
-        <PlaceField label="Kam" value={to} onChange={(p) => { touched.current = true; setTo(p); setLecture(null); }} placeholder="Kam chcete jet?" base={base.slice(1).concat(myPlace)} />
+        <PlaceField label="Odkud" value={from} onChange={(p) => { touched.current = true; setFrom(p); }} placeholder="Zastávka, adresa, místo…" base={base} near={origin.coords} onMap={() => setMapFor('from')} />
+        <PlaceField label="Kam" value={to} onChange={(p) => { touched.current = true; setTo(p); setLecture(null); }} placeholder="Kam chcete jet?" base={base.slice(1).concat(myPlace)} near={origin.coords} onMap={() => setMapFor('to')} />
         <button type="button" onClick={swap} className="absolute right-3 top-[38px] z-20 grid size-8 place-items-center rounded-full bg-surface text-muted shadow ring-1 ring-line hover:text-fg" aria-label="Prohodit odkud a kam">
           <ArrowDownUp className="size-4" aria-hidden />
         </button>
@@ -599,6 +633,28 @@ export function JourneyPlanner({ active = true }: { active?: boolean }) {
         <button type="button" onClick={() => void search()} className="ml-auto grid size-10 shrink-0 place-items-center rounded-full bg-accent text-accent-fg hover:brightness-110" aria-label="Hledat spojení">
           {status === 'loading' ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : <Search className="size-4" aria-hidden />}
         </button>
+      </div>
+
+      <div className="scrollbar-none -mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-0.5" role="group" aria-label="Čím chcete jet">
+        <span className="shrink-0 pr-0.5 text-[11px] font-black uppercase tracking-[0.1em] text-subtle">Čím</span>
+        {MODE_CHOICES.map((m) => {
+          const on = modes.includes(m.id);
+          return (
+            <button
+              key={m.id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => {
+                touched.current = true;
+                updateSettings({ transitModes: toggleMode(settings.transitModes, m.id) });
+              }}
+              className={cn('inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1.5 text-[12.5px] font-semibold ring-1 ring-inset transition', on ? 'bg-accent-soft text-accent ring-accent/40' : 'bg-surface text-subtle line-through decoration-1 ring-line hover:text-fg')}
+            >
+              {on && <Check className="size-3.5" aria-hidden />}
+              {m.label}
+            </button>
+          );
+        })}
       </div>
 
       {lectures.length > 0 && (

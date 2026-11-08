@@ -1,6 +1,7 @@
+import { AiMark } from '../ui/AiMark';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CalendarPlus, ClipboardPaste, FileUp, Sparkles, Wand, WandSparkles } from 'lucide-react';
+import { CalendarPlus, ClipboardPaste, FileUp, Wand } from 'lucide-react';
 import type { Milestone, MilestoneCategory, Requirement, RequirementType } from '../../types';
 import { milestoneToCalendarItem, requirementToCalendarItem, downloadIcs, type CalendarItem } from '../../lib/calendarExport';
 import { academicYearStart, endOfDay, formatDayMonth, formatTime, fromDateKey, isDateKey, toDate } from '../../lib/dates';
@@ -248,12 +249,12 @@ export function TextParser({ initialSubjectId }: { initialSubjectId?: string }) 
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-[12.5px] text-muted">
         <span className="flex items-center gap-1.5">
-          {engine === 'ai' ? <Sparkles className="size-3.5 text-violet-500" aria-hidden /> : <Wand className="size-3.5" aria-hidden />}
+          {engine === 'ai' ? <AiMark className="size-3.5 text-violet-500" aria-hidden /> : <Wand className="size-3.5" aria-hidden />}
           {stats
             ? `${engine === 'ai' ? 'AI' : 'Lokální parser'}: ${items.length} položek z ${stats.stats.lines} řádků · akademický rok ${stats.academicYearStart}/${stats.academicYearStart + 1}${stats.detectedYear ? '' : ' (odhad)'}`
             : 'Výsledky se objeví hned při vložení textu.'}
         </span>
-        <Button size="sm" variant="soft" icon={WandSparkles} onClick={() => void runAi()} loading={aiBusy} disabled={!text.trim()} title={api.canUseAi ? 'Zpřesnit pomocí AI' : 'AI není nastavené – vložte klíč od Claude, ChatGPT nebo Gemini v Nastavení → Data a soukromí'}>
+        <Button size="sm" variant="soft" icon={AiMark} onClick={() => void runAi()} loading={aiBusy} disabled={!text.trim()} title={api.canUseAi ? 'Zpřesnit pomocí AI' : 'AI není nastavené – vložte klíč od Claude, ChatGPT nebo Gemini v Nastavení → Data a soukromí'}>
           {api.canUseAi ? 'Zpřesnit pomocí AI' : 'AI (nenastaveno)'}
         </Button>
       </div>

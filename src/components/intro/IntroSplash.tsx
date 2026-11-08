@@ -7,6 +7,10 @@
  * Jen transformace a průhlednost (plynulé i na slabším telefonu), texty až po
  * načtení písma, „omezit pohyb“ = krátká statická verze.
  */
+import { Emoji3D } from '../ui/Emoji3D';
+import { weather3d } from '../../lib/emoji3d';
+import { weatherLabel } from '../../lib/weather';
+import { lastForecast } from '../../services/weather';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { vTime, calendarDayDiff, formatTime, isSameDay, plural, toDate } from '../../lib/dates';
@@ -89,18 +93,20 @@ function dayFacts(now: Date): { hello: string; facts: Fact[] } {
 }
 
 /** Úhel ručičky plynule z nuly na cíl (atribut SVG transform – spolehlivé i v Safari). */
+/**
+ * Úhel ručičky plynule z nuly na cíl (atribut SVG transform – spolehlivé i
+ * v Safari). Ručičky se natočí na aktuální čas vždy – i když má zařízení
+ * omezené animace (pak jen rychleji).
+ */
 function useSweep(target: number, delay: number, duration: number, reduce: boolean): number {
-  const [angle, setAngle] = useState(reduce ? target : 0);
+  const [angle, setAngle] = useState(0);
   useEffect(() => {
-    if (reduce) {
-      setAngle(target);
-      return;
-    }
     let raf = 0;
-    const t0 = performance.now() + delay;
+    const t0 = performance.now() + (reduce ? 100 : delay);
+    const span = reduce ? 600 : duration;
     const ease = (x: number) => 1 - Math.pow(1 - x, 3);
     const step = (t: number) => {
-      const k = Math.min(1, Math.max(0, (t - t0) / duration));
+      const k = Math.min(1, Math.max(0, (t - t0) / span));
       setAngle(target * ease(k));
       if (k < 1) raf = requestAnimationFrame(step);
     };
@@ -135,7 +141,7 @@ function Mark({ minutesAngle, hoursAngle, reduce }: { minutesAngle: number; hour
 }
 
 const TOTAL_MS = 4300;
-const REDUCED_MS = 1400;
+const REDUCED_MS = 2400;
 
 /** Veřejné stránky (zásady, podmínky, o aplikaci, propojení zařízení) se otevírají bez úvodní animace. */
 function openedOnPublicPage(): boolean {
@@ -152,6 +158,7 @@ export function IntroSplash() {
   const [run, setRun] = useState(0);
   const now = useMemo(() => appNow(), [run]); // eslint-disable-line react-hooks/exhaustive-deps
   const { hello, facts } = useMemo(() => dayFacts(now), [now]);
+  const weather = useMemo(() => lastForecast(), [run]); // eslint-disable-line react-hooks/exhaustive-deps
   // Jedna celá otáčka navíc – ručičky se roztočí a zastaví na aktuálním čase.
   const minutesAngle = now.getMinutes() * 6 + now.getSeconds() * 0.1 + 360;
   const hoursAngle = ((now.getHours() % 12) + now.getMinutes() / 60) * 30 + 360;
@@ -241,6 +248,12 @@ export function IntroSplash() {
                 <motion.p {...rise(1.4)} className="mt-7 font-display text-[25px] leading-tight text-[#f6f2e8] sm:text-[28px]">
                   {hello}
                 </motion.p>
+                {weather && (
+                  <motion.p {...rise(1.6)} className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/[0.08] py-1 pl-1.5 pr-3.5 text-[14px] font-semibold ring-1 ring-inset ring-white/15">
+                    <Emoji3D name={weather3d(weather.current.code, weather.current.isDay)} size={30} eager />
+                    {Math.round(weather.current.temp)}° · {weatherLabel(weather.current.code).toLowerCase()}
+                  </motion.p>
+                )}
                 <ul className="mt-4 w-full max-w-[22rem] space-y-2 text-left">
                   {facts.map((f, i) => (
                     <motion.li

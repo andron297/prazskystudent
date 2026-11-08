@@ -1,6 +1,6 @@
 import { useMemo, useState, type KeyboardEvent } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CalendarClock, CornerDownLeft, Flag, GraduationCap, ListTodo, MapPin, Sparkles, X } from 'lucide-react';
+import { CalendarClock, CornerDownLeft, Flag, GraduationCap, ListTodo, MapPin, Tag, X, Zap } from 'lucide-react';
 import { parseQuickAdd, type QuickAddResult } from '../../lib/quickAdd';
 import type { SubjectGuess } from '../../lib/subjectMatch';
 import { SUBJECT_COLOR_CLASSES } from '../../lib/colors';
@@ -11,7 +11,7 @@ import { appNow } from '../../store/clockStore';
 import { toast } from '../../store/uiStore';
 import { cn } from '../ui/primitives';
 
-const TOKEN_ICON = { date: CalendarClock, time: CalendarClock, subject: GraduationCap, place: MapPin, priority: Flag, kind: Sparkles } as const;
+const TOKEN_ICON = { date: CalendarClock, time: CalendarClock, subject: GraduationCap, place: MapPin, priority: Flag, kind: Tag } as const;
 
 /** Uloží výsledek rychlého zadání; vrací popisek pro potvrzení. */
 export function saveQuickAdd(result: QuickAddResult, guess?: SubjectGuess | null): string {
@@ -80,7 +80,7 @@ export function QuickAdd({ autoFocus = false, onSaved, variant = 'card', initial
   return (
     <div>
       <div className={cn('flex items-center gap-2 rounded-full pl-4 pr-1.5 ring-1 ring-inset transition focus-within:ring-2 focus-within:ring-accent', hero ? 'h-14 bg-surface ring-line-strong' : 'h-12 bg-surface-2 ring-line')}>
-        <Sparkles className="size-4 shrink-0 text-moss" aria-hidden />
+        <Zap className="size-4 shrink-0 text-moss" aria-hidden />
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -127,7 +127,7 @@ export function QuickAdd({ autoFocus = false, onSaved, variant = 'card', initial
                 })}
               {guessSubject && (
                 <span className={cn('inline-flex items-center gap-1 rounded-full py-0.5 pl-2 pr-1 text-[12px] font-bold', SUBJECT_COLOR_CLASSES[guessSubject.color].soft)} title={`Odhad ${guess!.reason}`}>
-                  <Sparkles className="size-3" aria-hidden />
+                  <Zap className="size-3" aria-hidden />
                   {guessSubject.code ?? guessSubject.name}
                   <button type="button" onClick={() => setDismissedGuess(guessSubject.id)} className="grid size-4 place-items-center rounded-full hover:bg-black/10" aria-label="Bez tohoto předmětu">
                     <X className="size-3" aria-hidden />

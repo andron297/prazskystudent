@@ -99,7 +99,7 @@ const SLIDES: Slide[] = [
   },
 ];
 
-function Qr({ text }: { text: string }) {
+export function Qr({ text }: { text: string }) {
   const svg = useMemo(() => {
     const q = qrcode(0, 'M');
     q.addData(text);

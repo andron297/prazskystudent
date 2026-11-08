@@ -79,10 +79,12 @@ describe('demo data a synchronizace', () => {
     const client = new DemoMoodleClient('https://dl1.cuni.cz', 'abc123abc123abc123abc123abc123ab', () => now);
     const result = await syncMoodle(client, seed, now);
     expect(result.stats.courses).toBe(4);
-    expect(result.stats.newSubjects).toBe(1);
+    // Kurz, který není v rozvrhu SIS, se nezakládá jako předmět.
+    expect(result.stats.newSubjects).toBe(0);
+    expect(result.subjects.every((x) => seed.subjects.some((y) => y.id === x.id))).toBe(true);
     expect(result.requirements.find((r) => r.externalId === 'moodle:assign:9001')?.subtasks.filter((s) => s.done)).toHaveLength(3);
-    expect(result.stats.newRequirements).toBe(3); // DÚ 5, případová studie, kvíz
-    expect(result.stats.newMaterials).toBe(5);
+    expect(result.stats.newRequirements).toBe(1); // DÚ 5 (případová studie a kvíz jsou z kurzu mimo rozvrh SIS)
+    expect(result.stats.newMaterials).toBe(3);
   }, 20_000);
 
   it('rejects an invalid token in the sandbox', async () => {

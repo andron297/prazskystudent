@@ -5,7 +5,6 @@
  */
 import type { Requirement, Subject } from '../types';
 import type { IcsCalendar, IcsEvent } from './ics';
-import { nextSubjectColor } from './colors';
 import { findSubject, extractSubjectName } from './icsImport';
 import { hashString } from './id';
 import { defaultSubtasks, guessRequirementType } from './progress';
@@ -78,25 +77,15 @@ export function buildMoodleIcsImport(calendar: IcsCalendar, ctx: MoodleIcsContex
   const nowIso = ctx.now.toISOString();
   const oldest = ctx.now.getTime() - 60 * 86_400_000;
 
-  const subjectFor = (ev: IcsEvent): Subject => {
+  // Jen předměty z rozvrhu SIS (nebo přidané studentem) – Moodle nové předměty nezakládá.
+  const subjectFor = (ev: IcsEvent): Subject | null => {
     const course = ev.categories[0]?.trim() ?? '';
+    if (!course) return null;
     const code = extractSubjectCode(course, ev.summary, ev.description);
-    const name = course ? extractSubjectName(course, code) : 'Moodle – ostatní';
-    let subject = findSubject(known, code, name);
-    if (!subject) {
-      subject = {
-        id: `subj_m_${hashString(code ?? name).toString(36)}`,
-        code,
-        name,
-        color: nextSubjectColor(known.map((s) => s.color)),
-        source: 'moodle',
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-      known.push(subject);
-      newSubjects.push(subject);
-    }
-    if (course) courses.add(course);
+    const name = extractSubjectName(course, code);
+    const subject = findSubject(known, code, name);
+    if (!subject) return null;
+    courses.add(course);
     return subject;
   };
 
@@ -116,6 +105,11 @@ export function buildMoodleIcsImport(calendar: IcsCalendar, ctx: MoodleIcsContex
       continue;
     }
     const subject = subjectFor(ev);
+    if (!subject) {
+      // Kurz mimo rozvrh SIS – ignorovat.
+      skipped++;
+      continue;
+    }
     const externalId = `moodle-ics:${ev.uid}`;
     const deadline = ev.start.toISOString();
     const existing =

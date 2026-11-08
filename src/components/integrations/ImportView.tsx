@@ -1,5 +1,6 @@
+import { AiMark } from '../ui/AiMark';
 import { useMemo, useState } from 'react';
-import { BookOpen, CalendarPlus, CircleAlert, CircleCheck, ClipboardPaste, GraduationCap, ListChecks, ScrollText, Sparkles } from 'lucide-react';
+import { BookOpen, CalendarPlus, CircleAlert, CircleCheck, ClipboardPaste, GraduationCap, ListChecks, ScrollText } from 'lucide-react';
 import type { Subject } from '../../types';
 import { formatDate, formatDeadline, formatTime, formatWeekdayShort } from '../../lib/dates';
 import { applyActivityToRequirement, detectMoodlePage, guessSubjectForCourse, matchRequirement, parseMoodleActivity, type MoodleActivityPage } from '../../lib/moodlePage';
@@ -82,7 +83,7 @@ export function ImportView() {
               <TextInput value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://is.cuni.cz/studium/predmety/…" inputMode="url" />
             </Field>
             <TextArea value={text} onChange={(e) => setText(e.target.value)} placeholder="Vložte text stránky…" className="min-h-48" />
-            <Button variant="primary" icon={Sparkles} onClick={load} disabled={!text.trim()}>
+            <Button variant="primary" icon={AiMark} onClick={load} disabled={!text.trim()}>
               Přečíst
             </Button>
           </div>
@@ -305,7 +306,7 @@ function SmartExtractCard({ text, course, subjects, known, onDone }: { text: str
     }
   };
   return (
-    <Card title={known ? 'Stránka kurzu' : 'Neznámá stránka'} eyebrow="Úkoly a termíny z textu" icon={Sparkles}>
+    <Card title={known ? 'Stránka kurzu' : 'Neznámá stránka'} eyebrow="Úkoly a termíny z textu" icon={AiMark}>
       <p className="flex items-start gap-2 text-[14px]">
         {!known && <CircleAlert className="mt-0.5 size-4 shrink-0 text-clay" aria-hidden />}
         {known ? 'Projdu text kurzu a vytáhnu z něj úkoly, váhy a termíny k vybranému předmětu.' : 'Tuhle stránku přesně neznám, ale zkusím z ní vytáhnout úkoly a termíny.'}
@@ -322,7 +323,7 @@ function SmartExtractCard({ text, course, subjects, known, onDone }: { text: str
               ))}
             </Select>
           </Field>
-          <Button variant="primary" icon={Sparkles} loading={busy} onClick={() => void run()}>
+          <Button variant="primary" icon={AiMark} loading={busy} onClick={() => void run()}>
             Vytáhnout úkoly a termíny
           </Button>
         </div>

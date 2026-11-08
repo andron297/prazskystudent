@@ -13,7 +13,7 @@ import { useAppStore } from '../store/appStore';
 import { appNow } from '../store/clockStore';
 import { useUiStore } from '../store/uiStore';
 import { useNow } from './useNow';
-import { useOrigin, type ResolvedOrigin } from './useOrigin';
+import { activeOriginStop, useOrigin, type ResolvedOrigin } from './useOrigin';
 
 export interface TransitPlanState {
   plan: TransitPlan | null;
@@ -73,7 +73,7 @@ export function useTransitPlan(event: ScheduleEvent | null, building: Building |
   const onSite = Boolean(building && haversineMeters(origin.coords, building.coords) < 300);
   const refreshEvery = settings.mode === 'demo' ? 15_000 : 30_000;
   const bucket = Math.floor(now.getTime() / refreshEvery);
-  const originStop = settings.originStop[settings.mode];
+  const originStop = activeOriginStop(settings.originStop[settings.mode], origin.coords);
   const originKey = `${origin.coords.lat.toFixed(4)},${origin.coords.lng.toFixed(4)}|${originStop?.name ?? ''}`;
 
   useEffect(() => {

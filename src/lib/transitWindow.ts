@@ -1,7 +1,7 @@
 /**
- * Kdy začít ukazovat odpočet odchodu: nejdřív 4 hodiny před výukou, a když
- * je před ní jiný program (výuka, schůzka), až ke konci něj – aby se odpočty
- * nepřekrývaly. Po skončení předchozí akce se cesta počítá z jejího místa.
+ * Kdy začít ukazovat odpočet odchodu: 4 hodiny před výukou, a když je před
+ * ní jiná výuka, od jejího začátku – aby se odpočty nepřekrývaly. Po
+ * skončení předchozí akce se cesta počítá z jejího místa (bez GPS).
  */
 import type { Itinerary, ScheduleEvent } from '../types';
 
@@ -9,15 +9,21 @@ export const MAX_LEAD_MINUTES = 240;
 
 const ms = (iso: string) => new Date(iso).getTime();
 
-/** Poslední akce téhož dne, která skončí před začátkem této. */
+/** Akce, na kterou se jede (výuka nebo schůzka na místě, ne online, ne celodenní, aspoň 15 minut). */
+function isPlaceEvent(e: ScheduleEvent): boolean {
+  if (e.allDay || e.online || e.google?.readOnly) return false;
+  if (e.kind === 'personal' && !e.buildingId) return false;
+  return ms(e.end) - ms(e.start) >= 15 * 60_000;
+}
+
+/** Poslední akce na místě téhož dne, která skončí před začátkem této. */
 export function previousEvent(event: ScheduleEvent, events: ScheduleEvent[]): ScheduleEvent | null {
   const start = ms(event.start);
   const dayStart = new Date(event.start);
   dayStart.setHours(0, 0, 0, 0);
   let best: ScheduleEvent | null = null;
   for (const e of events) {
-    if (e.id === event.id) continue;
-    if (e.allDay) continue;
+    if (e.id === event.id || !isPlaceEvent(e)) continue;
     const end = ms(e.end);
     if (end > start || end <= dayStart.getTime() || ms(e.start) >= start) continue;
     if (!best || end > ms(best.end)) best = e;
@@ -26,16 +32,17 @@ export function previousEvent(event: ScheduleEvent, events: ScheduleEvent[]): Sc
 }
 
 /**
- * Od kdy ukazovat odpočet na tuto akci. Když si student zvolil spoj, který
- * jede dřív, odpočet začne nejpozději půl hodiny před jeho odchodem.
+ * Od kdy ukazovat odpočet na tuto akci: 4 hodiny předem. Když je před ní
+ * jiná výuka, až od jejího začátku (její odpočet tím skončil, takže se
+ * nepřekrývají) – vždy ale aspoň hodinu předem. Když si student zvolil spoj,
+ * který jede dřív, odpočet začne nejpozději půl hodiny před jeho odchodem.
  */
 export function countdownStart(event: ScheduleEvent, events: ScheduleEvent[], chosen?: Itinerary | null): Date {
   const start = ms(event.start);
   let from = start - MAX_LEAD_MINUTES * 60_000;
   const prev = previousEvent(event, events);
-  // Deset minut před koncem předchozí akce už je dobré vědět, kudy dál.
-  if (prev) from = Math.max(from, ms(prev.end) - 10 * 60_000);
-  from = Math.min(from, start - 15 * 60_000);
+  if (prev) from = Math.max(from, ms(prev.start));
+  from = Math.min(from, start - 60 * 60_000);
   if (chosen) from = Math.min(from, ms(chosen.leaveAt) - 30 * 60_000);
   return new Date(from);
 }

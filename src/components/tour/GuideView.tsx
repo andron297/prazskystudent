@@ -42,7 +42,7 @@ const SECTIONS: Section[] = [
     title: 'Dnes: kdy vyrazit a co vás čeká',
     lead: 'Úvodní obrazovka ukazuje jen to, co právě potřebujete.',
     points: [
-      'Velký odpočet říká, za jak dlouho vyrazit, ze které zastávky (i nástupiště) a kdy spoj skutečně jede. Objeví se nejdřív 4 hodiny předem, a když máte před tím výuku, až ke konci ní.',
+      'Velký odpočet říká, za jak dlouho vyrazit, ze které zastávky (i nástupiště) a kdy spoj skutečně jede. Objeví se 4 hodiny předem; když máte před tím výuku, od jejího začátku – vždy aspoň hodinu předem. Cestu počítám z vaší aktuální polohy.',
       'Pod fotkou jsou termíny na dnešek a zítra (po termínu červeně) – rovnou je odškrtnete tlačítkem Hotovo.',
       'Když vám skončí výuka, karta Kam dál nabídne cestu na další bod programu z kalendáře, nebo domů (domov nastavíte v Nastavení → Doprava, cesta a domov).',
       'Karta „Dnes vás čeká“: budova, učebna, spoj a úkoly k dnešním předmětům. Večer se přepne na zítřek.',
@@ -68,7 +68,8 @@ const SECTIONS: Section[] = [
     title: 'Doprava: vyhledávač spojení',
     lead: 'Jako IDOS – odkud kamkoli, se zpožděním v reálném čase.',
     points: [
-      'Zadejte zastávku, adresu nebo místo. Uvidíte všechny varianty s přestupy a chůzí, další načtete tlačítkem Pozdější spoje.',
+      'Zadejte zastávku, adresu nebo místo – našeptávač řadí podle blízkosti a u míst ukáže druh a čtvrť (hypermarket se nesplete s automyčkou). Cíl můžete vybrat i na mapě. Další spoje načtete tlačítkem Pozdější spoje.',
+      'V řadě „Čím“ zvolíte, čím chcete jet (metro, tramvaj, autobus, vlak, přívoz, lanovka). Nabídka je pestrá – ukážu i spoje bez metra, pokud nejsou o moc horší.',
       'Štítky Doporučený, Nejjednodušší (nejméně přestupů a chůze) a Nejrychlejší. Méně přestupů má přednost před malou časovou úsporou; za deště nebo mrazu doporučím méně chůze.',
       'U každého spoje je čas odchodu z domu a výrazně i to, kdy spoj skutečně jede ze zastávky (nástupiště, u metra a vlaku kolej). Spoje, které už odjely, se neukazují.',
       'Tlačítkem „Pojedu tímto“ si spoj zvolíte – odpočet na hlavní stránce se pak řídí jím.',
@@ -106,6 +107,7 @@ const SECTIONS: Section[] = [
     title: 'Předměty, sylaby a Google Disk',
     lead: 'U každého předmětu je všechno pohromadě.',
     points: [
+      'Předměty jsou jen ty z vašeho rozvrhu v SIS (a ty, které sami přidáte). Moodle k nim jen doplní úkoly, testy a materiály – nové předměty nezakládá.',
       'Předmět přidáte jen kódem nebo názvem – název, kredity, zakončení, vyučující i sylabus dohledám ve veřejném SISu.',
       'Sylabus a podmínky zakončení ze SISu – povinnosti, váhy a termíny z nich vytáhne AI, zdarma a bez klíče.',
       'Materiály z Moodlu, vlastní soubory, poznámky a odkazy.',
@@ -243,9 +245,12 @@ export function GuideView() {
             <button type="button" onClick={() => openSetup('start')} className="glass-photo inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14.5px] font-bold text-white">
               Propojit SIS, Moodle a Google
             </button>
-            <button type="button" onClick={() => usePresentationStore.getState().setSlideshow(true)} className="glass-photo inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14.5px] font-bold text-white">
+            <button type="button" onClick={() => usePresentationStore.getState().setStage(true)} className="glass-photo inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14.5px] font-bold text-white">
               Prezentace na plátno
             </button>
+            <a href="/Stihnuto-prirucka.pdf" download="Stihnuto-prirucka.pdf" className="glass-photo inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14.5px] font-bold text-white">
+              Podrobná příručka (PDF)
+            </a>
             <a href="/brand/stihnuto-brand-kit.zip" download className="glass-photo inline-flex h-11 items-center gap-2 rounded-full px-5 text-[14.5px] font-bold text-white">
               Logo a prvky ke stažení
             </a>

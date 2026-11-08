@@ -4,6 +4,7 @@
  * ať plánovač (komunitní služba) zbytečně nezatěžujeme.
  */
 import type { Itinerary, JourneyLeg, LatLng, RideLeg, TransitMode } from '../types';
+import { modesParam } from '../lib/transitModes';
 import { haversineMeters } from '../lib/geo';
 import { decodePolyline } from '../lib/polyline';
 import { requestJson } from './http';
@@ -183,10 +184,13 @@ export interface TransitousPlanRequest {
   wheelchair?: boolean;
   /** Ruční obnovení – starší výsledek než minuta se nepoužije. */
   fresh?: boolean;
+  /** Povolené dopravní prostředky (nevyplněno = všechny). */
+  modes?: TransitMode[];
 }
 
 export async function transitousPlan(req: TransitousPlanRequest): Promise<CompactItinerary[]> {
-  const key = `${round(req.destination.lat)},${round(req.destination.lng)}|${req.arriveBy.toISOString().slice(0, 16)}|${req.wheelchair ? 1 : 0}`;
+  const modes = modesParam(req.modes);
+  const key = `${round(req.destination.lat)},${round(req.destination.lng)}|${req.arriveBy.toISOString().slice(0, 16)}|${req.wheelchair ? 1 : 0}|${modes ?? ''}`;
   // Těsně před odjezdem obnovujeme častěji (živá zpoždění), jinak jednou za pár minut.
   const minutesToGo = (req.arriveBy.getTime() - req.now.getTime()) / 60_000;
   const ttl = req.fresh ? 60_000 : minutesToGo < 45 ? 2 * 60_000 : 8 * 60_000;
@@ -199,6 +203,7 @@ export async function transitousPlan(req: TransitousPlanRequest): Promise<Compac
     time: req.arriveBy.toISOString().slice(0, 16) + ':00Z',
     arriveBy: '1',
     ...(req.wheelchair ? { wheelchair: '1' } : {}),
+    ...(modes ? { modes } : {}),
   });
   const url = `/api/transit?${params}`;
   let pending = inflight.get(url);

@@ -107,6 +107,7 @@ function baseParams(request: TransitRequest, settings: Settings): LivePlanParams
     originStop: request.originStop ?? null,
     accessibleOnly: settings.accessibleOnly,
     fresh: request.fresh,
+    modes: settings.transitModes,
   };
 }
 

@@ -29,6 +29,8 @@ export const SHARED_SETTING_KEYS = [
   'walkSpeed',
   'accessibleOnly',
   'preferAirConditioned',
+  'transitModes',
+  'prefs',
   'reminders',
   'buildings',
   'locationAliases',
@@ -58,6 +60,8 @@ export interface SnapshotData {
   tombstones: Record<string, string>;
   settings?: SharedSettings;
   settingsUpdatedAt?: string;
+  /** Čas poslední změny každé položky nastavení. */
+  settingsStamps?: Record<string, string>;
   google?: Pick<GoogleSyncState, 'links' | 'containers' | 'excluded'>;
 }
 
@@ -87,6 +91,7 @@ export function snapshotData(input: SnapshotData): SnapshotData {
     tombstones: input.tombstones,
     settings: input.settings,
     settingsUpdatedAt: input.settingsUpdatedAt,
+    settingsStamps: input.settingsStamps,
     google: input.google,
   };
 }
@@ -153,6 +158,7 @@ function fingerprint(data: SnapshotData): string {
       sortById(data.milestones),
       Object.entries(data.tombstones).sort(),
       data.settingsUpdatedAt ?? '',
+      Object.entries(data.settingsStamps ?? {}).sort(),
     ]),
   ).toString(36);
 }
@@ -178,9 +184,26 @@ export function mergeSnapshots(local: SnapshotData, remote: SnapshotData): Merge
     milestones: mergeCollection(local.milestones, remote.milestones ?? [], tombstones, (x) => keyOf.ms(x.id)),
     tombstones,
   };
-  const remoteSettingsNewer = (remote.settingsUpdatedAt ?? '') > (local.settingsUpdatedAt ?? '');
-  merged.settings = remoteSettingsNewer ? { ...local.settings, ...remote.settings } : local.settings;
-  merged.settingsUpdatedAt = remoteSettingsNewer ? remote.settingsUpdatedAt : local.settingsUpdatedAt;
+  // Nastavení po položkách: u každé vyhraje novější změna (ne celé nastavení najednou).
+  if (local.settings || remote.settings) {
+    const ls = local.settingsStamps ?? {};
+    const rs = remote.settingsStamps ?? {};
+    const out: Record<string, unknown> = {};
+    const stamps: Record<string, string> = {};
+    const lo = (local.settings ?? {}) as Record<string, unknown>;
+    const ro = (remote.settings ?? {}) as Record<string, unknown>;
+    for (const key of new Set([...Object.keys(lo), ...Object.keys(ro)])) {
+      const lt = ls[key] ?? local.settingsUpdatedAt ?? '';
+      const rt = rs[key] ?? remote.settingsUpdatedAt ?? '';
+      const takeRemote = key in ro && (!(key in lo) || rt > lt);
+      out[key] = takeRemote ? ro[key] : lo[key];
+      const at = takeRemote ? rt : lt;
+      if (at) stamps[key] = at;
+    }
+    merged.settings = out as SharedSettings;
+    merged.settingsStamps = stamps;
+  }
+  merged.settingsUpdatedAt = [local.settingsUpdatedAt ?? '', remote.settingsUpdatedAt ?? ''].sort().pop() || undefined;
   if (local.google || remote.google) {
     merged.google = {
       links: mergeLinks(remote.google?.links, local.google?.links),

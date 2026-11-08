@@ -437,6 +437,7 @@ function localData(): SnapshotData {
     tombstones: s.tombstones,
     settings: settings as SnapshotData['settings'],
     settingsUpdatedAt: s.meta.settingsUpdatedAt,
+    settingsStamps: s.meta.settingsStamps,
     google: { links: live.links, containers: live.containers, excluded: live.excluded },
   });
 }

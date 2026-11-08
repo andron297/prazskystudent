@@ -36,6 +36,39 @@ function parseTime(value: string | null): string {
   return t.toISOString();
 }
 
+/** Dopravní prostředky, které si student vybral (metro, tramvaj…), jako režimy plánovače MOTIS. */
+const MODE_MAP: Record<string, string[]> = {
+  metro: ['SUBWAY', 'METRO'],
+  tram: ['TRAM'],
+  bus: ['BUS', 'COACH'],
+  train: ['RAIL', 'REGIONAL_RAIL', 'REGIONAL_FAST_RAIL', 'SUBURBAN', 'LONG_DISTANCE', 'HIGHSPEED_RAIL', 'NIGHT_RAIL'],
+  ferry: ['FERRY'],
+  funicular: ['FUNICULAR', 'AERIAL_LIFT', 'CABLE_CAR'],
+};
+
+function parseModes(value: string | null): string | null {
+  if (!value) return null;
+  const parts = value.split(',').map((x) => x.trim()).filter(Boolean);
+  if (parts.length === 0 || parts.length > 6 || parts.some((x) => !MODE_MAP[x])) throw new HttpError(400, 'bad_modes', 'Neplatný výběr dopravních prostředků.');
+  return [...new Set(parts.flatMap((x) => MODE_MAP[x]))].join(',');
+}
+
+/** Kategorie míst z plánovače (OpenStreetMap) česky. */
+const CATEGORY_CS: Record<string, string> = {
+  supermarket: 'Supermarket', mall: 'Obchodní centrum', department_store: 'Obchodní dům', convenience: 'Večerka', bakery: 'Pekárna',
+  restaurant: 'Restaurace', cafe: 'Kavárna', fast_food: 'Rychlé občerstvení', bar: 'Bar', pub: 'Hospoda', canteen: 'Menza',
+  university: 'Univerzita', college: 'Vysoká škola', school: 'Škola', library: 'Knihovna', kindergarten: 'Školka',
+  hospital: 'Nemocnice', clinic: 'Poliklinika', doctors: 'Lékař', pharmacy: 'Lékárna', dentist: 'Zubař',
+  museum: 'Muzeum', theatre: 'Divadlo', cinema: 'Kino', gallery: 'Galerie', arts_centre: 'Kulturní centrum', attraction: 'Památka',
+  park: 'Park', garden: 'Zahrada', sports_centre: 'Sportovní centrum', stadium: 'Stadion', swimming_pool: 'Bazén', fitness_centre: 'Posilovna',
+  hotel: 'Hotel', hostel: 'Hostel', dormitory: 'Kolej', student_accommodation: 'Kolej', townhall: 'Úřad', post_office: 'Pošta', bank: 'Banka', police: 'Policie',
+  place_of_worship: 'Kostel', station: 'Nádraží', bus_station: 'Autobusové nádraží', airport: 'Letiště',
+  fuel: 'Čerpací stanice', car_wash: 'Automyčka', parking: 'Parkoviště', atm: 'Bankomat', car_repair: 'Autoservis', charging_station: 'Nabíječka',
+  clothes: 'Oblečení', shoes: 'Obuv', electronics: 'Elektronika', books: 'Knihkupectví', chemist: 'Drogerie', hardware: 'Železářství', doityourself: 'Hobby market', furniture: 'Nábytek', sports: 'Sportovní potřeby', florist: 'Květinářství',
+};
+/** Místa, kam student skoro nikdy nechce (automyčka, pumpa, parkoviště…) – až na konec. */
+const LOW_VALUE = new Set(['fuel', 'car_wash', 'parking', 'parking_entrance', 'atm', 'charging_station', 'car_repair', 'vending_machine', 'bicycle_parking', 'recycling', 'toilets', 'compressed_air', 'post_box', 'waste_basket', 'bench']);
+
 async function upstream<T>(path: string, query: Record<string, string>): Promise<T> {
   const url = new URL(path, API);
   for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
@@ -260,6 +293,7 @@ export async function handleTransit(request: Request): Promise<Response> {
       // Kurzor plánovače vypadá jako „LATER|1794212880“ nebo „EARLIER|1794211200“.
       if (cursor && !/^(?:EARLIER|LATER)\|\d{9,13}$/.test(cursor) && !/^[\w=+/|-]{1,600}$/.test(cursor)) throw new HttpError(400, 'bad_cursor', 'Neplatný kurzor.');
       const count = Math.min(12, Math.max(3, Number(params.get('n')) || 6));
+      const transitModes = parseModes(params.get('modes'));
       const data = await upstream<{ itineraries?: { startTime?: string; endTime?: string; transfers?: number; legs?: RawLeg[] }[]; nextPageCursor?: string; previousPageCursor?: string }>('plan', {
         fromPlace: `${from.lat},${from.lon}`,
         toPlace: `${to.lat},${to.lon}`,
@@ -270,6 +304,7 @@ export async function handleTransit(request: Request): Promise<Response> {
         maxPostTransitTime: '1200',
         ...(cursor ? { pageCursor: cursor } : {}),
         ...(wheelchair ? { pedestrianProfile: 'WHEELCHAIR' } : {}),
+        ...(transitModes ? { transitModes } : {}),
       });
       const itineraries = (data.itineraries ?? [])
         .filter((it) => !(it.legs ?? []).some((l) => l.cancelled))
@@ -277,18 +312,44 @@ export async function handleTransit(request: Request): Promise<Response> {
       return json({ itineraries, next: data.nextPageCursor, previous: data.previousPageCursor, source: 'transitous' }, 200, { 'cache-control': 'public, max-age=30, s-maxage=60' });
     }
     if (op === 'geocode') {
-      // Hledání míst: adresy, zastávky, místa (jen Praha a okolí).
+      // Hledání míst: adresy, zastávky, místa (jen Praha a okolí), seřazené podle blízkosti.
       const text = (params.get('text') ?? '').trim();
       if (text.length < 2 || text.length > 80) throw new HttpError(400, 'bad_text', 'Zadejte aspoň dva znaky.');
-      const data = await upstream<{ type?: string; name?: string; id?: string; lat?: number; lon?: number; areas?: { name?: string; adminLevel?: number; matched?: boolean; default?: boolean }[]; street?: string; houseNumber?: string }[]>('geocode', { text, language: 'cs' });
+      const near = params.get('near') ? parsePoint(params.get('near'), 'poblíž') : { lat: 50.0835, lon: 14.4241 };
+      const data = await upstream<{ type?: string; name?: string; id?: string; lat?: number; lon?: number; category?: string; areas?: { name?: string; adminLevel?: number; matched?: boolean; default?: boolean }[]; street?: string; houseNumber?: string }[]>('geocode', { text, language: 'cs', place: `${near.lat},${near.lon}` });
       const places = (Array.isArray(data) ? data : [])
         .filter((p) => typeof p.lat === 'number' && typeof p.lon === 'number' && p.lat >= BOUNDS.minLat && p.lat <= BOUNDS.maxLat && p.lon >= BOUNDS.minLon && p.lon <= BOUNDS.maxLon)
+        .map((p, i) => {
+          const areas = (p.areas ?? []).filter((a) => a.name && a.name !== 'Česko' && !/^(SO|obvod|okres|SO POÚ|SO ORP)\b/.test(a.name));
+          const area = areas.sort((a, b) => (b.adminLevel ?? 0) - (a.adminLevel ?? 0))[0]?.name;
+          const cat = (p.category ?? '').replace(/_\d+$/, '');
+          const street = p.street ? `${p.street}${p.houseNumber ? ` ${p.houseNumber}` : ''}` : undefined;
+          return {
+            rank: i + (LOW_VALUE.has(cat) ? 50 : 0),
+            place: {
+              type: p.type ?? 'PLACE',
+              name: (p.name ?? '').slice(0, 120),
+              area: area?.slice(0, 80),
+              category: CATEGORY_CS[cat],
+              street: street && street !== p.name ? street.slice(0, 80) : undefined,
+              lat: p.lat!,
+              lon: p.lon!,
+              stopId: p.type === 'STOP' ? p.id : undefined,
+            },
+          };
+        })
+        .sort((a, b) => a.rank - b.rank)
         .slice(0, 10)
-        .map((p) => {
-          const area = (p.areas ?? []).filter((a) => a.name && a.name !== 'Česko').sort((a, b) => (b.adminLevel ?? 0) - (a.adminLevel ?? 0))[0]?.name;
-          return { type: p.type ?? 'PLACE', name: (p.name ?? '').slice(0, 120), area: area?.slice(0, 80), lat: p.lat!, lon: p.lon!, stopId: p.type === 'STOP' ? p.id : undefined };
-        });
+        .map((x) => x.place);
       return json({ places }, 200, { 'cache-control': 'public, max-age=3600, s-maxage=86400' });
+    }
+    if (op === 'reverse') {
+      // Místo vybrané na mapě → adresa nebo název.
+      const at = parsePoint(params.get('at'), 'místo');
+      const data = await upstream<{ type?: string; name?: string; street?: string; houseNumber?: string; areas?: { name?: string; adminLevel?: number }[] }[]>('reverse-geocode', { place: `${at.lat},${at.lon}` });
+      const first = (Array.isArray(data) ? data : [])[0];
+      const area = (first?.areas ?? []).filter((a) => a.name && a.name !== 'Česko' && !/^(SO|obvod|okres)\b/.test(a.name)).sort((a, b) => (b.adminLevel ?? 0) - (a.adminLevel ?? 0))[0]?.name;
+      return json({ name: (first?.name ?? '').slice(0, 120) || null, area: area?.slice(0, 80) ?? null }, 200, { 'cache-control': 'public, max-age=86400' });
     }
     if (op === 'departures') {
       const stopId = (params.get('stopId') ?? '').trim();

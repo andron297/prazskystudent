@@ -26,6 +26,19 @@ function revive(raw: WeatherForecast): WeatherForecast {
   };
 }
 
+/** Poslední stažená předpověď (do 3 hodin), ať je odkudkoli – pro úvodní animaci. */
+export function lastForecast(): WeatherForecast | null {
+  const ok = (f: WeatherForecast | null) => f && Date.now() - new Date(f.fetchedAt).getTime() < 3 * 3_600_000;
+  if (ok(memory)) return memory;
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    const parsed = raw ? revive(JSON.parse(raw) as WeatherForecast) : null;
+    return ok(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function cached(location: LatLng): WeatherForecast | null {
   const fresh = (f: WeatherForecast | null) => f && Date.now() - new Date(f.fetchedAt).getTime() < TTL && haversineMeters(f.location, location) < 3000;
   if (fresh(memory)) return memory;

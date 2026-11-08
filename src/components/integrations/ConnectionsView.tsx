@@ -1,6 +1,9 @@
+import { AiMark } from '../ui/AiMark';
+import { MODE_CHOICES, normalizeModes, toggleMode } from '../../lib/transitModes';
+import { activeOriginStop } from '../../hooks/useOrigin';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { BookMarked, CalendarDays, ChevronDown, Database, Download, ExternalLink, FlaskConical, GraduationCap, KeyRound, LoaderCircle, MapPin, MousePointerClick, Plus, RefreshCw, RotateCcw, ScrollText, ServerCog, Sparkles, TramFront, Trash, Upload, Zap } from 'lucide-react';
+import { BookMarked, CalendarDays, ChevronDown, Database, Download, ExternalLink, FlaskConical, GraduationCap, KeyRound, LoaderCircle, MapPin, MousePointerClick, Plus, RefreshCw, RotateCcw, ScrollText, ServerCog, TramFront, Trash, Upload, Zap } from 'lucide-react';
 import type { IcsSource, WalkSpeed } from '../../types';
 import { downloadTextFile } from '../../lib/calendarExport';
 import { formatRelative } from '../../lib/dates';
@@ -274,7 +277,7 @@ function SyllabiBlock() {
   return (
     <div className="rounded-[22px] bg-surface-2 p-4">
       <p className="flex items-center gap-2 text-[14px] font-bold">
-        <Sparkles className="size-4 text-moss" aria-hidden /> Sylaby a povinnosti – samy
+        <AiMark className="size-4 text-moss" aria-hidden /> Sylaby a povinnosti – samy
       </p>
       <p className="mt-1 text-[13px] text-muted">
         Po načtení rozvrhu stáhnu ke každému předmětu jeho veřejný sylabus ze SISu a z podmínek zakončení vytáhnu povinnosti, váhy a termíny.{' '}
@@ -418,7 +421,7 @@ export function TransitSection() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const liveOrigin = settings.origin.live;
-  const stop = settings.originStop[settings.mode];
+  const stop = activeOriginStop(settings.originStop[settings.mode], null);
   return (
     <Card id="doprava" className="scroll-mt-24" eyebrow="PID · Golemio" title={<>Doprava <em className="italic text-moss">na míru</em></>}>
       <div className="space-y-5">
@@ -460,8 +463,8 @@ export function TransitSection() {
               <option value="fast">Rychlá</option>
             </Select>
           </Field>
-          <Field label="Bez GPS jedu z">
-            <Select value={liveOrigin.presetId} onChange={(e) => setOrigin('live', { ...liveOrigin, presetId: e.target.value })}>
+          <Field label="Když poloha není k dispozici" hint="Jinak vždy podle aktuální polohy">
+            <Select value={liveOrigin.presetId} onChange={(e) => setOrigin('live', { source: 'preset', presetId: e.target.value })}>
               {LOCATION_PRESETS.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.label}
@@ -470,9 +473,28 @@ export function TransitSection() {
             </Select>
           </Field>
         </div>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div>
+          <p className="mb-2 text-[13.5px] font-bold">Čím jezdím</p>
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Čím jezdím">
+            {MODE_CHOICES.map((m) => {
+              const on = normalizeModes(settings.transitModes).includes(m.id);
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => updateSettings({ transitModes: toggleMode(settings.transitModes, m.id) })}
+                  className={cn('rounded-full px-3 py-1.5 text-[13px] font-semibold ring-1 ring-inset transition', on ? 'bg-accent-soft text-accent ring-accent/40' : 'bg-surface text-subtle line-through ring-line hover:text-fg')}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-[12.5px] text-subtle">Platí pro odpočet na hlavní stránce i pro hledání v Dopravě.</p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
           {[
-            <Toggle key="gps" checked={liveOrigin.source === 'gps'} onChange={(v) => setOrigin('live', { ...liveOrigin, source: v ? 'gps' : 'preset' })} label="GPS v Live režimu" />,
             <Toggle key="acc" checked={settings.accessibleOnly} onChange={(accessibleOnly) => updateSettings({ accessibleOnly })} label="Jen nízkopodlažní" />,
             <Toggle key="ac" checked={settings.preferAirConditioned} onChange={(preferAirConditioned) => updateSettings({ preferAirConditioned })} label="Preferovat klimatizaci" />,
           ].map((toggle) => (

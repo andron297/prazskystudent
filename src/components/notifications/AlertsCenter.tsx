@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { AlarmClock, Bell, BellRing, CalendarClock, Check, CircleAlert, Clock3, Flag, Hourglass, Link2, ListTodo, RefreshCw, Route, Sparkles, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, Bell, BellRing, CalendarClock, Check, CircleAlert, Clock3, Flag, GraduationCap, Hourglass, Link2, ListTodo, RefreshCw, Route, type LucideIcon, X } from 'lucide-react';
 import { attentionCount, buildAttention, isSnoozed, type AttentionItem, type AttentionKind, type AttentionLevel } from '../../lib/attention';
 import { formatRelative } from '../../lib/dates';
 import { useConnections } from '../../hooks/useConnections';
@@ -77,7 +77,7 @@ const KIND_ICON: Record<AttentionKind, LucideIcon> = {
   sync: RefreshCw,
   milestone: Flag,
   countdown: Hourglass,
-  profile: Sparkles,
+  profile: GraduationCap,
 };
 
 const LEVEL_LABEL: Record<AttentionLevel, string> = { now: 'Teď', today: 'Dnes', soon: 'Tento týden', info: 'Pro informaci' };

@@ -4,7 +4,7 @@
  */
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { CalendarClock, ChevronDown, GraduationCap, ListTodo, Sparkles } from 'lucide-react';
+import { CalendarClock, ChevronDown, GraduationCap, Lightbulb, ListTodo } from 'lucide-react';
 import type { Subject } from '../../types';
 import { SUBJECT_COLOR_CLASSES } from '../../lib/colors';
 import { plural } from '../../lib/dates';
@@ -111,7 +111,7 @@ export function TasksView({ embedded = false }: { embedded?: boolean } = {}) {
 
       {pending.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex items-start gap-3 rounded-[22px] bg-moss/10 px-4 py-3 text-[13.5px] ring-1 ring-inset ring-moss/25">
-          <Sparkles className="mt-0.5 size-4 shrink-0 text-moss" aria-hidden />
+          <Lightbulb className="mt-0.5 size-4 shrink-0 text-moss" aria-hidden />
           <p>
             U {pending.length} {plural(pending.length, ['úkolu', 'úkolů', 'úkolů'])} aplikace navrhuje předmět. Stačí klepnout na správný – nebo na „Ne“.
           </p>

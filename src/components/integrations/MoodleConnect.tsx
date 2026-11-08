@@ -1,3 +1,4 @@
+import { bindingSubjects } from '../../lib/bindingSubjects';
 import { useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { CircleCheck, Copy, ExternalLink, Eye, EyeOff, KeyRound, LoaderCircle, LogIn, RefreshCw, Settings2, Unplug } from 'lucide-react';
@@ -62,7 +63,7 @@ export function MoodleConnect() {
     try {
       const api = createApi(settings, server, appNow);
       const client = api.moodle(normalized, token);
-      const res = await syncMoodle(client, { subjects, requirements, materials }, appNow(), (p) => setProgress((prev) => [...prev, p]));
+      const res = await syncMoodle(client, { subjects: bindingSubjects(subjects, useAppStore.getState().events), requirements, materials }, appNow(), (p) => setProgress((prev) => [...prev, p]));
       applyMoodleSync(res, { baseUrl: normalized, token: token.trim() }, client.isDemo);
       setResult(res);
       toast.success(`Moodle synchronizován: ${res.stats.courses} předmětů, ${res.stats.newRequirements} nových úkolů, ${res.stats.newMaterials} nových materiálů.`);

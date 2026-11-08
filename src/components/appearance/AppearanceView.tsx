@@ -5,7 +5,7 @@
  */
 import { useRef, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { Check, ExternalLink, ImagePlus, Monitor, Moon, Play, RotateCcw, Sparkles, Sun, Trash2, Upload } from 'lucide-react';
+import { Check, ExternalLink, ImagePlus, Lightbulb, Monitor, Moon, Play, RotateCcw, Sun, Trash2, Upload } from 'lucide-react';
 import type { AccentTheme, AppearanceSettings } from '../../types';
 import { ACCENTS, DEFAULT_APPEARANCE, GALLERY, autoHeroPhoto, galleryPhoto, parseHex, photoCredit, photoUrl, resolveAppearance, type GalleryPhoto } from '../../lib/appearance';
 import { removeImage, storeImage, useLocalImage, type ImageSlot } from '../../hooks/useLocalImage';
@@ -359,7 +359,7 @@ export function AppearanceView() {
         <aside className="order-first space-y-3 lg:sticky lg:top-24 lg:order-none">
           <Preview a={a} />
           <p className="flex items-start gap-2 px-1 text-[12.5px] leading-relaxed text-subtle">
-            <Sparkles className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <Lightbulb className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             {a.heroPhoto === 'auto' ? 'Fotka se mění podle denní doby.' : a.heroPhoto === 'upload' ? 'Vlastní fotka z tohoto zařízení.' : (galleryPhoto(a.heroPhoto)?.title ?? '')}
           </p>
         </aside>

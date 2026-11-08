@@ -1,4 +1,5 @@
-import { useId, useMemo, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { appNow } from '../../store/clockStore';
 import { motion } from 'motion/react';
 import { BookOpen, CalendarDays, Clock, FastForward, ArrowRight, FlaskConical, House, Plus, RotateCcw, Timer, TramFront, type LucideIcon } from 'lucide-react';
 import { AlertsButton } from '../notifications/AlertsCenter';
@@ -36,9 +37,40 @@ function useUrgentCount(): number {
   return useMemo(() => buildTaskRows(tasks, requirements, now).filter((r) => ['overdue', 'today'].includes(dueGroup(r, now))).length, [tasks, requirements, now]);
 }
 
-export function BrandMark({ className }: { className?: string }) {
+/**
+ * Ručičky loga: při otevření se roztočí a zastaví na aktuálním čase, pak
+ * jdou s časem (každou půlminutu). Bez `live` ukazují pevný čas loga.
+ */
+function useLiveHands(live: boolean): { hour: number; minute: number } | null {
+  const [now, setNow] = useState(() => appNow());
+  const [k, setK] = useState(0);
+  useEffect(() => {
+    if (!live) return;
+    const t = setInterval(() => setNow(appNow()), 30_000);
+    let raf = 0;
+    const t0 = performance.now() + 250;
+    const ease = (x: number) => 1 - Math.pow(1 - x, 3);
+    const step = (t: number) => {
+      const x = Math.min(1, Math.max(0, (t - t0) / 1300));
+      setK(ease(x));
+      if (x < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => {
+      clearInterval(t);
+      cancelAnimationFrame(raf);
+    };
+  }, [live]);
+  if (!live) return null;
+  const minute = (now.getMinutes() + now.getSeconds() / 60) * 6 + 360;
+  const hour = ((now.getHours() % 12) + now.getMinutes() / 60) * 30 + 360;
+  return { hour: hour * k, minute: minute * k };
+}
+
+export function BrandMark({ className, live = false }: { className?: string; live?: boolean }) {
   // Unikátní id gradientu – logo je v DOM víckrát.
   const id = `stihnu-g-${useId().replace(/:/g, '')}`;
+  const hands = useLiveHands(live);
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden>
       <defs>
@@ -50,7 +82,15 @@ export function BrandMark({ className }: { className?: string }) {
       <rect width="64" height="64" rx="20" fill={`url(#${id})`} />
       <circle cx="32" cy="33" r="16" fill="none" stroke="#f1ece0" strokeOpacity="0.28" strokeWidth="4.5" />
       <path d="M32 17a16 16 0 0 1 15.2 11" fill="none" stroke="#d4b98e" strokeWidth="4.5" strokeLinecap="round" />
-      <path d="M32 24v9.5l6.5 4.5" fill="none" stroke="#f1ece0" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+      {hands ? (
+        <>
+          <line x1="32" y1="33" x2="32" y2="24.5" stroke="#f1ece0" strokeWidth="4.5" strokeLinecap="round" transform={`rotate(${hands.hour.toFixed(2)} 32 33)`} />
+          <line x1="32" y1="33" x2="32" y2="20.5" stroke="#f1ece0" strokeWidth="3.4" strokeLinecap="round" transform={`rotate(${hands.minute.toFixed(2)} 32 33)`} />
+          <circle cx="32" cy="33" r="2.4" fill="#f1ece0" />
+        </>
+      ) : (
+        <path d="M32 24v9.5l6.5 4.5" fill="none" stroke="#f1ece0" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" />
+      )}
       <path d="M44 12c-5 0-8 3-8 7 4 0 8-2.5 8-7z" fill="#a8c79f" />
     </svg>
   );
@@ -139,7 +179,7 @@ function PresentationRibbon() {
   return (
     <div className="border-b border-line bg-fg text-canvas">
       <div className="mx-auto flex max-w-[1320px] items-center gap-3 px-4 py-1.5 text-[12.5px] sm:px-6 lg:px-8">
-        <span className="min-w-0 flex-1 truncate font-semibold">Režim prezentace – názvy jsou vymyšlené, úpravy se neukládají</span>
+        <span className="min-w-0 flex-1 truncate font-semibold">Režim prezentace – popisky jsou vymyšlené, co přidáte na ukázku, po vypnutí zmizí</span>
         <button type="button" onClick={() => usePresentationStore.getState().setMasked(false)} className="shrink-0 rounded-full bg-canvas/15 px-3 py-0.5 font-bold hover:bg-canvas/25">
           Vypnout
         </button>
@@ -198,7 +238,7 @@ export function AppShell({ view, children, fullBleed = false }: { view: View; ch
         <PresentationRibbon />
         <div className={cn('mx-auto flex h-14 items-center gap-3 px-4 sm:px-6 lg:h-16 lg:px-8', !fullBleed && 'max-w-[1320px]')}>
           <a href="#/dnes" className="flex shrink-0 items-center gap-2.5">
-            <BrandMark className="size-8 lg:size-9" />
+            <BrandMark className="size-8 lg:size-9" live />
             <span className="font-display wordmark text-[24px] leading-none tracking-tight lg:text-[26px]">
               Stihnu<em className="text-moss">to</em>
             </span>

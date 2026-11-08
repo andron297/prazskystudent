@@ -6,8 +6,7 @@ import { platformLabel, rideLegs } from '../../lib/transitPlanner';
 import { TRANSIT_STYLES } from '../../lib/urgency';
 import type { TransitPlanState } from '../../hooks/useTransitPlan';
 import { useNow } from '../../hooks/useNow';
-import { useOrigin } from '../../hooks/useOrigin';
-import { useAppStore } from '../../store/appStore';
+import { useOrigin, useOriginStop } from '../../hooks/useOrigin';
 import { useUiStore } from '../../store/uiStore';
 import { cn } from '../ui/primitives';
 import { DelayChip, LineBadge } from './TransitBits';
@@ -55,8 +54,8 @@ export function TransitGlance({
   onDetail: () => void;
 }) {
   const now = useNow(1000);
-  const stop = useAppStore((s) => s.settings.originStop[s.settings.mode]);
   const origin = useOrigin();
+  const stop = useOriginStop(origin.coords);
   const startNavigation = (itinerary: Itinerary) => useUiStore.getState().startNavigation({ itinerary, event, building, origin: origin.coords });
   const platformFor = usePlatformLookup();
   const status = transitStatusOf(event, building, transit, now);
@@ -211,7 +210,7 @@ export function TransitGlance({
       ) : event && transit.tooFar ? (
         <div className="mt-4">
           <p className="font-display text-[44px] leading-none">{formatTime(new Date(event.start))}</p>
-          <p className="mt-2 text-[14px] text-white/85">{transit.windowStart ? `Spoj a odpočet odchodu ukážu ${calendarDayDiff(transit.windowStart, now) === 0 ? 'dnes' : 'zítra'} ${vTime(transit.windowStart)}.` : 'Spoj a odpočet odchodu ukážu s předstihem.'}</p>
+          <p className="mt-2 text-[14px] text-white/85">{transit.windowStart ? `Odpočet, kdy vyrazit, začne ${calendarDayDiff(transit.windowStart, now) === 0 ? 'dnes' : 'zítra'} ${vTime(transit.windowStart)}.` : 'Odpočet, kdy vyrazit, začne s předstihem.'}</p>
         </div>
       ) : event && !building ? (
         <div className="mt-4">

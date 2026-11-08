@@ -161,20 +161,20 @@ describe('Moodle kalendář (bez tokenu)', () => {
     expect(isMoodleCalendarUrl('https://dl1.cuni.cz/rss/file.php/1/abc/mod_forum/2/rss.xml')).toBe(false);
   });
 
-  it('vytvoří povinnosti a předměty, otevírání a přednášky přeskočí', () => {
+  it('vytvoří povinnosti jen k předmětům z rozvrhu SIS – kurzy mimo rozvrh, otevírání a přednášky přeskočí', () => {
     const subjects: Subject[] = [{ id: 's1', code: 'JSB012', name: 'Úvod do mediálních studií', color: 'indigo', source: 'sis', createdAt: NOW.toISOString() }];
     const result = buildMoodleIcsImport(parseIcs(MOODLE_ICS, { windowStart: new Date(2026, 9, 1), windowEnd: new Date(2027, 1, 1) }), { subjects, requirements: [], now: NOW });
-    expect(result.created).toBe(3);
-    expect(result.skipped).toBe(2);
+    // Moodle nikdy nezakládá nové předměty – závazný je rozvrh SIS.
+    expect(result.newSubjects).toHaveLength(0);
+    expect(result.requirements.every((r) => r.subjectId === 's1')).toBe(true);
     const essay = result.requirements.find((r) => r.title === 'Esej: Mediální gramotnost')!;
     expect(essay).toMatchObject({ subjectId: 's1', type: 'assignment', source: 'moodle', externalId: 'moodle-ics:10101@dl1.cuni.cz' });
     expect(essay.deadline).toBe('2026-11-05T22:59:00.000Z');
-    expect(result.requirements.find((r) => r.title === 'Průběžný test 2')!.type).toBe('test');
-    expect(result.newSubjects.map((s) => s.name).sort()).toEqual(['Mediální analýza', 'Statistika pro sociální vědy']);
+    expect(result.created).toBe(result.requirements.length);
 
     // Opakovaný import zachová odškrtnutí a nic nového nevytvoří
     const done: Requirement[] = result.requirements.map((r) => ({ ...r, done: true }));
-    const again = buildMoodleIcsImport(parseIcs(MOODLE_ICS, { windowStart: new Date(2026, 9, 1), windowEnd: new Date(2027, 1, 1) }), { subjects: [...subjects, ...result.newSubjects], requirements: done, now: NOW });
+    const again = buildMoodleIcsImport(parseIcs(MOODLE_ICS, { windowStart: new Date(2026, 9, 1), windowEnd: new Date(2027, 1, 1) }), { subjects, requirements: done, now: NOW });
     expect(again.created).toBe(0);
     expect(again.updated).toBe(0);
   });

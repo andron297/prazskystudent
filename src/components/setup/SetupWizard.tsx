@@ -2,35 +2,11 @@
  * Průvodce propojením – krok za krokem, velkým písmem, obyčejnou češtinou.
  * Každou službu jde přeskočit a kdykoli doplnit v Nastavení → Propojení.
  */
+import { AiMark } from '../ui/AiMark';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import {
-  Play,
-  ArrowLeft,
-  ArrowRight,
-  BellRing,
-  BookOpenCheck,
-  CalendarDays,
-  Check,
-  ClipboardPaste,
-  CloudSun,
-  ExternalLink,
-  FileUp,
-  FlaskConical,
-  GraduationCap,
-  Landmark,
-  LoaderCircle,
-  LocateFixed,
-  MapPin,
-  Music2,
-  PartyPopper,
-  ShieldCheck,
-  Sparkles,
-  TramFront,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
+import { ArrowLeft, ArrowRight, BellRing, BookOpenCheck, CalendarDays, Check, ClipboardPaste, CloudSun, ExternalLink, FileUp, FlaskConical, GraduationCap, Landmark, LoaderCircle, LocateFixed, MapPin, Music2, PartyPopper, Play, ShieldCheck, TramFront, type LucideIcon, Wand2, X } from 'lucide-react';
 import type { IcsSource } from '../../types';
 import { LOCATION_PRESETS } from '../../lib/buildings';
 import { uid } from '../../lib/id';
@@ -116,7 +92,7 @@ export function SetupWizard() {
         {/* Hlavička s průběhem */}
         <div className="flex items-center gap-3 border-b border-line px-5 py-3.5">
           <span className="inline-flex size-9 items-center justify-center rounded-full bg-accent-soft text-accent">
-            <Sparkles className="size-[18px]" aria-hidden />
+            <Wand2 className="size-[18px]" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-bold">Nastavení krok za krokem</p>
@@ -263,7 +239,7 @@ function StartStep({ onOwn, onDemo }: { onOwn: () => void; onDemo: () => void })
   };
   return (
     <div>
-      <StepHead icon={Sparkles} kicker="Vítejte" title={<>Nastavíme to <em className="text-moss">spolu</em></>}>
+      <StepHead icon={Wand2} kicker="Vítejte" title={<>Nastavíme to <em className="text-moss">spolu</em></>}>
         Pár jednoduchých kroků a Stihnuto bude znát váš rozvrh, úkoly i cestu do školy. Každý krok jde přeskočit a doplnit později.
       </StepHead>
       <div className="grid gap-3">
@@ -674,7 +650,7 @@ function AiStep({ onDone }: { onDone: () => void }) {
   };
   return (
     <div>
-      <StepHead icon={Sparkles} kicker="Funguje samo" title={<>Chytré čtení <em className="text-moss">s AI</em></>}>
+      <StepHead icon={AiMark} kicker="Funguje samo" title={<>Chytré čtení <em className="text-moss">s AI</em></>}>
         AI přečte sylaby, stránky z Moodlu i PDF harmonogram a vytáhne z nich úkoly, váhy a termíny přesněji než pravidla.
       </StepHead>
       {serverAi && !saved && (
