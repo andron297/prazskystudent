@@ -302,7 +302,7 @@ function SisSection() {
   const updateSettings = useAppStore((s) => s.updateSettings);
   const openConnect = useUiStore((s) => s.openConnect);
   const linkRef = useRef<HTMLAnchorElement>(null);
-  const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app';
+  const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://stihnuto.vercel.app';
   useEffect(() => {
     // React by href „javascript:“ zablokoval – nastavíme ho přímo v DOM.
     linkRef.current?.setAttribute('href', sisBookmarklet(appOrigin));

@@ -8,7 +8,7 @@ import { HttpError, errorResponse, json, methodNotAllowed } from './http.js';
 import { readTextLimited } from './security.js';
 
 const BASE = 'https://is.cuni.cz/studium/predmety/index.php';
-const USER_AGENT = 'Stihnuto/2.0 (studijni aplikace; +https://prazskystudent.vercel.app)';
+const USER_AGENT = 'Stihnuto/2.4 (studijni aplikace, open source; +https://github.com/andron297/prazskystudent)';
 
 async function getPage(params: Record<string, string>): Promise<string> {
   const url = new URL(BASE);

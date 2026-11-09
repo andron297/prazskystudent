@@ -137,7 +137,7 @@ Propojení → Pro správce aplikace.
 2. **APIs & Services → Library**: zapni *Google Calendar API*, *Google Tasks API* a *Google Drive API*.
 3. **OAuth consent screen**: typ *External*, stav *Testing*, do *Test users* přidej svůj Gmail.
 4. **Credentials → Create credentials → OAuth client ID → Web application**:
-   - *Authorized JavaScript origins*: adresa aplikace (např. `https://prazskystudent.vercel.app`, po přestěhování i nová) a `http://localhost:5173`.
+   - *Authorized JavaScript origins*: adresa aplikace (např. `https://stihnuto.vercel.app`, po přestěhování i nová) a `http://localhost:5173`.
    - Pro trvalé přihlášení (volitelné) ulož i *Client secret* do Vercelu jako `GOOGLE_CLIENT_SECRET` a Client ID jako `GOOGLE_CLIENT_ID`.
 5. Client ID vlož v aplikaci (**Propojení → Google**), nebo ho nastav jako `VITE_GOOGLE_CLIENT_ID` a znovu nasaď.
 6. V aplikaci přepni na **Live** a klikni **Propojit s Googlem**.

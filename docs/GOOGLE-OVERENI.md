@@ -42,10 +42,10 @@ Vše se dělá v **Google Auth Platform**: <https://console.cloud.google.com/aut
 | App name | `Stihnuto` |
 | User support email | kontaktní e-mail provozovatele |
 | App logo | `public/icons/icon-512.png` zmenšené na 120 × 120 px (PNG, čtverec) |
-| Application home page | `https://prazskystudent.vercel.app/o-aplikaci` |
-| Application privacy policy link | `https://prazskystudent.vercel.app/soukromi` |
-| Application terms of service link | `https://prazskystudent.vercel.app/podminky` |
-| Authorized domains | `prazskystudent.vercel.app` |
+| Application home page | `https://stihnuto.vercel.app/o-aplikaci` |
+| Application privacy policy link | `https://stihnuto.vercel.app/soukromi` |
+| Application terms of service link | `https://stihnuto.vercel.app/podminky` |
+| Authorized domains | `stihnuto.vercel.app` |
 | Developer contact information | kontaktní e-mail provozovatele |
 
 Stránky `/o-aplikaci`, `/soukromi` a `/podminky` jsou veřejné, bez přihlášení
@@ -60,10 +60,10 @@ prohlášením o *Limited Use*, které Google vyžaduje.
 Google musí vidět, že doména patří vám:
 
 1. Otevřete <https://search.google.com/search-console>, přidejte vlastnost typu
-   **Předpona adresy URL** `https://prazskystudent.vercel.app/` a zvolte ověření
+   **Předpona adresy URL** `https://stihnuto.vercel.app/` a zvolte ověření
    **souborem HTML**.
 2. Stažený soubor (např. `google1234abcd.html`) dejte do složky `public/` a nasaďte.
-   Bude dostupný na `https://prazskystudent.vercel.app/google1234abcd.html`.
+   Bude dostupný na `https://stihnuto.vercel.app/google1234abcd.html`.
 3. V Search Console klikněte na **Ověřit**. Ověřujte stejným účtem Google,
    který je vlastníkem projektu v Google Cloud.
 
@@ -87,7 +87,7 @@ zdůvodnění (anglicky):
 Google chce video, které ukáže přihlášení a použití každého oprávnění. Stačí 2–3
 minuty nahrávky obrazovky v angličtině nebo s anglickými titulky:
 
-1. Otevřít `https://prazskystudent.vercel.app`, Nastavení → Propojení → **Propojit s Googlem**.
+1. Otevřít `https://stihnuto.vercel.app`, Nastavení → Propojení → **Propojit s Googlem**.
 2. V okně Googlu ukázat **adresní řádek s `client_id`** a celý souhlas s oprávněními (název aplikace Stihnuto).
 3. Ukázat, že v Kalendáři Google vznikl kalendář „Stihnuto · studium“ s rozvrhem a termíny. Změnit v něm událost a ukázat, že se změna objevila v aplikaci.
 4. Ukázat seznam „Stihnuto“ v Google Úkolech, odškrtnout úkol v telefonu a ukázat ho odškrtnutý v aplikaci.

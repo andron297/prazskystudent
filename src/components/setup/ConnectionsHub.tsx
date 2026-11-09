@@ -118,8 +118,8 @@ export function OwnerCard() {
             (stejné jako u GOOGLE_CLIENT_ID a GOOGLE_CLIENT_SECRET) → <strong>Save</strong>.
           </li>
           <li>
-            V Supabase <strong>Authentication → URL Configuration</strong>: Site URL <CopyName name={typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app'} />, do Redirect URLs přidejte{' '}
-            <CopyName name={`${typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app'}/**`} />.
+            V Supabase <strong>Authentication → URL Configuration</strong>: Site URL <CopyName name={typeof window !== 'undefined' ? window.location.origin : 'https://stihnuto.vercel.app'} />, do Redirect URLs přidejte{' '}
+            <CopyName name={`${typeof window !== 'undefined' ? window.location.origin : 'https://stihnuto.vercel.app'}/**`} />.
           </li>
           {supabaseCallback && (
             <li>
@@ -181,7 +181,7 @@ export function OwnerCard() {
             <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="font-semibold text-accent hover:underline">
               Credentials
             </a>{' '}
-            → <strong>Create credentials → API key</strong>. U klíče nastavte <strong>Application restrictions: Websites</strong> s adresou <CopyName name={`${typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app'}/*`} /> a{' '}
+            → <strong>Create credentials → API key</strong>. U klíče nastavte <strong>Application restrictions: Websites</strong> s adresou <CopyName name={`${typeof window !== 'undefined' ? window.location.origin : 'https://stihnuto.vercel.app'}/*`} /> a{' '}
             <strong>API restrictions: Google Picker API</strong>.
           </li>
           <li>Klíč vložte do Vercelu jako GOOGLE_PICKER_API_KEY a dejte Redeploy. (Tenhle klíč je veřejný z principu – chrání ho omezení na vaši adresu.)</li>

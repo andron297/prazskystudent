@@ -62,7 +62,7 @@ export const useSyncStore = create<SyncUiState>()(() => ({
   moodleBusy: false,
 }));
 
-const APP_URL = typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app';
+const APP_URL = typeof window !== 'undefined' ? window.location.origin : 'https://stihnuto.vercel.app';
 let suppressChangeUntil = 0;
 let lastDriveFingerprint = '';
 

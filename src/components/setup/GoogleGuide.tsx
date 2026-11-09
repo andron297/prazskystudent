@@ -27,7 +27,7 @@ export const GOOGLE_SHOTS: RealShot[] = [
     src: '/guides/google-2.webp',
     width: 800,
     height: 1026,
-    alt: 'Okno Googlu „Google tuto aplikaci neověřil“ se zvýrazněnými odkazy Rozšířené a Přejít na web prazskystudent.vercel.app (nebezpečné)',
+    alt: 'Okno Googlu „Google tuto aplikaci neověřil“ se zvýrazněnými odkazy Rozšířené a Přejít na web stihnuto.vercel.app (nebezpečné)',
     caption: (
       <>
         Když Google napíše „Google tuto aplikaci neověřil“, klikněte vlevo dole na <strong>Rozšířené</strong> (1) a pak na <strong>Přejít na web … (nebezpečné)</strong> (2).

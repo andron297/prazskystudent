@@ -20,6 +20,7 @@ import { usePresentationStore } from '../../store/presentationStore';
 import { isTransitTarget } from '../../store/selectors';
 import { BrandMark } from '../layout/AppShell';
 import { Qr } from '../presentation/PresentationMode';
+import { useAppOrigin } from '../../lib/appUrl';
 
 interface StageStep {
   view: View;
@@ -40,7 +41,6 @@ const bySelector = (...selectors: string[]) => () => {
 };
 const buttonWithText = (prefix: string) => () => [...document.querySelectorAll<HTMLElement>('main button')].find((b) => visible(b) && (b.textContent ?? '').trim().startsWith(prefix)) ?? null;
 
-const URL = 'prazskystudent.vercel.app';
 
 const STEPS: StageStep[] = [
   { view: 'dnes', target: bySelector('[data-tour="glance"]'), title: 'Kdy vyrazit', text: 'Odpočet do odchodu podle živých spojů a vaší rezervy.' },
@@ -89,6 +89,7 @@ export function StageTour() {
 }
 
 function StageOverlay() {
+  const app = useAppOrigin();
   const [index, setIndex] = useState(0);
   const [box, setBox] = useState<Box | null>(null);
   const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight });
@@ -212,8 +213,8 @@ function StageOverlay() {
               Stih<em className="italic text-[#a8c79f]">nuto</em>
             </p>
             <p className="max-w-2xl text-[20px] text-white/80 sm:text-[28px]">{step.text}</p>
-            <Qr text={`https://${URL}`} />
-            <p className="text-[22px] font-bold tracking-wide sm:text-[30px]">{URL}</p>
+            <Qr text={app.origin} />
+            <p className="text-[22px] font-bold tracking-wide sm:text-[30px]">{app.host}</p>
           </motion.div>
         ) : (
           <motion.div

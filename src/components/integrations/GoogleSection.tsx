@@ -91,7 +91,7 @@ function ServiceCard({ icon: Icon, title, enabled, onToggle, children }: { icon:
 function SetupGuide() {
   const g = useAppStore((s) => s.settings.google);
   const updateGoogleSettings = useAppStore((s) => s.updateGoogleSettings);
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://prazskystudent.vercel.app';
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://stihnuto.vercel.app';
   const link = (href: string, text: string) => (
     <a className="font-semibold text-accent hover:underline" href={href} target="_blank" rel="noreferrer">
       {text}

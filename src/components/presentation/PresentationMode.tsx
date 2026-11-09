@@ -3,6 +3,7 @@
  * animace, skutečné obrazovky Stihnuta. Ovládá se šipkami, mezerníkem,
  * klikrem (Page Up/Down), přejetím prstem; F = celá obrazovka, Esc = konec.
  */
+import { useAppOrigin } from '../../lib/appUrl';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
@@ -93,7 +94,7 @@ const SLIDES: Slide[] = [
         Zdarma, <em>hned teď</em>
       </>
     ),
-    points: ['prazskystudent.vercel.app', 'Funguje v prohlížeči i jako aplikace na ploše telefonu.'],
+    points: ['__APP_HOST__', 'Funguje v prohlížeči i jako aplikace na ploše telefonu.'],
     bg: '/images/hrad-vecer-1200.webp',
     final: true,
   },
@@ -110,6 +111,7 @@ export function Qr({ text }: { text: string }) {
 }
 
 export function PresentationMode({ onClose }: { onClose: () => void }) {
+  const app = useAppOrigin();
   const [index, setIndex] = useState(0);
   const [dir, setDir] = useState(1);
   const touch = useRef<number | null>(null);
@@ -220,7 +222,7 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
                       className={cn('flex gap-4 text-[clamp(20px,2.3vw,38px)] leading-snug text-white/90', slide.final && i === 0 && 'font-bold text-white')}
                     >
                       {!slide.final && <span className="mt-[0.55em] size-3 shrink-0 rounded-full bg-[#a8c79f]" aria-hidden />}
-                      {p}
+                      {p === '__APP_HOST__' ? app.host : p}
                     </motion.li>
                   ))}
                 </ul>
@@ -255,7 +257,7 @@ export function PresentationMode({ onClose }: { onClose: () => void }) {
               </motion.div>
             ) : slide.final ? (
               <motion.div key="qr" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.2 }} className="flex justify-center">
-                <Qr text="https://prazskystudent.vercel.app" />
+                <Qr text={app.origin} />
               </motion.div>
             ) : null}
           </AnimatePresence>
